@@ -1,0 +1,334 @@
+import { prisma } from '../src/data/services/prisma'
+import { RuleWithConditions, CreateRuleData } from '../shared/types/race'
+
+export class RuleService {
+  /**
+   * Get all rules with their conditions and matchings
+   */
+  static async getAllRules(): Promise<RuleWithConditions[]> {
+    const rules = await prisma.rule.findMany({
+      include: {
+        conditions: true,
+        matchings: true
+      },
+      orderBy: [
+        { isActive: 'desc' },
+        { createdAt: 'desc' }
+      ]
+    })
+
+    return rules
+  }
+
+  /**
+   * Get all active rules only
+   */
+  static async getActiveRules(): Promise<RuleWithConditions[]> {
+    const rules = await prisma.rule.findMany({
+      where: { isActive: true },
+      include: {
+        conditions: true,
+        matchings: true
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    return rules
+  }
+
+  /**
+   * Get a specific rule by ID with its conditions and matchings
+   */
+  static async getRuleById(id: number): Promise<RuleWithConditions | null> {
+    const rule = await prisma.rule.findUnique({
+      where: { id },
+      include: {
+        conditions: true,
+        matchings: true
+      }
+    })
+
+    return rule
+  }
+
+  /**
+   * Create a new rule with conditions and matchings
+   */
+  static async createRule(data: CreateRuleData): Promise<RuleWithConditions> {
+    const rule = await prisma.rule.create({
+      data: {
+        name: data.name,
+        description: data.description || null,
+        minIntervalMinutes: data.minIntervalMinutes,
+        conditions: {
+          create: data.conditions.map(condition => ({
+            conditionSet: condition.conditionSet,
+            field: condition.field,
+            operator: condition.operator,
+            value: condition.value
+          }))
+        },
+        matchings: {
+          create: data.matchings.map(matching => ({
+            field: matching.field
+          }))
+        }
+      },
+      include: {
+        conditions: true,
+        matchings: true
+      }
+    })
+
+    return rule
+  }
+
+  /**
+   * Update an existing rule
+   */
+  static async updateRule(id: number, data: Partial<CreateRuleData>): Promise<RuleWithConditions | null> {
+    try {
+      // Start a transaction to update rule and its relationships
+      const updatedRule = await prisma.$transaction(async (prisma) => {
+        // Update basic rule data
+        const rule = await prisma.rule.update({
+          where: { id },
+          data: {
+            name: data.name,
+            description: data.description !== undefined ? data.description || null : undefined,
+            minIntervalMinutes: data.minIntervalMinutes,
+            updatedAt: new Date()
+          }
+        })
+
+        // If conditions are provided, replace them
+        if (data.conditions !== undefined) {
+          // Delete existing conditions
+          await prisma.ruleCondition.deleteMany({
+            where: { ruleId: id }
+          })
+
+          // Create new conditions
+          await prisma.ruleCondition.createMany({
+            data: data.conditions.map(condition => ({
+              ruleId: id,
+              conditionSet: condition.conditionSet,
+              field: condition.field,
+              operator: condition.operator,
+              value: condition.value
+            }))
+          })
+        }
+
+        // If matchings are provided, replace them
+        if (data.matchings !== undefined) {
+          // Delete existing matchings
+          await prisma.ruleMatching.deleteMany({
+            where: { ruleId: id }
+          })
+
+          // Create new matchings
+          await prisma.ruleMatching.createMany({
+            data: data.matchings.map(matching => ({
+              ruleId: id,
+              field: matching.field
+            }))
+          })
+        }
+
+        // Return the updated rule with relationships
+        return await prisma.rule.findUnique({
+          where: { id },
+          include: {
+            conditions: true,
+            matchings: true
+          }
+        })
+      })
+
+      return updatedRule
+    } catch (error) {
+      console.error('Error updating rule:', error)
+      return null
+    }
+  }
+
+  /**
+   * Delete a rule
+   */
+  static async deleteRule(id: number): Promise<boolean> {
+    try {
+      await prisma.rule.delete({
+        where: { id }
+      })
+      return true
+    } catch (error) {
+      console.error('Error deleting rule:', error)
+      return false
+    }
+  }
+
+  /**
+   * Toggle rule active status
+   */
+  static async toggleRuleActive(id: number, isActive: boolean): Promise<boolean> {
+    try {
+      await prisma.rule.update({
+        where: { id },
+        data: { 
+          isActive,
+          updatedAt: new Date()
+        }
+      })
+      return true
+    } catch (error) {
+      console.error('Error toggling rule active status:', error)
+      return false
+    }
+  }
+
+  /**
+   * Get rule statistics
+   */
+  static async getRuleStats(): Promise<{ totalRules: number, activeRules: number, inactiveRules: number }> {
+    const [totalRules, activeRules] = await Promise.all([
+      prisma.rule.count(),
+      prisma.rule.count({ where: { isActive: true } })
+    ])
+
+    return {
+      totalRules,
+      activeRules,
+      inactiveRules: totalRules - activeRules
+    }
+  }
+
+  /**
+   * Search rules by name or description
+   */
+  static async searchRules(searchTerm: string): Promise<RuleWithConditions[]> {
+    const rules = await prisma.rule.findMany({
+      where: {
+        OR: [
+          { name: { contains: searchTerm } },
+          { description: { contains: searchTerm } }
+        ]
+      },
+      include: {
+        conditions: true,
+        matchings: true
+      },
+      orderBy: [
+        { isActive: 'desc' },
+        { createdAt: 'desc' }
+      ]
+    })
+
+    return rules
+  }
+
+  /**
+   * Dismiss a rule violation for a specific schedule
+   */
+  static async dismissViolation(scheduleId: number, violationHash: string): Promise<boolean> {
+    try {
+      await prisma.dismissedRuleViolation.create({
+        data: {
+          scheduleId,
+          violationHash
+        }
+      })
+      return true
+    } catch (error) {
+      console.error('Error dismissing violation:', error)
+      return false
+    }
+  }
+
+  /**
+   * Get all dismissed violations for a schedule
+   */
+  static async getDismissedViolations(scheduleId: number): Promise<string[]> {
+    try {
+      const dismissedViolations = await prisma.dismissedRuleViolation.findMany({
+        where: { scheduleId },
+        select: { violationHash: true }
+      })
+      return dismissedViolations.map(dv => dv.violationHash)
+    } catch (error) {
+      console.error('Error getting dismissed violations:', error)
+      return []
+    }
+  }
+
+  /**
+   * Remove a dismissed violation (if user wants to see it again)
+   */
+  static async undismissViolation(scheduleId: number, violationHash: string): Promise<boolean> {
+    try {
+      await prisma.dismissedRuleViolation.delete({
+        where: {
+          scheduleId_violationHash: {
+            scheduleId,
+            violationHash
+          }
+        }
+      })
+      return true
+    } catch (error) {
+      console.error('Error undismissing violation:', error)
+      return false
+    }
+  }
+
+  /**
+   * Clear all dismissed violations for a schedule
+   */
+  static async clearDismissedViolations(scheduleId: number): Promise<boolean> {
+    try {
+      await prisma.dismissedRuleViolation.deleteMany({
+        where: { scheduleId }
+      })
+      return true
+    } catch (error) {
+      console.error('Error clearing dismissed violations:', error)
+      return false
+    }
+  }
+
+  /**
+   * Get count of dismissed violations for a schedule
+   */
+  static async getDismissedViolationCount(scheduleId: number): Promise<number> {
+    try {
+      return await prisma.dismissedRuleViolation.count({
+        where: { scheduleId }
+      })
+    } catch (error) {
+      console.error('Error getting dismissed violation count:', error)
+      return 0
+    }
+  }
+
+  /**
+   * Clean up dismissed violations that no longer apply
+   * (i.e., removed hashes that don't match any current violations)
+   */
+  static async cleanupDismissedViolations(scheduleId: number, currentViolationHashes: string[]): Promise<boolean> {
+    try {
+      // Remove any dismissed violations whose hashes are no longer in the current violations
+      await prisma.dismissedRuleViolation.deleteMany({
+        where: {
+          scheduleId,
+          violationHash: {
+            notIn: currentViolationHashes
+          }
+        }
+      })
+      return true
+    } catch (error) {
+      console.error('Error cleaning up dismissed violations:', error)
+      return false
+    }
+  }
+}

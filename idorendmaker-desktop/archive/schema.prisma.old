@@ -1,0 +1,270 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:../idorendmaker.db"
+}
+
+model Race {
+  id          Int      @id @default(autoincrement())
+  name        String
+  discipline  String   // 'Kajak', 'Kenu', 'SUP', 'Kajakpóló', 'Parakenu', 'Sárkányhajó', 'Szlalom', 'Tengeri kajak'
+  boatClass   String   @map("boat_class")
+  gender      String   // 'Férfi', 'Női', 'Vegyes'
+  distance    String
+  occurrence  Int      @default(0) // Track historical frequency for relevance sorting
+  hidden      Boolean  @default(false) // User can hide races they don't organize
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  // Relationships
+  ageGroups                  RaceAgeGroup[]
+  scheduleItems              ScheduleItem[]
+  raceCompetitorAssociations RaceCompetitorAssociation[]
+
+  @@index([discipline])
+  @@index([boatClass])
+  @@index([gender])
+  @@index([distance])
+  @@index([occurrence])
+  @@index([hidden])
+  @@map("races")
+}
+
+model AgeGroup {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique // e.g., "Serdülő - U15", "Serdülő - U16"
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relationships
+  races RaceAgeGroup[]
+
+  @@index([name])
+  @@map("age_groups")
+}
+
+model RaceAgeGroup {
+  raceId     Int @map("race_id")
+  ageGroupId Int @map("age_group_id")
+
+  // Relationships
+  race     Race     @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  ageGroup AgeGroup @relation(fields: [ageGroupId], references: [id], onDelete: Cascade)
+
+  @@id([raceId, ageGroupId])
+  @@index([raceId])
+  @@index([ageGroupId])
+  @@map("race_age_groups")
+}
+
+model Schedule {
+  id               Int      @id @default(autoincrement())
+  name             String
+  pdfExtractionId  Int?     @map("pdf_extraction_id") // Link to PDF data for competitor-aware features
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at")
+
+  // Relationships
+  sections            ScheduleSection[]
+  scheduleItems       ScheduleItem[]
+  dismissedViolations DismissedRuleViolation[]
+  pdfExtraction       PDFExtraction? @relation(fields: [pdfExtractionId], references: [id], onDelete: SetNull)
+
+  @@index([pdfExtractionId])
+  @@map("schedules")
+}
+
+model ScheduleSection {
+  id          Int      @id @default(autoincrement())
+  scheduleId  Int      @map("schedule_id")
+  dayNumber   Int      @default(1) @map("day_number")
+  sectionType String   @map("section_type") // 'délelőtt', 'délután'
+  startTime   String   @map("start_time")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relationships
+  schedule      Schedule       @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  scheduleItems ScheduleItem[]
+
+  @@unique([scheduleId, dayNumber, sectionType])
+  @@index([scheduleId])
+  @@index([scheduleId, dayNumber, sectionType])
+  @@map("schedule_sections")
+}
+
+model Level {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique // e.g., "A Döntő", "I. Előfutam", "Döntő I."
+  levelType   String   @map("level_type") // "döntő", "előfutam", "középfutam"
+  sortOrder   Int      @default(0) @map("sort_order") // For UI display ordering
+  isDefault   Boolean  @default(false) @map("is_default") // Mark "Döntő I." as default
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relationships
+  scheduleItems ScheduleItem[]
+
+  @@index([levelType])
+  @@index([sortOrder])
+  @@index([isDefault])
+  @@map("levels")
+}
+
+model ScheduleItem {
+  id              Int      @id @default(autoincrement())
+  scheduleId      Int      @map("schedule_id")
+  sectionId       Int      @map("section_id")
+  raceId          Int      @map("race_id")
+  levelId         Int      @map("level_id") // Reference to competitive level
+  orderIndex      Int      @map("order_index")
+  intervalMinutes Int      @default(15) @map("interval_minutes") // Break time AFTER this race
+  notes           String?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relationships
+  schedule Schedule        @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  section  ScheduleSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  race     Race            @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  level    Level           @relation(fields: [levelId], references: [id], onDelete: Cascade)
+
+  @@index([scheduleId])
+  @@index([sectionId])
+  @@index([scheduleId, sectionId, orderIndex])
+  @@index([raceId, levelId]) // For checking race+level uniqueness
+  @@map("schedule_items")
+}
+
+model Rule {
+  id                 Int      @id @default(autoincrement())
+  name              String
+  description       String?
+  minIntervalMinutes Int     @map("min_interval_minutes")
+  isActive          Boolean @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at")
+  
+  // Relationships
+  conditions        RuleCondition[]
+  matchings         RuleMatching[]
+
+  @@index([isActive])
+  @@map("rules")
+}
+
+model RuleCondition {
+  id           Int    @id @default(autoincrement())
+  ruleId       Int    @map("rule_id")
+  conditionSet String @map("condition_set") // "A" or "B" - which set of races this applies to
+  field        String // "discipline", "boatClass", "gender", "distance", "ageGroups"
+  operator     String // "equals", "contains", "not_equals", "in"
+  value        String // the value to match against
+  
+  // Relationships
+  rule Rule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId])
+  @@index([conditionSet])
+  @@index([field])
+  @@map("rule_conditions")
+}
+
+model RuleMatching {
+  id     Int    @id @default(autoincrement())
+  ruleId Int    @map("rule_id")
+  field  String // field that must have same value in both races
+  
+  // Relationships
+  rule Rule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId])
+  @@index([field])
+  @@map("rule_matchings")
+}
+
+model DismissedRuleViolation {
+  id            Int      @id @default(autoincrement())
+  scheduleId    Int      @map("schedule_id")
+  violationHash String   @map("violation_hash") // Unique identifier: ruleId-race1Id-race1StartTime-race2Id-race2StartTime
+  dismissedAt   DateTime @default(now()) @map("dismissed_at")
+  
+  // Relationships
+  schedule Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@unique([scheduleId, violationHash])
+  @@index([scheduleId])
+  @@index([violationHash])
+  @@map("dismissed_rule_violations")
+}
+
+// PDF Processing & Competitor-Aware Models
+model PDFExtraction {
+  id               Int       @id @default(autoincrement())
+  filename         String
+  fileHash         String?   @unique @map("file_hash") // SHA-256 hash for deduplication
+  totalRaces       Int       @default(0) @map("total_races")
+  totalCompetitors Int       @default(0) @map("total_competitors")
+  totalEntries     Int       @default(0) @map("total_entries")
+  extractionStatus String    @default("completed") @map("extraction_status") // "processing", "completed", "error"
+  status           String    @default("session") // "session", "linked", "archived" - lifecycle management
+  linkedAt         DateTime? @map("linked_at") // When data was promoted from session to linked
+  expiresAt        DateTime? @map("expires_at") // When session data expires (null for linked data)
+  createdAt        DateTime  @default(now()) @map("created_at")
+  
+  // Relationships
+  competitorEntries          CompetitorEntry[]
+  raceCompetitorAssociations RaceCompetitorAssociation[]
+  schedules                  Schedule[] // Schedules using this PDF data
+  
+  @@index([extractionStatus])
+  @@index([createdAt])
+  @@index([fileHash])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("pdf_extractions")
+}
+
+model CompetitorEntry {
+  id               Int      @id @default(autoincrement())
+  pdfExtractionId  Int      @map("pdf_extraction_id")
+  competitorId     String   @map("competitor_id") // Unique identifier from PDF
+  competitorName   String   @map("competitor_name")
+  organization     String? // Club/organization
+  birthYear        Int?     @map("birth_year")
+  createdAt        DateTime @default(now()) @map("created_at")
+  
+  // Relationships
+  pdfExtraction              PDFExtraction               @relation(fields: [pdfExtractionId], references: [id], onDelete: Cascade)
+  raceCompetitorAssociations RaceCompetitorAssociation[]
+  
+  @@unique([pdfExtractionId, competitorId])
+  @@index([pdfExtractionId])
+  @@index([competitorId])
+  @@index([competitorName])
+  @@map("competitor_entries")
+}
+
+model RaceCompetitorAssociation {
+  id               Int      @id @default(autoincrement())
+  pdfExtractionId  Int      @map("pdf_extraction_id")
+  raceId           Int      @map("race_id") // Database race ID (matched)
+  competitorId     String   @map("competitor_id") // From PDF
+  pdfRaceName      String   @map("pdf_race_name") // Original race name from PDF
+  matchConfidence  Float    @default(1.0) @map("match_confidence") // 0.0 to 1.0 confidence score
+  createdAt        DateTime @default(now()) @map("created_at")
+  
+  // Relationships
+  pdfExtraction     PDFExtraction   @relation(fields: [pdfExtractionId], references: [id], onDelete: Cascade)
+  race              Race            @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  competitorEntry   CompetitorEntry @relation(fields: [pdfExtractionId, competitorId], references: [pdfExtractionId, competitorId], onDelete: Cascade)
+  
+  @@unique([pdfExtractionId, raceId, competitorId])
+  @@index([pdfExtractionId])
+  @@index([raceId])
+  @@index([competitorId])
+  @@index([matchConfidence])
+  @@map("race_competitor_associations")
+}

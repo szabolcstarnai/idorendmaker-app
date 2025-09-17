@@ -8,19 +8,35 @@ import org.springframework.stereotype.Service;
 
 @Service
 public interface RaceService {
-  List<RaceWithAgeGroupsDto> getAllRaces();
-  
-  List<RaceWithAgeGroupsDto> searchRaces(String paramString);
-  
-  boolean updateRaceHidden(Integer paramInteger, boolean paramBoolean);
-  
-  List<AgeGroupDto> getAllAgeGroups();
-  
-  DatabaseStatsDto getStats();
+
+	/**
+	 * Get all races with their age groups, ordered by occurrence and name
+	 * Equivalent to TypeScript: getAllRaces(): Promise<RaceWithAgeGroups[]>
+	 */
+	List<RaceWithAgeGroupsDto> getAllRaces();
+
+	/**
+	 * Search races by term across multiple fields including age groups
+	 * Equivalent to TypeScript: searchRaces(searchTerm: string): Promise<RaceWithAgeGroups[]>
+	 */
+	List<RaceWithAgeGroupsDto> searchRaces(String searchTerm);
+
+	/**
+	 * Update race visibility (hidden status)
+	 * Equivalent to TypeScript: updateRaceHidden(raceId: number, hidden: boolean): Promise<boolean>
+	 */
+	boolean updateRaceHidden(Integer raceId, boolean hidden);
+
+	/**
+	 * Get all age groups ordered by name
+	 * Equivalent to TypeScript: getAllAgeGroups(): Promise<{id: number, name: string, createdAt: Date}[]>
+	 */
+	List<AgeGroupDto> getAllAgeGroups();
+
+	/**
+	 * Get statistics about the database
+	 * Equivalent to TypeScript: getStats(): Promise<{races: number, ageGroups: number, schedules: number}>
+	 */
+	DatabaseStatsDto getStats();
+
 }
-
-
-/* Location:              C:\Users\Szabolcs\Documents\PROJECTS\idorendmaker-app\idorendmaker-backend\target\idorendmaker-backend-1.0.0.jar!\BOOT-INF\classes\hu\szabolcst\idorendmaker\service\RaceService.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

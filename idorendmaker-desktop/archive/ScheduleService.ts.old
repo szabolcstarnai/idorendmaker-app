@@ -1,0 +1,476 @@
+import { prisma } from '../src/data/services/prisma'
+import { 
+  Schedule, 
+  ScheduleSection, 
+  ScheduleItem,
+  ScheduleWithSections,
+  ScheduleItemWithRace, 
+  ScheduleItemWithRaceAndSection,
+  CreateScheduleSectionData,
+  RaceWithAgeGroups
+} from '../shared/types/race'
+
+export class ScheduleService {
+  
+  // Calculate display start time for a race based on section start and previous intervals  
+  static calculateStartTime(
+    sectionStartTime: string,
+    itemOrderIndex: number,
+    allItemsInSection: ScheduleItem[]
+  ): string {
+    const [hours, minutes] = sectionStartTime.split(':').map(Number)
+    let totalMinutes = hours * 60 + minutes
+
+    // Add up all intervals from races before this one
+    for (let i = 0; i < itemOrderIndex; i++) {
+      if (allItemsInSection[i]) {
+        totalMinutes += allItemsInSection[i].intervalMinutes
+      }
+    }
+
+    const finalHours = Math.floor(totalMinutes / 60)
+    const finalMinutes = totalMinutes % 60
+    
+    return `${finalHours.toString().padStart(2, '0')}:${finalMinutes.toString().padStart(2, '0')}`
+  }
+
+  // Convert schedule items to include calculated start times
+  static enrichWithCalculatedTimes(
+    items: ScheduleItem[],
+    sectionStartTime: string
+  ): ScheduleItemWithRace[] {
+    const sortedItems = [...items].sort((a, b) => a.orderIndex - b.orderIndex)
+    
+    return sortedItems.map(item => ({
+      ...item,
+      race: {} as RaceWithAgeGroups, // Will be filled by caller
+      level: {} as any, // Will be filled by caller
+      calculatedStartTime: this.calculateStartTime(sectionStartTime, item.orderIndex, sortedItems)
+    }))
+  }
+
+  /**
+   * Get all schedules ordered by creation date
+   */
+  static async getAllSchedules(): Promise<Schedule[]> {
+    return await prisma.schedule.findMany({
+      orderBy: { createdAt: 'desc' }
+    })
+  }
+
+  /**
+   * Create a new schedule
+   */
+  static async createSchedule(name: string): Promise<number> {
+    const schedule = await prisma.schedule.create({
+      data: { name }
+    })
+    return schedule.id
+  }
+
+  /**
+   * Get schedule items for a specific schedule (legacy method - kept for compatibility)
+   */
+  static async getScheduleItems(scheduleId: number): Promise<ScheduleItemWithRace[]> {
+    const items = await prisma.scheduleItem.findMany({
+      where: { scheduleId },
+      include: {
+        race: {
+          include: {
+            ageGroups: {
+              include: {
+                ageGroup: true
+              }
+            }
+          }
+        },
+        level: true
+      },
+      orderBy: { orderIndex: 'asc' }
+    })
+
+    // Return items with ageGroups directly
+    return items.map(item => ({
+      ...item,
+      race: {
+        ...item.race,
+        ageGroups: item.race.ageGroups.map(rag => rag.ageGroup)
+      },
+      level: item.level
+    }))
+  }
+
+  /**
+   * Create a schedule item
+   */
+  static async createScheduleItem(
+    scheduleId: number,
+    sectionId: number,
+    raceId: number,
+    levelId: number,
+    orderIndex: number, 
+    intervalMinutes: number = 15,
+    notes?: string
+  ): Promise<number> {
+    const scheduleItem = await prisma.scheduleItem.create({
+      data: {
+        scheduleId,
+        sectionId,
+        raceId,
+        levelId,
+        orderIndex,
+        intervalMinutes,
+        notes
+      }
+    })
+    return scheduleItem.id
+  }
+
+  /**
+   * Save schedule with sections and items (transaction)
+   * Enhanced to support PDF data linking for competitor-aware features
+   */
+  static async saveScheduleWithSections(
+    name: string,
+    sectionsData: Array<{
+      dayNumber: number,           // Use camelCase
+      sectionType: 'délelőtt' | 'délután',  // Use camelCase  
+      startTime: string,           // Use camelCase
+      items: Array<{
+        raceId: number,
+        levelId: number,
+        orderIndex: number,
+        intervalMinutes: number,
+        notes?: string
+      }>
+    }>,
+    pdfExtractionId?: number  // Optional PDF data to link
+  ): Promise<number> {
+    return await prisma.$transaction(async (tx) => {
+      // Create the schedule with optional PDF link
+      const schedule = await tx.schedule.create({
+        data: { 
+          name,
+          pdfExtractionId // Will be null if not provided
+        }
+      })
+      
+      // If PDF data is linked, promote it from session to linked status
+      if (pdfExtractionId) {
+        await tx.pDFExtraction.update({
+          where: { id: pdfExtractionId },
+          data: {
+            status: 'linked',
+            linkedAt: new Date(),
+            expiresAt: null // Linked data doesn't expire
+          }
+        })
+        console.log(`PDF extraction ${pdfExtractionId} linked to schedule ${schedule.id}`)
+      }
+      
+      // Create all sections with their items
+      for (const sectionData of sectionsData) {
+        const section = await tx.scheduleSection.create({
+          data: {
+            scheduleId: schedule.id,
+            dayNumber: sectionData.dayNumber,      // Use camelCase
+            sectionType: sectionData.sectionType,  // Use camelCase
+            startTime: sectionData.startTime       // Use camelCase
+          }
+        })
+        
+        // Create all items for this section
+        for (const item of sectionData.items) {
+          await tx.scheduleItem.create({
+            data: {
+              scheduleId: schedule.id,
+              sectionId: section.id,
+              raceId: item.raceId,
+              levelId: item.levelId,
+              orderIndex: item.orderIndex,
+              intervalMinutes: item.intervalMinutes,
+              notes: item.notes
+            }
+          })
+        }
+      }
+      
+      return schedule.id
+    })
+  }
+
+  /**
+   * Update existing schedule with sections and items (transaction)
+   * Enhanced to support PDF data linking for competitor-aware features
+   */
+  static async updateScheduleWithSections(
+    scheduleId: number,
+    name: string,
+    sectionsData: Array<{
+      dayNumber: number,           // Use camelCase
+      sectionType: 'délelőtt' | 'délután',  // Use camelCase  
+      startTime: string,           // Use camelCase
+      items: Array<{
+        raceId: number,
+        levelId: number,
+        orderIndex: number,
+        intervalMinutes: number,
+        notes?: string
+      }>
+    }>,
+    pdfExtractionId?: number  // Optional PDF data to link
+  ): Promise<number> {
+    return await prisma.$transaction(async (tx) => {
+      // Update the schedule with new name and optional PDF link
+      await tx.schedule.update({
+        where: { id: scheduleId },
+        data: { 
+          name,
+          pdfExtractionId, // Will be null if not provided
+          updatedAt: new Date()
+        }
+      })
+      
+      // If PDF data is linked, promote it from session to linked status
+      if (pdfExtractionId) {
+        await tx.pDFExtraction.update({
+          where: { id: pdfExtractionId },
+          data: {
+            status: 'linked',
+            linkedAt: new Date(),
+            expiresAt: null // Linked data doesn't expire
+          }
+        })
+        console.log(`PDF extraction ${pdfExtractionId} linked to schedule ${scheduleId}`)
+      }
+      
+      // Delete existing sections and their items (cascade delete handles items)
+      await tx.scheduleSection.deleteMany({
+        where: { scheduleId }
+      })
+      
+      // Create all sections with their items (same logic as create)
+      for (const sectionData of sectionsData) {
+        const section = await tx.scheduleSection.create({
+          data: {
+            scheduleId: scheduleId,
+            dayNumber: sectionData.dayNumber,      // Use camelCase
+            sectionType: sectionData.sectionType,  // Use camelCase
+            startTime: sectionData.startTime       // Use camelCase
+          }
+        })
+        
+        // Create all items for this section
+        for (const item of sectionData.items) {
+          await tx.scheduleItem.create({
+            data: {
+              scheduleId: scheduleId,
+              sectionId: section.id,
+              raceId: item.raceId,
+              levelId: item.levelId,
+              orderIndex: item.orderIndex,
+              intervalMinutes: item.intervalMinutes,
+              notes: item.notes
+            }
+          })
+        }
+      }
+      
+      return scheduleId
+    })
+  }
+
+  /**
+   * Create a schedule section
+   */
+  static async createScheduleSection(data: CreateScheduleSectionData): Promise<number> {
+    const section = await prisma.scheduleSection.create({
+      data: {
+        scheduleId: data.scheduleId,
+        dayNumber: data.dayNumber,
+        sectionType: data.sectionType,
+        startTime: data.startTime
+      }
+    })
+    return section.id
+  }
+
+  /**
+   * Get all sections for a schedule
+   */
+  static async getScheduleSections(scheduleId: number): Promise<ScheduleSection[]> {
+    return await prisma.scheduleSection.findMany({
+      where: { scheduleId },
+      orderBy: [
+        { dayNumber: 'asc' },
+        { sectionType: 'asc' }
+      ]
+    })
+  }
+
+  /**
+   * Get schedule items by section with calculated start times
+   */
+  static async getScheduleItemsBySection(sectionId: number): Promise<ScheduleItemWithRaceAndSection[]> {
+    const items = await prisma.scheduleItem.findMany({
+      where: { sectionId },
+      include: {
+        race: {
+          include: {
+            ageGroups: {
+              include: {
+                ageGroup: true
+              }
+            }
+          }
+        },
+        level: true,
+        section: true
+      },
+      orderBy: { orderIndex: 'asc' }
+    })
+
+    // Much simpler - use items directly for calculation
+    return items.map(item => ({
+      ...item,
+      calculatedStartTime: this.calculateStartTime(
+        item.section.startTime, 
+        item.orderIndex, 
+        items  // Use items directly
+      ),
+      race: {
+        ...item.race,
+        ageGroups: item.race.ageGroups.map(rag => rag.ageGroup)
+      },
+      level: item.level,
+      section: item.section
+    }))
+  }
+
+  /**
+   * Get schedule with all its sections, schedule items, and PDF data if linked
+   */
+  static async getScheduleWithSections(scheduleId: number): Promise<ScheduleWithSections | null> {
+    const schedule = await prisma.schedule.findUnique({
+      where: { id: scheduleId },
+      include: {
+        sections: {
+          include: {
+            scheduleItems: {
+              include: {
+                race: {
+                  include: {
+                    ageGroups: {
+                      include: {
+                        ageGroup: true
+                      }
+                    }
+                  }
+                },
+                level: true
+              },
+              orderBy: { orderIndex: 'asc' }
+            }
+          },
+          orderBy: [
+            { dayNumber: 'asc' },
+            { sectionType: 'asc' }
+          ]
+        },
+        pdfExtraction: true // Include PDF data if linked
+      }
+    })
+
+    // Transform the nested scheduleItems to include ageGroups directly and calculated start times
+    if (schedule) {
+      schedule.sections.forEach(section => {
+        (section as any).items = (section as any).scheduleItems.map((item: any) => ({
+          ...item,
+          race: {
+            ...item.race,
+            ageGroups: item.race.ageGroups.map((rag: any) => rag.ageGroup)
+          },
+          level: item.level,
+          calculatedStartTime: this.calculateStartTime(
+            section.startTime, 
+            item.orderIndex, 
+            (section as any).scheduleItems
+          )
+        }))
+        // Clean up the original scheduleItems to avoid confusion
+        delete (section as any).scheduleItems;
+      })
+    }
+
+    return schedule
+  }
+
+  /**
+   * Get schedule with PDF context restored for competitor-aware features
+   */
+  static async getScheduleWithPDFContext(scheduleId: number): Promise<{
+    schedule: ScheduleWithSections | null
+    pdfExtractionId?: number
+    hasPDFData: boolean
+  }> {
+    const schedule = await this.getScheduleWithSections(scheduleId)
+    
+    if (!schedule) {
+      return { schedule: null, hasPDFData: false }
+    }
+
+    const hasPDFData = !!(schedule as any).pdfExtraction
+    const pdfExtractionId = (schedule as any).pdfExtraction?.id
+    
+    // Log restoration of PDF context
+    if (hasPDFData) {
+      console.log(`Schedule ${scheduleId} has linked PDF data (extraction ID: ${pdfExtractionId}) - competitor-aware features available`)
+    } else {
+      console.log(`Schedule ${scheduleId} has no PDF data - standard scheduling mode`)
+    }
+    
+    return {
+      schedule,
+      pdfExtractionId,
+      hasPDFData
+    }
+  }
+
+  /**
+   * Get all rules
+   */
+  static async getAllRules() {
+    return await prisma.rule.findMany({
+      where: { isActive: true },
+      orderBy: { name: 'asc' }
+    })
+  }
+
+  /**
+   * Delete a schedule and all its associated data
+   */
+  static async deleteSchedule(scheduleId: number): Promise<void> {
+    await prisma.$transaction(async (tx) => {
+      // Delete schedule items (cascade will handle this through sections, but explicit is better)
+      await tx.scheduleItem.deleteMany({
+        where: {
+          section: {
+            scheduleId: scheduleId
+          }
+        }
+      })
+
+      // Delete schedule sections
+      await tx.scheduleSection.deleteMany({
+        where: { scheduleId: scheduleId }
+      })
+
+      // Delete the schedule itself
+      await tx.schedule.delete({
+        where: { id: scheduleId }
+      })
+
+      console.log(`Schedule ${scheduleId} and all associated data deleted successfully`)
+    })
+  }
+}

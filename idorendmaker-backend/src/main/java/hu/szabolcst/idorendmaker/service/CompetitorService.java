@@ -8,22 +8,50 @@ import hu.szabolcst.idorendmaker.model.dto.competitor.ScheduleRaceDto;
 import java.util.List;
 import org.springframework.stereotype.Service;
 
+/**
+ * Service interface for Competitor operations
+ * Provides all functionality matching the TypeScript CompetitorService
+ */
 @Service
 public interface CompetitorService {
 
-    List<CompetitorScheduleDto> analyzeCompetitorSchedules(List<ScheduleRaceDto> paramList, Integer paramInteger);
+    /**
+     * Analyze competitor schedules from a set of schedule races
+     * Equivalent to TypeScript: analyzeCompetitorSchedules(scheduleRaces: ScheduleRace[], pdfExtractionId?: number): Promise<CompetitorSchedule[]>
+     * Equivalent to IPC: 'competitor:analyzeSchedules'
+     * 
+     * Implements sophisticated "worst case scenario" logic for multiple heats:
+     * - Groups races by (race.id, level.levelType) to identify multiple heats
+     * - For each group with multiple heats, assumes competitor is in the heat that creates worst scheduling conflict
+     * - Ensures conservative safety margins while eliminating false positives
+     */
+    List<CompetitorScheduleDto> analyzeCompetitorSchedules(List<ScheduleRaceDto> scheduleRaces, Integer pdfExtractionId);
 
-    CompetitorConflictResultDto checkCompetitorConflicts(Integer paramInteger1, Integer paramInteger2, Integer paramInteger3);
+    /**
+     * Check for competitor conflicts between two specific races
+     * Equivalent to TypeScript: checkCompetitorConflicts(race1Id: number, race2Id: number, pdfExtractionId?: number)
+     * Equivalent to IPC: 'competitor:checkConflicts'
+     */
+    CompetitorConflictResultDto checkCompetitorConflicts(Integer race1Id, Integer race2Id, Integer pdfExtractionId);
 
-    RaceCompetitorSummaryDto getRaceCompetitorSummary(Integer paramInteger1, Integer paramInteger2);
+    /**
+     * Get competitor summary for a race
+     * Equivalent to TypeScript: getRaceCompetitorSummary(raceId: number, pdfExtractionId?: number)
+     * Equivalent to IPC: 'competitor:getRaceSummary'
+     */
+    RaceCompetitorSummaryDto getRaceCompetitorSummary(Integer raceId, Integer pdfExtractionId);
 
-    List<CompetitorScheduleDto> getHighRiskCompetitors(Integer paramInteger);
+    /**
+     * Get competitors at high risk (tight schedules)
+     * Equivalent to TypeScript: getHighRiskCompetitors(pdfExtractionId: number): Promise<CompetitorSchedule[]>
+     * Equivalent to IPC: 'competitor:getHighRiskCompetitors'
+     */
+    List<CompetitorScheduleDto> getHighRiskCompetitors(Integer pdfExtractionId);
 
-    CompetitorStatsDto getCompetitorStats(Integer paramInteger);
+    /**
+     * Get competitor entry statistics for a PDF extraction
+     * Equivalent to TypeScript: getCompetitorStats(pdfExtractionId: number)
+     * Equivalent to IPC: 'competitor:getStats'
+     */
+    CompetitorStatsDto getCompetitorStats(Integer pdfExtractionId);
 }
-
-
-/* Location:              C:\Users\Szabolcs\Documents\PROJECTS\idorendmaker-app\idorendmaker-backend\target\idorendmaker-backend-1.0.0.jar!\BOOT-INF\classes\hu\szabolcst\idorendmaker\service\CompetitorService.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

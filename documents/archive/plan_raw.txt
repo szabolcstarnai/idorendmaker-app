@@ -1,0 +1,26 @@
+Kell egy applikáció (egyszerű telepítés indítás, minimális követelmények, lehetőleg egy csomagban, (ne kelljen külön backend, DB és frontendet elindítani, mezei user, asztali app: egyszerű Electron app?), amely egy DBvel tud komminukálni (lightweight, nem lehet docker, nem telepíthető RDBMS: sqlite?) és egy egyszerű de letisztult szép felülettel rendelkezik (shadcn/ui React?).
+
+Az applikáció egy Kajak-Kenu verseny előkészítésében segítő rendszer:
+
+Egy verseny előkészítésekor időrendet kell készíteni a tervezett versenyszámokból. Ehhez lenne segítség ez az app.  A DBben vannak a versenyszámok, ezek közül lehet összerakni egy időrendet.
+
+Elképzelés: 
+Oldalt egy kereshető/szűrhető lista a versenyszámokkal, main részen pedig a készülő lista/táblázat=időrend. Az első versenyszám hozzáadásakor meg kell adni a kezdés időpontját (óra:perc). Ezután egy beállított időközt. A következő verenyzám hozzáadása a megadott időközzeltörténik a tálázatban a hozzáadott időközzel növelt időpontra kerül a versenyszám.
+
+---
+
+A versenyszámokat jelenleg egy excelben tárolom ilyen adatokkal:
+
+```
+Versenyszám neve	Versenyszám szakág	Hajóosztály	Versenyszám nem	Versenyszám évfolyamok	Versenyszám táv
+
+K1 Férfi Serdülő U15-U16 500 m	Kajak	Kajak egyes	Férfi	Serdülő - U15; Serdülő - U16	500 m
+K1 Férfi Serdülő U15. 500m	Kajak	Kajak egyes	Férfi	Serdülő - U15	500 m
+K2 Férfi Serdülő U15. 500m	Kajak	Kajak páros	Férfi	Serdülő - U15	500 m
+```
+
+Azért fontos ezen adatok eltárolása mert az időrendet leginkább azért nehéz létrehozni, mert oda kell figyelni, hogy egy versenyző több  versenyszámban is indulhat, amit bizonyos keretek között biztosítani kell. 
+
+Kell egy lehetőség a felhasználónak, hogy nagyon egyszerűen létrehozzon olyan szabályokat, mint pl: "<Kajak egyes> és <Kajak páros> `Hajóosztály`-ok között teljen el <60 perc>, amennyiben a `Versenyszám nem` és `Versenyszám évfolyam` megegyezik.", vagy "<500 m> és <1000 m> `Versenyszám táv`-ok között teljen el <60 perc>, amennyiben a `Versenyszám nem` és `Versenyszám évfolyam` és `Hajóosztály` megegyezik".
+
+Ezen szabályokat az időrend létrehozása közben az app ellenőrzi, és figyelmeztetéseket fogalmaz meg, amennyiben kell.

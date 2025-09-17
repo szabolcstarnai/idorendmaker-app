@@ -6,7 +6,15 @@ import java.util.Optional;
 
 public interface ScheduleRepository {
 
+    Optional<Schedule> findById(Integer id);
+
+    void deleteById(Integer id);
+
     List<Schedule> findAllByOrderByCreatedAtDesc();
 
     Optional<Schedule> findByIdWithSections(Integer paramInteger);
+
+    Schedule save(Schedule entity);
+
+    long count();
 }

@@ -8,4 +8,6 @@ public interface RuleMatchingRepository {
     List<RuleMatching> findByRuleIdOrderByFieldAsc(Integer paramInteger);
 
     void deleteByRuleId(Integer paramInteger);
+
+    List<RuleMatching> saveAll(Iterable<RuleMatching> entities);
 }

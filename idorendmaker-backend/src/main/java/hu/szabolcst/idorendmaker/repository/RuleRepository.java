@@ -21,4 +21,22 @@ public interface RuleRepository {
     long countByIsActiveTrue();
 
     List<Rule> searchWithConditions(String paramString);
+
+    List<Rule> findAllWithConditionsAndMatchings();
+
+    List<Rule> findActiveWithConditionsAndMatchings();
+
+    Optional<Rule> findByIdWithConditionsAndMatchings(Integer id);
+
+    List<Rule> searchWithConditionsAndMatchings(String searchTerm);
+
+    List<Rule> saveAll(Iterable<Rule> entities);
+
+    Rule save(Rule entity);
+
+    Optional<Rule> findById(Integer id);
+
+    void deleteById(Integer id);
+
+    long count();
 }

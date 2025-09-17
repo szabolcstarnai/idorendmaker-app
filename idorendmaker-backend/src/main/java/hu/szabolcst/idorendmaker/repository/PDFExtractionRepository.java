@@ -7,6 +7,10 @@ import java.util.Optional;
 
 public interface PDFExtractionRepository {
 
+    Optional<PDFExtraction> findById(Integer id);
+
+    PDFExtraction save(PDFExtraction entity);
+
     Optional<PDFExtraction> findByFileHash(String paramString);
 
     List<PDFExtraction> findAllWithSchedulesOrderByCreatedAtDesc();
@@ -20,4 +24,8 @@ public interface PDFExtractionRepository {
     List<PDFExtraction> findByStatusOrderByCreatedAtDesc(String paramString);
 
     List<PDFExtraction> findDeletableExtractions();
+
+    void delete(PDFExtraction entity);
+
+    void deleteAll(Iterable<? extends PDFExtraction> entities);
 }

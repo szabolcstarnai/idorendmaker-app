@@ -1,0 +1,708 @@
+import { prisma } from '../src/data/services/prisma'
+import { PDFProcessingResult, ExtractedRace, ExtractedCompetitor, RaceWithCompetitorData } from '../shared/types/race'
+import * as crypto from 'crypto'
+import * as fs from 'fs'
+
+interface ProcessedVersenyszam {
+  nev: string
+  hajoosztaly?: string
+  nem?: string
+  korosztaly?: string
+  tav?: string
+  nevezettek?: Array<{
+    id: string
+    nev: string
+    tagszervezet?: string
+    szuletesiEv?: number
+  }>
+  [key: string]: any
+}
+
+// Extend the PDFProcessingResult interface to include deduplication info
+declare module '../../../../shared/types/race' {
+  interface PDFProcessingResult {
+    wasDeduplication?: boolean
+  }
+}
+
+export class RaceMatchingService {
+  /**
+   * Process PDF extraction result and store competitor data with race matching
+   * Includes deduplication based on file hash
+   */
+  static async processPDFAndMatch(
+    filename: string, 
+    pdfData: ProcessedVersenyszam[],
+    filePath?: string,
+    onProgress?: (progress: { totalRaces: number; processedRaces: number; currentRaceName: string; status: string }) => void
+  ): Promise<PDFProcessingResult> {
+    try {
+      console.log(`Processing PDF: ${filename} with ${pdfData.length} races`)
+      
+      // Emit initial progress
+      onProgress?.({
+        totalRaces: pdfData.length,
+        processedRaces: 0,
+        currentRaceName: '',
+        status: `${pdfData.length} versenyszám feldolgozása...`
+      });
+
+      // Calculate file hash for deduplication (if file path provided)
+      let fileHash: string | null = null
+      if (filePath && fs.existsSync(filePath)) {
+        fileHash = await this.calculateFileHash(filePath)
+        console.log(`Calculated file hash: ${fileHash}`)
+        
+        // Check for existing extraction with same hash
+        const existingExtraction = await prisma.pDFExtraction.findUnique({
+          where: { fileHash },
+          include: {
+            _count: {
+              select: {
+                competitorEntries: true,
+                raceCompetitorAssociations: true
+              }
+            }
+          }
+        })
+
+        if (existingExtraction) {
+          console.log(`Found existing extraction for hash ${fileHash}, reusing data`)
+          
+          // Update existing extraction to reset session expiry
+          const updatedExtraction = await prisma.pDFExtraction.update({
+            where: { id: existingExtraction.id },
+            data: {
+              status: 'session', // Reset to session status
+              expiresAt: this.calculateSessionExpiry(), // Extend expiry
+              extractionStatus: 'completed'
+            }
+          })
+
+          // Transform existing data back to our result format
+          const extractedRaces = await this.loadExistingExtractionData(existingExtraction.id)
+          
+          return {
+            success: true,
+            pdfExtractionId: existingExtraction.id,
+            extractedRaces,
+            totalCompetitors: existingExtraction.totalCompetitors,
+            totalEntries: existingExtraction.totalEntries,
+            wasDeduplication: true
+          }
+        }
+      }
+
+      // Transform PDF data to our internal format
+      const extractedRaces = await this.transformPDFData(pdfData)
+      
+      // Create new PDF extraction record
+      const pdfExtraction = await prisma.pDFExtraction.create({
+        data: {
+          filename,
+          fileHash,
+          totalRaces: extractedRaces.length,
+          totalCompetitors: this.countUniqueCompetitors(extractedRaces),
+          totalEntries: this.countTotalEntries(extractedRaces),
+          extractionStatus: 'processing',
+          status: 'session',
+          expiresAt: this.calculateSessionExpiry()
+        }
+      })
+
+      console.log(`Created PDF extraction record with ID: ${pdfExtraction.id}`)
+
+      // Store competitor entries
+      await this.storeCompetitorEntries(pdfExtraction.id, extractedRaces)
+
+      // Match races to database and store associations
+      await this.matchAndStoreRaces(pdfExtraction.id, extractedRaces, onProgress)
+
+      // Update extraction status to completed
+      await prisma.pDFExtraction.update({
+        where: { id: pdfExtraction.id },
+        data: { extractionStatus: 'completed' }
+      })
+
+      console.log(`PDF processing completed successfully`)
+
+      return {
+        success: true,
+        pdfExtractionId: pdfExtraction.id,
+        extractedRaces,
+        totalCompetitors: pdfExtraction.totalCompetitors,
+        totalEntries: pdfExtraction.totalEntries,
+        wasDeduplication: false
+      }
+    } catch (error) {
+      console.error('Error processing PDF and matching races:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        extractedRaces: [],
+        totalCompetitors: 0,
+        totalEntries: 0,
+        wasDeduplication: false
+      }
+    }
+  }
+
+  /**
+   * Transform PDF data from Spring Boot format to our internal format
+   */
+  private static async transformPDFData(pdfData: ProcessedVersenyszam[]): Promise<ExtractedRace[]> {
+    return pdfData.map(race => {
+      const competitors: ExtractedCompetitor[] = (race.nevezettek || []).map(competitor => ({
+        id: competitor.id || `${competitor.nev}_${race.nev}`,
+        name: competitor.nev,
+        organization: competitor.tagszervezet || null,
+        birthYear: competitor.szuletesiEv || null,
+        raceEntries: [race.nev] // Will be updated when processing multiple races
+      }))
+
+      return {
+        id: race.nev, // Use race name as initial ID
+        name: race.nev,
+        competitors,
+        matchConfidence: 0 // Will be calculated during matching
+      }
+    })
+  }
+
+  /**
+   * Count unique competitors across all races
+   */
+  private static countUniqueCompetitors(extractedRaces: ExtractedRace[]): number {
+    const uniqueCompetitors = new Set<string>()
+    extractedRaces.forEach(race => {
+      race.competitors.forEach(competitor => {
+        uniqueCompetitors.add(competitor.id)
+      })
+    })
+    return uniqueCompetitors.size
+  }
+
+  /**
+   * Count total individual entries (competitor-race combinations)
+   */
+  private static countTotalEntries(extractedRaces: ExtractedRace[]): number {
+    return extractedRaces.reduce((total, race) => total + race.competitors.length, 0)
+  }
+
+  /**
+   * Store competitor entries in database
+   */
+  private static async storeCompetitorEntries(
+    pdfExtractionId: number, 
+    extractedRaces: ExtractedRace[]
+  ): Promise<void> {
+    const uniqueCompetitors = new Map<string, ExtractedCompetitor>()
+
+    // Collect unique competitors and their race entries
+    extractedRaces.forEach(race => {
+      race.competitors.forEach(competitor => {
+        if (uniqueCompetitors.has(competitor.id)) {
+          // Add this race to existing competitor's entries
+          const existing = uniqueCompetitors.get(competitor.id)!
+          existing.raceEntries.push(race.name)
+        } else {
+          // New competitor
+          uniqueCompetitors.set(competitor.id, {
+            ...competitor,
+            raceEntries: [race.name]
+          })
+        }
+      })
+    })
+
+    // Store competitors in database
+    for (const [competitorId, competitor] of uniqueCompetitors.entries()) {
+      await prisma.competitorEntry.create({
+        data: {
+          pdfExtractionId,
+          competitorId,
+          competitorName: competitor.name,
+          organization: competitor.organization,
+          birthYear: competitor.birthYear
+        }
+      })
+    }
+
+    console.log(`Stored ${uniqueCompetitors.size} unique competitors`)
+  }
+
+  /**
+   * Match extracted races to database races and store associations
+   */
+  private static async matchAndStoreRaces(
+    pdfExtractionId: number,
+    extractedRaces: ExtractedRace[],
+    onProgress?: (progress: { totalRaces: number; processedRaces: number; currentRaceName: string; status: string }) => void
+  ): Promise<void> {
+    // Get all database races for matching
+    const dbRaces = await prisma.race.findMany({
+      select: { id: true, name: true }
+    })
+
+    console.log(`Matching ${extractedRaces.length} extracted races against ${dbRaces.length} database races`)
+
+    let processedRaces = 0;
+    for (const extractedRace of extractedRaces) {
+      // Find exact name match first (simple matching for now)
+      const exactMatch = dbRaces.find(dbRace => 
+        this.normalizeRaceName(dbRace.name) === this.normalizeRaceName(extractedRace.name)
+      )
+
+      if (exactMatch) {
+        console.log(`Exact match found: "${extractedRace.name}" → "${exactMatch.name}"`)
+        
+        // Store race-competitor associations for this match
+        for (const competitor of extractedRace.competitors) {
+          await prisma.raceCompetitorAssociation.create({
+            data: {
+              pdfExtractionId,
+              raceId: exactMatch.id,
+              competitorId: competitor.id,
+              pdfRaceName: extractedRace.name,
+              matchConfidence: 1.0 // Exact match
+            }
+          })
+        }
+
+        extractedRace.matchedDatabaseRaceId = exactMatch.id
+        extractedRace.matchConfidence = 1.0
+      } else {
+        console.log(`No match found for race: "${extractedRace.name}"`)
+        // TODO: Implement fuzzy matching here
+        extractedRace.matchConfidence = 0.0
+      }
+      
+      // Emit progress after each race is processed
+      processedRaces++;
+      onProgress?.({
+        totalRaces: extractedRaces.length,
+        processedRaces,
+        currentRaceName: extractedRace.name,
+        status: `Feldolgozva: ${processedRaces}/${extractedRaces.length}`
+      });
+    }
+  }
+
+  /**
+   * Normalize race names for comparison
+   */
+  private static normalizeRaceName(name: string): string {
+    return name
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .replace(/[^\w\s]/g, '') // Remove special characters
+  }
+
+  /**
+   * Get filtered races with competitor data for a PDF extraction
+   */
+  static async getFilteredRaces(pdfExtractionId: number): Promise<RaceWithCompetitorData[]> {
+    try {
+      // Get races that have competitor associations from this PDF extraction
+      const raceAssociations = await prisma.raceCompetitorAssociation.findMany({
+        where: { pdfExtractionId },
+        include: {
+          race: {
+            include: {
+              ageGroups: {
+                include: { ageGroup: true }
+              }
+            }
+          },
+          competitorEntry: true
+        }
+      })
+
+      // Group by race ID to aggregate competitor data
+      const raceMap = new Map<number, {
+        race: any
+        competitors: any[]
+      }>()
+
+      raceAssociations.forEach(association => {
+        if (!raceMap.has(association.raceId)) {
+          raceMap.set(association.raceId, {
+            race: association.race,
+            competitors: []
+          })
+        }
+        raceMap.get(association.raceId)!.competitors.push(association.competitorEntry)
+      })
+
+      // Transform to RaceWithCompetitorData format
+      const filteredRaces: RaceWithCompetitorData[] = Array.from(raceMap.values()).map(({ race, competitors }) => {
+        // Transform race to match RaceWithAgeGroups format
+        const raceWithAgeGroups = {
+          ...race,
+          ageGroups: race.ageGroups.map((rag: any) => rag.ageGroup)
+        }
+
+        const competitorIds = competitors.map(c => c.competitorId)
+        const topCompetitors = competitors.slice(0, 3).map(c => c.competitorName)
+
+        return {
+          ...raceWithAgeGroups,
+          entryCount: competitors.length,
+          competitorIds,
+          topCompetitors,
+          pdfExtractionId
+        }
+      })
+
+      // Sort by entry count (highest first)
+      filteredRaces.sort((a, b) => b.entryCount - a.entryCount)
+
+      console.log(`Retrieved ${filteredRaces.length} filtered races for PDF extraction ${pdfExtractionId}`)
+      return filteredRaces
+    } catch (error) {
+      console.error('Error getting filtered races:', error)
+      return []
+    }
+  }
+
+  /**
+   * Get competitor data for analysis and rule checking
+   */
+  static async getCompetitorData(pdfExtractionId: number): Promise<Map<string, any>> {
+    try {
+      const competitors = await prisma.competitorEntry.findMany({
+        where: { pdfExtractionId },
+        include: {
+          raceCompetitorAssociations: {
+            include: {
+              race: true
+            }
+          }
+        }
+      })
+
+      const competitorMap = new Map<string, any>()
+      
+      competitors.forEach(competitor => {
+        competitorMap.set(competitor.competitorId, {
+          id: competitor.competitorId,
+          name: competitor.competitorName,
+          organization: competitor.organization,
+          birthYear: competitor.birthYear,
+          races: competitor.raceCompetitorAssociations.map(assoc => ({
+            raceId: assoc.raceId,
+            raceName: assoc.race.name,
+            pdfRaceName: assoc.pdfRaceName
+          }))
+        })
+      })
+
+      console.log(`Retrieved competitor data for ${competitorMap.size} competitors`)
+      return competitorMap
+    } catch (error) {
+      console.error('Error getting competitor data:', error)
+      return new Map()
+    }
+  }
+
+  /**
+   * Get PDF extraction statistics
+   */
+  static async getPDFExtractionStats(pdfExtractionId: number) {
+    try {
+      const extraction = await prisma.pDFExtraction.findUnique({
+        where: { id: pdfExtractionId },
+        include: {
+          _count: {
+            select: {
+              competitorEntries: true,
+              raceCompetitorAssociations: true
+            }
+          }
+        }
+      })
+
+      if (!extraction) {
+        throw new Error(`PDF extraction ${pdfExtractionId} not found`)
+      }
+
+      // Get count of unique races that have matches (can't use distinct with count)
+      const matchedRacesData = await prisma.raceCompetitorAssociation.findMany({
+        where: { 
+          pdfExtractionId,
+          matchConfidence: { gt: 0 }
+        },
+        select: { raceId: true },
+        distinct: ['raceId']
+      })
+      
+      const matchedRaces = matchedRacesData.length
+
+      return {
+        filename: extraction.filename,
+        totalRaces: extraction.totalRaces,
+        matchedRaces,
+        totalCompetitors: extraction.totalCompetitors,
+        totalEntries: extraction.totalEntries,
+        createdAt: extraction.createdAt
+      }
+    } catch (error) {
+      console.error('Error getting PDF extraction stats:', error)
+      return null
+    }
+  }
+
+  /**
+   * Calculate SHA-256 hash of a file for deduplication
+   */
+  private static async calculateFileHash(filePath: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const hash = crypto.createHash('sha256')
+      const stream = fs.createReadStream(filePath)
+      
+      stream.on('error', reject)
+      stream.on('data', chunk => hash.update(chunk))
+      stream.on('end', () => resolve(hash.digest('hex')))
+    })
+  }
+
+  /**
+   * Calculate session expiry time (24 hours from now by default)
+   */
+  private static calculateSessionExpiry(hoursFromNow: number = 24): Date {
+    const expiry = new Date()
+    expiry.setHours(expiry.getHours() + hoursFromNow)
+    return expiry
+  }
+
+  /**
+   * Load existing extraction data back to our internal format
+   */
+  private static async loadExistingExtractionData(pdfExtractionId: number): Promise<ExtractedRace[]> {
+    try {
+      // Get all race associations for this extraction
+      const associations = await prisma.raceCompetitorAssociation.findMany({
+        where: { pdfExtractionId },
+        include: {
+          race: true,
+          competitorEntry: true
+        }
+      })
+
+      // Group by race to rebuild the extracted races structure
+      const raceMap = new Map<number, {
+        race: any
+        competitors: any[]
+        pdfRaceName: string
+        matchConfidence: number
+      }>()
+
+      associations.forEach(assoc => {
+        if (!raceMap.has(assoc.raceId)) {
+          raceMap.set(assoc.raceId, {
+            race: assoc.race,
+            competitors: [],
+            pdfRaceName: assoc.pdfRaceName,
+            matchConfidence: assoc.matchConfidence
+          })
+        }
+        raceMap.get(assoc.raceId)!.competitors.push({
+          id: assoc.competitorEntry.competitorId,
+          name: assoc.competitorEntry.competitorName,
+          organization: assoc.competitorEntry.organization,
+          birthYear: assoc.competitorEntry.birthYear,
+          raceEntries: [assoc.pdfRaceName] // Simplified for now
+        })
+      })
+
+      // Convert back to ExtractedRace format
+      const extractedRaces: ExtractedRace[] = Array.from(raceMap.values()).map(raceData => ({
+        id: raceData.pdfRaceName,
+        name: raceData.pdfRaceName,
+        competitors: raceData.competitors,
+        matchedDatabaseRaceId: raceData.race.id,
+        matchConfidence: raceData.matchConfidence
+      }))
+
+      console.log(`Loaded ${extractedRaces.length} existing races from extraction ${pdfExtractionId}`)
+      return extractedRaces
+    } catch (error) {
+      console.error('Error loading existing extraction data:', error)
+      return []
+    }
+  }
+
+  /**
+   * Promote PDF extraction from session to linked status
+   */
+  static async linkToSchedule(pdfExtractionId: number): Promise<void> {
+    try {
+      await prisma.pDFExtraction.update({
+        where: { id: pdfExtractionId },
+        data: {
+          status: 'linked',
+          linkedAt: new Date(),
+          expiresAt: null // Linked data doesn't expire
+        }
+      })
+      console.log(`PDF extraction ${pdfExtractionId} promoted to linked status`)
+    } catch (error) {
+      console.error('Error linking PDF extraction to schedule:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Clean up expired session data
+   */
+  static async cleanupExpiredSessions(): Promise<{ deletedExtractions: number; deletedRecords: number }> {
+    try {
+      const now = new Date()
+      
+      // Find expired session extractions
+      const expiredExtractions = await prisma.pDFExtraction.findMany({
+        where: {
+          status: 'session',
+          expiresAt: { lt: now }
+        },
+        select: { id: true }
+      })
+
+      const extractionIds = expiredExtractions.map(e => e.id)
+      
+      if (extractionIds.length === 0) {
+        return { deletedExtractions: 0, deletedRecords: 0 }
+      }
+
+      console.log(`Cleaning up ${extractionIds.length} expired PDF extractions`)
+      
+      // Delete in correct order (due to foreign key constraints)
+      const deletedAssociations = await prisma.raceCompetitorAssociation.deleteMany({
+        where: { pdfExtractionId: { in: extractionIds } }
+      })
+      
+      const deletedCompetitors = await prisma.competitorEntry.deleteMany({
+        where: { pdfExtractionId: { in: extractionIds } }
+      })
+      
+      const deletedExtractions = await prisma.pDFExtraction.deleteMany({
+        where: { id: { in: extractionIds } }
+      })
+
+      const totalDeleted = deletedAssociations.count + deletedCompetitors.count + deletedExtractions.count
+      
+      console.log(`Cleanup completed: ${deletedExtractions.count} extractions, ${totalDeleted} total records deleted`)
+      
+      return { 
+        deletedExtractions: deletedExtractions.count, 
+        deletedRecords: totalDeleted 
+      }
+    } catch (error) {
+      console.error('Error during cleanup:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Get all PDF extractions with metadata for the PDF manager
+   */
+  static async getAllPDFExtractions() {
+    try {
+      const extractions = await prisma.pDFExtraction.findMany({
+        include: {
+          _count: {
+            select: {
+              competitorEntries: true,
+              raceCompetitorAssociations: true,
+              schedules: true
+            }
+          },
+          schedules: {
+            select: {
+              id: true,
+              name: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      })
+
+      // Transform to include computed fields
+      return extractions.map(extraction => ({
+        id: extraction.id,
+        filename: extraction.filename,
+        fileHash: extraction.fileHash,
+        totalRaces: extraction.totalRaces,
+        totalCompetitors: extraction.totalCompetitors,
+        totalEntries: extraction.totalEntries,
+        extractionStatus: extraction.extractionStatus,
+        status: extraction.status,
+        linkedAt: extraction.linkedAt,
+        expiresAt: extraction.expiresAt,
+        createdAt: extraction.createdAt,
+        linkedSchedules: extraction.schedules.map(s => s.name),
+        competitorEntriesCount: extraction._count.competitorEntries,
+        raceAssociationsCount: extraction._count.raceCompetitorAssociations,
+        schedulesUsingCount: extraction._count.schedules,
+        canDelete: extraction.status === 'session' && extraction._count.schedules === 0
+      }))
+    } catch (error) {
+      console.error('Error getting all PDF extractions:', error)
+      return []
+    }
+  }
+
+  /**
+   * Delete a PDF extraction and all associated data
+   * Only allows deletion of session data not linked to any schedules
+   */
+  static async deletePDFExtraction(pdfExtractionId: number) {
+    try {
+      // Check if extraction exists and is safe to delete
+      const extraction = await prisma.pDFExtraction.findUnique({
+        where: { id: pdfExtractionId },
+        include: {
+          _count: {
+            select: {
+              schedules: true
+            }
+          }
+        }
+      })
+
+      if (!extraction) {
+        throw new Error(`PDF extraction ${pdfExtractionId} not found`)
+      }
+
+      if (extraction.status === 'linked' || extraction._count.schedules > 0) {
+        throw new Error(`Cannot delete PDF extraction ${pdfExtractionId}: it is linked to ${extraction._count.schedules} schedule(s)`)
+      }
+
+      // Delete all related data (cascading deletes should handle this, but being explicit)
+      await prisma.competitorEntry.deleteMany({
+        where: { pdfExtractionId }
+      })
+
+      await prisma.raceCompetitorAssociation.deleteMany({
+        where: { pdfExtractionId }
+      })
+
+      // Delete the extraction itself
+      await prisma.pDFExtraction.delete({
+        where: { id: pdfExtractionId }
+      })
+
+      console.log(`Successfully deleted PDF extraction ${pdfExtractionId}`)
+      return { success: true }
+    } catch (error) {
+      console.error('Error deleting PDF extraction:', error)
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      }
+    }
+  }
+}

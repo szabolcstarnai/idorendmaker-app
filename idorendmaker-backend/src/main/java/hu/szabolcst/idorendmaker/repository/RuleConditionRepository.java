@@ -8,4 +8,6 @@ public interface RuleConditionRepository {
     List<RuleCondition> findByRuleIdOrderByConditionSetAsc(Integer paramInteger);
 
     void deleteByRuleId(Integer paramInteger);
+
+    List<RuleCondition> saveAll(Iterable<RuleCondition> entities);
 }

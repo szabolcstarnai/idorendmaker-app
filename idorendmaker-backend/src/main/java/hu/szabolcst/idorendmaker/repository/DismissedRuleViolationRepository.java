@@ -17,4 +17,6 @@ public interface DismissedRuleViolationRepository {
     void deleteByScheduleId(Integer paramInteger);
 
     int deleteByScheduleIdAndViolationHashNotIn(Integer paramInteger, List<String> paramList);
+
+    DismissedRuleViolation save(DismissedRuleViolation entity);
 }

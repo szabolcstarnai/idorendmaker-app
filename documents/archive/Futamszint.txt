@@ -1,0 +1,49 @@
+Futamszint
+----------
+A Döntő
+B Döntő
+C Döntő
+D Döntő
+E Döntő
+F Döntő
+G Döntő
+H Döntő
+I Döntő
+J Döntő
+
+Döntő I.
+Döntő II.
+Döntő III.
+Döntő IV.
+Döntő V.
+Döntő VI.
+Döntő VII.
+Döntő VIII.
+
+I. Előfutam
+II. Előfutam
+III. Előfutam
+IV. Előfutam
+V. Előfutam
+VI. Előfutam
+VII. Előfutam
+VIII. Előfutam
+IX. Előfutam
+X. Előfutam
+XI. Előfutam
+XII. Előfutam
+XIII. Előfutam
+XIV. Előfutam
+XV. Előfutam
+XVI. Előfutam
+
+I. Középfutam
+II. Középfutam
+III. Középfutam
+IV. Középfutam
+IX. Középfutam
+V. Középfutam
+VI. Középfutam
+VII. Középfutam
+VIII. Középfutam
+X. Középfutam

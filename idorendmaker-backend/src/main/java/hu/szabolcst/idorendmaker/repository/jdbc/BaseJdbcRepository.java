@@ -93,10 +93,10 @@ public abstract class BaseJdbcRepository<T, ID> {
         return update(entity);
     }
 
-    public <S extends T> List<S> saveAll(final Iterable<S> entities) {
-        final List<S> result = new ArrayList<>();
-        for (final S entity : entities) {
-            result.add((S) save(entity));
+    public List<T> saveAll(final Iterable<T> entities) {
+        final List<T> result = new ArrayList<>();
+        for (final T entity : entities) {
+            result.add(save(entity));
         }
         return result;
     }

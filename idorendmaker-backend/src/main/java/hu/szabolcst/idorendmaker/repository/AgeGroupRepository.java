@@ -6,4 +6,6 @@ import java.util.List;
 public interface AgeGroupRepository {
 
     List<AgeGroup> findAllByOrderByNameAsc();
+
+    long count();
 }

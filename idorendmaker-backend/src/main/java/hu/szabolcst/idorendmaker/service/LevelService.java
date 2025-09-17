@@ -5,17 +5,32 @@ import java.util.List;
 import java.util.Optional;
 
 public interface LevelService {
-  List<LevelDto> getAllLevels();
-  
-  LevelDto getDefaultLevel();
-  
-  Optional<LevelDto> getLevelById(Integer paramInteger);
-  
-  List<LevelDto> getLevelsByType(String paramString);
+
+	/**
+	 * Get all levels ordered by sort order
+	 * Equivalent to TypeScript: getAllLevels(): Promise<Level[]>
+	 */
+	List<LevelDto> getAllLevels();
+
+	/**
+	 * Get the default level (Döntő I.)
+	 * Equivalent to TypeScript: getDefaultLevel(): Promise<Level>
+	 * Throws exception if default level not found
+	 */
+	LevelDto getDefaultLevel();
+
+	/**
+	 * Get level by ID
+	 * Equivalent to TypeScript: getLevelById(id: number): Promise<Level | null>
+	 * TODO: DEAD CODE - Not exposed via IPC, consider removal
+	 */
+	Optional<LevelDto> getLevelById(Integer id);
+
+	/**
+	 * Get levels by type
+	 * Equivalent to TypeScript: getLevelsByType(levelType: string): Promise<Level[]>
+	 * TODO: DEAD CODE - Not exposed via IPC, consider removal
+	 */
+	List<LevelDto> getLevelsByType(String levelType);
+
 }
-
-
-/* Location:              C:\Users\Szabolcs\Documents\PROJECTS\idorendmaker-app\idorendmaker-backend\target\idorendmaker-backend-1.0.0.jar!\BOOT-INF\classes\hu\szabolcst\idorendmaker\service\LevelService.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

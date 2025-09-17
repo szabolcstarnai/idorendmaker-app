@@ -12,4 +12,8 @@ public interface CompetitorEntryRepository {
     List<String> findDistinctOrganizationsByPdfExtractionId(Integer paramInteger);
 
     List<CompetitorEntry> findAllByPdfExtractionId(Integer paramInteger);
+
+    CompetitorEntry save(CompetitorEntry entity);
+
+    void deleteAll(Iterable<? extends CompetitorEntry> entities);
 }

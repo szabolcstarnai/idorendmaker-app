@@ -8,182 +8,213 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+/**
+ * Service responsible for resolving the correct database file path
+ * based on the current environment (development vs production)
+ */
 @Slf4j
 @Service
 public class DatabasePathResolver {
 
-
     @Value("${app.database.mode:development}")
     private String databaseMode;
-
-
+    
     @Value("${app.database.development.relative-path:../idorendmaker-desktop/idorendmaker.db}")
     private String developmentRelativePath;
-
-
+    
     @Value("${app.database.production.app-name:idorendmaker}")
     private String productionAppName;
-
-
+    
     @Value("${app.database.production.filename:idorendmaker.db}")
     private String productionFilename;
-
-
+    
     @Value("${app.database.override-path:#{null}}")
     private String overridePath;
 
-
+    /**
+     * Resolves the database file path based on current configuration
+     * 
+     * Priority:
+     * 1. Environment variable override (app.database.override-path)
+     * 2. Development mode: relative path to desktop project  
+     * 3. Production mode: OS-specific user data directory
+     */
     public String resolveDatabasePath() {
-        if (this.overridePath != null && !this.overridePath.isEmpty()) {
-            log.info("🔧 Using override database path: {}", this.overridePath);
-            return this.overridePath;
+        // Priority 1: Override path (for testing/debugging)
+        if (overridePath != null && !overridePath.isEmpty()) {
+            log.info("🔧 Using override database path: {}", overridePath);
+            return overridePath;
         }
-
-        if ("development".equals(this.databaseMode)) {
+        
+        // Priority 2: Development mode
+        if ("development".equals(databaseMode)) {
             return resolveDevelopmentPath();
         }
-
+        
+        // Priority 3: Production mode
         return resolveProductionPath();
     }
-
-
+    
+    /**
+     * Resolves database path for development environment
+     * Looks for database in desktop project directory relative to backend
+     * Automatically detects if running from target/ directory and adjusts path accordingly
+     */
     private String resolveDevelopmentPath() {
         final String currentDir = System.getProperty("user.dir");
         final Path currentPath = Paths.get(currentDir);
-
+        
         log.info("🔧 Development database path resolution:");
         log.info("   Current directory: {}", currentDir);
-        log.info("   Configured relative path: {}", this.developmentRelativePath);
-
-        Path dbPath = Paths.get(currentDir, this.developmentRelativePath).normalize();
+        log.info("   Configured relative path: {}", developmentRelativePath);
+        
+        // Try the configured path first
+        Path dbPath = Paths.get(currentDir, developmentRelativePath).normalize();
         String absolutePath = dbPath.toAbsolutePath().toString();
-
-        if ((new File(absolutePath)).exists()) {
+        
+        // Check if database exists at the configured path
+        if (new File(absolutePath).exists()) {
             log.info("✅ Database found at configured path: {}", absolutePath);
             return absolutePath;
         }
-
-        log.info("🔍 Running from target directory, adjusting path...");
-
-        final String adjustedRelativePath = "../" + this.developmentRelativePath;
-        dbPath = Paths.get(currentDir, adjustedRelativePath).normalize();
-        absolutePath = dbPath.toAbsolutePath().toString();
-
-        log.info("   Adjusted relative path: {}", adjustedRelativePath);
-        log.info("   Adjusted absolute path: {}", absolutePath);
-
-        if (currentPath.endsWith("target") && (new File(absolutePath)).exists()) {
-            log.info("✅ Database found at adjusted path: {}", absolutePath);
-            return absolutePath;
+        
+        // If not found and we're in a 'target' directory, try adjusting the path
+        if (currentPath.endsWith("target")) {
+            log.info("🔍 Running from target directory, adjusting path...");
+            
+            // Go up one more level: target -> backend -> project root -> desktop
+            final String adjustedRelativePath = "../" + developmentRelativePath;
+            dbPath = Paths.get(currentDir, adjustedRelativePath).normalize();
+            absolutePath = dbPath.toAbsolutePath().toString();
+            
+            log.info("   Adjusted relative path: {}", adjustedRelativePath);
+            log.info("   Adjusted absolute path: {}", absolutePath);
+            
+            if (new File(absolutePath).exists()) {
+                log.info("✅ Database found at adjusted path: {}", absolutePath);
+                return absolutePath;
+            }
         }
-
+        
+        // Try alternative paths for different execution contexts
         final Path projectRoot = findProjectRoot(currentPath);
-
-        dbPath = projectRoot.resolve("idorendmaker-desktop/idorendmaker.db");
-        absolutePath = dbPath.toAbsolutePath().toString();
-        log.info("   Alternative path (from project root): {}", absolutePath);
-
-        if (new File(absolutePath).exists()) {
-            log.info("✅ Database found at project root path: {}", absolutePath);
-            return absolutePath;
+        if (projectRoot != null) {
+            dbPath = projectRoot.resolve("idorendmaker-desktop/idorendmaker.db");
+            absolutePath = dbPath.toAbsolutePath().toString();
+            log.info("   Alternative path (from project root): {}", absolutePath);
+            
+            if (new File(absolutePath).exists()) {
+                log.info("✅ Database found at project root path: {}", absolutePath);
+                return absolutePath;
+            }
         }
-
-        dbPath = Paths.get(currentDir, this.developmentRelativePath).normalize();
+        
+        // Return the originally configured path even if it doesn't exist
+        // This allows for better error messages and potential database creation
+        dbPath = Paths.get(currentDir, developmentRelativePath).normalize();
         absolutePath = dbPath.toAbsolutePath().toString();
         log.warn("⚠️ Database not found, returning configured path: {}", absolutePath);
-
+        
         return absolutePath;
     }
-
-
+    
+    /**
+     * Find the project root directory by looking for characteristic files/directories
+     */
     private Path findProjectRoot(final Path startPath) {
         Path current = startPath;
 
-        for (int i = 0; i < 5 &&
-            current != null; i++) {
+        for (int i = 0; i < 5 && current != null; i++) {
 
             final Path backendDir = current.resolve("idorendmaker-backend");
             final Path desktopDir = current.resolve("idorendmaker-desktop");
-
+            
             if (Files.exists(backendDir) && Files.exists(desktopDir)) {
                 log.info("📁 Found project root: {}", current.toAbsolutePath());
                 return current;
             }
-
+            
             current = current.getParent();
         }
-
+        
         log.warn("📁 Could not find project root from: {}", startPath);
         return null;
     }
-
-
+    
+    /**
+     * Resolves database path for production environment
+     * Uses OS-specific user data directories
+     */
     private String resolveProductionPath() {
         final String userDataDir = getUserDataDirectory();
-        final Path dbPath = Paths.get(userDataDir, this.productionFilename);
+        final Path dbPath = Paths.get(userDataDir, productionFilename);
         final String absolutePath = dbPath.toAbsolutePath().toString();
-
+        
         log.info("🏭 Production database path resolution:");
         log.info("   User data directory: {}", userDataDir);
-        log.info("   Database filename: {}", this.productionFilename);
+        log.info("   Database filename: {}", productionFilename);
         log.info("   Resolved path: {}", absolutePath);
-        log.info("   Database exists: {}", (new File(absolutePath)).exists());
-
+        log.info("   Database exists: {}", new File(absolutePath).exists());
+        
+        // Ensure the directory exists
         final File parentDir = new File(userDataDir);
         if (!parentDir.exists()) {
             log.info("📁 Creating user data directory: {}", userDataDir);
             parentDir.mkdirs();
         }
-
+        
         return absolutePath;
     }
-
-
+    
+    /**
+     * Gets the OS-specific user data directory
+     * Follows Electron's app.getPath('userData') logic
+     */
     private String getUserDataDirectory() {
         final String os = System.getProperty("os.name").toLowerCase();
         final String userHome = System.getProperty("user.home");
-
+        
         if (os.contains("win")) {
-
+            // Windows: %APPDATA%\{appName}
             final String appData = System.getenv("APPDATA");
-            return (appData != null) ?
-                Paths.get(appData, this.productionAppName).toString() :
-                Paths.get(userHome, "AppData", "Roaming", this.productionAppName).toString();
+            return appData != null 
+                ? Paths.get(appData, productionAppName).toString()
+                : Paths.get(userHome, "AppData", "Roaming", productionAppName).toString();
+        } else if (os.contains("mac")) {
+            // macOS: ~/Library/Application Support/{appName}
+            return Paths.get(userHome, "Library", "Application Support", productionAppName).toString();
+        } else {
+            // Linux: ~/.config/{appName}
+            return Paths.get(userHome, ".config", productionAppName).toString();
         }
-        if (os.contains("mac")) {
-            return Paths.get(userHome, "Library", "Application Support", this.productionAppName).toString();
-        }
-
-        return Paths.get(userHome, ".config", this.productionAppName).toString();
     }
-
-
+    
+    /**
+     * Validates that the resolved database path is accessible
+     */
     public boolean validateDatabasePath() {
         final String dbPath = resolveDatabasePath();
         final File dbFile = new File(dbPath);
-
+        
+        // Check if file exists
         if (!dbFile.exists()) {
             log.warn("⚠️ Database file does not exist: {}", dbPath);
             return false;
         }
-
+        
+        // Check if file is readable
         if (!dbFile.canRead()) {
             log.error("❌ Database file is not readable: {}", dbPath);
             return false;
         }
-
+        
+        // Check if file is writable
         if (!dbFile.canWrite()) {
             log.error("❌ Database file is not writable: {}", dbPath);
             return false;
         }
-
+        
         log.info("✅ Database file validation passed: {}", dbPath);
         return true;
     }
 }
-
-
-/* Location:              C:\Users\Szabolcs\Documents\PROJECTS\idorendmaker-app\idorendmaker-backend\target\idorendmaker-backend-1.0.0.jar!\BOOT-INF\classes\hu\szabolcst\idorendmaker\service\DatabasePathResolver.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

@@ -1,0 +1,47 @@
+import { prisma } from '../src/data/services/prisma'
+import { Level } from '@prisma/client'
+
+export class LevelService {
+  /**
+   * Get all levels ordered by sort order
+   */
+  static async getAllLevels(): Promise<Level[]> {
+    return await prisma.level.findMany({
+      orderBy: { sortOrder: 'asc' }
+    })
+  }
+
+  /**
+   * Get the default level (Döntő I.)
+   */
+  static async getDefaultLevel(): Promise<Level> {
+    const defaultLevel = await prisma.level.findFirst({
+      where: { isDefault: true }
+    })
+    
+    if (!defaultLevel) {
+      throw new Error('Default level not found in database')
+    }
+    
+    return defaultLevel
+  }
+
+  /**
+   * Get level by ID
+   */
+  static async getLevelById(id: number): Promise<Level | null> {
+    return await prisma.level.findUnique({
+      where: { id }
+    })
+  }
+
+  /**
+   * Get levels by type
+   */
+  static async getLevelsByType(levelType: string): Promise<Level[]> {
+    return await prisma.level.findMany({
+      where: { levelType },
+      orderBy: { sortOrder: 'asc' }
+    })
+  }
+}

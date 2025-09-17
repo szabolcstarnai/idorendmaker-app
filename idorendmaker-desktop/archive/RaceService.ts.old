@@ -1,0 +1,119 @@
+import { prisma } from '../src/data/services/prisma'
+import { RaceWithAgeGroups } from '../shared/types/race'
+
+export class RaceService {
+  /**
+   * Get all races with their age groups, ordered by occurrence and name
+   */
+  static async getAllRaces(): Promise<RaceWithAgeGroups[]> {
+    const races = await prisma.race.findMany({
+      include: {
+        ageGroups: {
+          include: {
+            ageGroup: true
+          }
+        }
+      },
+      orderBy: [
+        { occurrence: 'desc' },
+        { name: 'asc' }
+      ]
+    })
+
+    // Return races with ageGroups directly - no transformation needed!
+    return races.map(race => ({
+      ...race,
+      ageGroups: race.ageGroups.map((rag: any) => rag.ageGroup)
+    }))
+  }
+
+  /**
+   * Search races by term across multiple fields
+   */
+  static async searchRaces(searchTerm: string): Promise<RaceWithAgeGroups[]> {
+    const races = await prisma.race.findMany({
+      where: {
+        OR: [
+          { name: { contains: searchTerm } },
+          { discipline: { contains: searchTerm } },
+          { boatClass: { contains: searchTerm } },
+          { gender: { contains: searchTerm } },
+          { distance: { contains: searchTerm } },
+          {
+            ageGroups: {
+              some: {
+                ageGroup: {
+                  name: { contains: searchTerm }
+                }
+              }
+            }
+          }
+        ]
+      },
+      include: {
+        ageGroups: {
+          include: {
+            ageGroup: true
+          }
+        }
+      },
+      orderBy: [
+        { occurrence: 'desc' },
+        { name: 'asc' }
+      ]
+    })
+
+    // Return races with ageGroups directly - no transformation needed!
+    return races.map(race => ({
+      ...race,
+      ageGroups: race.ageGroups.map((rag: any) => rag.ageGroup)
+    }))
+  }
+
+  /**
+   * Update race visibility (hidden status)
+   */
+  static async updateRaceHidden(raceId: number, hidden: boolean): Promise<boolean> {
+    try {
+      const result = await prisma.race.update({
+        where: { id: raceId },
+        data: { 
+          hidden,
+          updatedAt: new Date()
+        }
+      })
+      return !!result
+    } catch (error) {
+      console.error('Error updating race hidden status:', error)
+      return false
+    }
+  }
+
+  /**
+   * Get all age groups ordered by name
+   */
+  static async getAllAgeGroups() {
+    return await prisma.ageGroup.findMany({
+      orderBy: {
+        name: 'asc'
+      }
+    })
+  }
+
+  /**
+   * Get statistics about the database
+   */
+  static async getStats(): Promise<{ races: number, ageGroups: number, schedules: number }> {
+    const [raceCount, ageGroupCount, scheduleCount] = await Promise.all([
+      prisma.race.count(),
+      prisma.ageGroup.count(),
+      prisma.schedule.count()
+    ])
+
+    return {
+      races: raceCount,
+      ageGroups: ageGroupCount,
+      schedules: scheduleCount
+    }
+  }
+}

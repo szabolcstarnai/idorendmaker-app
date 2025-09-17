@@ -5,6 +5,8 @@ import java.util.List;
 
 public interface ScheduleItemRepository {
 
+    ScheduleItem save(ScheduleItem entity);
+
     List<ScheduleItem> findAllByScheduleIdWithRaceAndLevel(Integer paramInteger);
 
     List<ScheduleItem> findAllBySectionIdWithRaceAndLevelAndSection(Integer paramInteger);

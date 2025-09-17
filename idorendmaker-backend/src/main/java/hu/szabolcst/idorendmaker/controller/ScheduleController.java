@@ -10,12 +10,9 @@ import hu.szabolcst.idorendmaker.service.ScheduleService;
 import java.util.List;
 import java.util.Optional;
 import lombok.Data;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,149 +23,222 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * REST Controller for Schedule operations
+ * Maps TypeScript IPC handlers to HTTP endpoints
+ */
 @Slf4j
 @RestController
 @RequiredArgsConstructor
-@RequestMapping({"/api/schedules"})
+@RequestMapping("/api/schedules")
 public class ScheduleController {
 
     private final ScheduleService scheduleService;
 
+    /**
+     * Get all schedules ordered by creation date
+     * Equivalent to IPC: 'db:getAllSchedules'
+     * TypeScript: getAllSchedules(): Promise<Schedule[]>
+     */
     @GetMapping
     public ResponseEntity<List<ScheduleDto>> getAllSchedules() {
         log.debug("GET /api/schedules - Getting all schedules");
-
-        final List<ScheduleDto> schedules = this.scheduleService.getAllSchedules();
-
+        
+        final List<ScheduleDto> schedules = scheduleService.getAllSchedules();
+        
         log.debug("Found {} schedules", schedules.size());
         return ResponseEntity.ok(schedules);
     }
 
+    /**
+     * Create a new schedule
+     * Equivalent to IPC: 'db:createSchedule'
+     * TypeScript: createSchedule(name: string): Promise<number>
+     */
     @PostMapping
     public ResponseEntity<Integer> createSchedule(@RequestBody final CreateScheduleRequest request) {
         log.debug("POST /api/schedules - Creating new schedule with name: {}", request.getName());
-
-        final Integer scheduleId = this.scheduleService.createSchedule(request.getName());
-
+        
+        final Integer scheduleId = scheduleService.createSchedule(request.getName());
+        
         log.info("Created schedule with id: {}", scheduleId);
         return ResponseEntity.status(HttpStatus.CREATED).body(scheduleId);
     }
 
-    @GetMapping({"/{id}/items"})
+    /**
+     * Get schedule items for a specific schedule (legacy compatibility)
+     * Equivalent to IPC: 'db:getScheduleItems'
+     * TypeScript: getScheduleItems(scheduleId: number): Promise<ScheduleItemWithRace[]>
+     */
+    @GetMapping("/{id}/items")
     public ResponseEntity<List<ScheduleItemWithRaceAndSectionDto>> getScheduleItems(@PathVariable final Integer id) {
         log.debug("GET /api/schedules/{}/items - Getting schedule items", id);
-
-        final List<ScheduleItemWithRaceAndSectionDto> items = this.scheduleService.getScheduleItems(id);
-
+        
+        final List<ScheduleItemWithRaceAndSectionDto> items = scheduleService.getScheduleItems(id);
+        
         log.debug("Found {} items for schedule {}", items.size(), id);
         return ResponseEntity.ok(items);
     }
 
-    @PostMapping({"/{id}/sections/{sectionId}/items"})
-    public ResponseEntity<Integer> createScheduleItem(@PathVariable final Integer id, @PathVariable final Integer sectionId,
-        @RequestBody final CreateScheduleItemRequest request) {
+    /**
+     * Create a schedule item
+     * Equivalent to IPC: 'db:createScheduleItem'
+     */
+    @PostMapping("/{id}/sections/{sectionId}/items")
+    public ResponseEntity<Integer> createScheduleItem(
+            @PathVariable final Integer id,
+            @PathVariable final Integer sectionId,
+            @RequestBody final CreateScheduleItemRequest request) {
         log.debug("POST /api/schedules/{}/sections/{}/items - Creating schedule item", id, sectionId);
-
-        final Integer itemId = this.scheduleService.createScheduleItem(id, sectionId, request
-            .getRaceId(), request.getLevelId(), request
-            .getOrderIndex(), request.getIntervalMinutes(), request.getNotes());
-
+        
+        final Integer itemId = scheduleService.createScheduleItem(
+                id, sectionId, request.getRaceId(), request.getLevelId(),
+                request.getOrderIndex(), request.getIntervalMinutes(), request.getNotes());
+        
         log.info("Created schedule item with id: {}", itemId);
         return ResponseEntity.status(HttpStatus.CREATED).body(itemId);
     }
 
-    @PostMapping({"/with-sections"})
+    /**
+     * Save schedule with sections and items (transaction)
+     * Equivalent to IPC: 'db:saveScheduleWithSections'
+     */
+    @PostMapping("/with-sections")
     public ResponseEntity<Integer> saveScheduleWithSections(@RequestBody final SaveScheduleWithSectionsRequest request) {
-        log.debug("POST /api/schedules/with-sections - Saving schedule with {} sections",
-            request.getSectionsData().size());
-
-        final Integer scheduleId = this.scheduleService.saveScheduleWithSections(request
-            .getName(), request.getSectionsData(), request.getPdfExtractionId());
-
+        log.debug("POST /api/schedules/with-sections - Saving schedule with {} sections", 
+                 request.getSectionsData().size());
+        
+        final Integer scheduleId = scheduleService.saveScheduleWithSections(
+                request.getName(), request.getSectionsData(), request.getPdfExtractionId());
+        
         log.info("Saved schedule with id: {}", scheduleId);
         return ResponseEntity.status(HttpStatus.CREATED).body(scheduleId);
     }
 
-    @PutMapping({"/{id}/with-sections"})
-    public ResponseEntity<Integer> updateScheduleWithSections(@PathVariable final Integer id,
-        @RequestBody final UpdateScheduleWithSectionsRequest request) {
-        log.debug("PUT /api/schedules/{}/with-sections - Updating schedule with {} sections", id,
-            request.getSectionsData().size());
-
-        final Integer updatedId = this.scheduleService.updateScheduleWithSections(id, request
-            .getName(), request.getSectionsData(), request.getPdfExtractionId());
-
+    /**
+     * Update existing schedule with sections and items (transaction)
+     * Equivalent to IPC: 'db:updateScheduleWithSections'
+     */
+    @PutMapping("/{id}/with-sections")
+    public ResponseEntity<Integer> updateScheduleWithSections(
+            @PathVariable final Integer id,
+            @RequestBody final UpdateScheduleWithSectionsRequest request) {
+        log.debug("PUT /api/schedules/{}/with-sections - Updating schedule with {} sections", 
+                 id, request.getSectionsData().size());
+        
+        final Integer updatedId = scheduleService.updateScheduleWithSections(
+                id, request.getName(), request.getSectionsData(), request.getPdfExtractionId());
+        
         log.info("Updated schedule with id: {}", updatedId);
         return ResponseEntity.ok(updatedId);
     }
 
-    @PostMapping({"/{id}/sections"})
-    public ResponseEntity<Integer> createScheduleSection(@PathVariable final Integer id, @RequestBody final CreateScheduleSectionDataDto sectionData) {
+    /**
+     * Create a schedule section
+     * Equivalent to IPC: 'db:createScheduleSection'
+     */
+    @PostMapping("/{id}/sections")
+    public ResponseEntity<Integer> createScheduleSection(
+            @PathVariable final Integer id,
+            @RequestBody final CreateScheduleSectionDataDto sectionData) {
         log.debug("POST /api/schedules/{}/sections - Creating schedule section", id);
-
+        
+        // Set the schedule ID from path parameter
         sectionData.setScheduleId(id);
-        final Integer sectionId = this.scheduleService.createScheduleSection(sectionData);
-
+        final Integer sectionId = scheduleService.createScheduleSection(sectionData);
+        
         log.info("Created schedule section with id: {}", sectionId);
         return ResponseEntity.status(HttpStatus.CREATED).body(sectionId);
     }
 
-    @GetMapping({"/{id}/sections"})
+    /**
+     * Get all sections for a schedule
+     * Equivalent to IPC: 'db:getScheduleSections'
+     */
+    @GetMapping("/{id}/sections")
     public ResponseEntity<List<ScheduleSectionDto>> getScheduleSections(@PathVariable final Integer id) {
         log.debug("GET /api/schedules/{}/sections - Getting schedule sections", id);
-
-        final List<ScheduleSectionDto> sections = this.scheduleService.getScheduleSections(id);
-
+        
+        final List<ScheduleSectionDto> sections = scheduleService.getScheduleSections(id);
+        
         log.debug("Found {} sections for schedule {}", sections.size(), id);
         return ResponseEntity.ok(sections);
     }
 
-    @GetMapping({"/sections/{sectionId}/items"})
-    public ResponseEntity<List<ScheduleItemWithRaceAndSectionDto>> getScheduleItemsBySection(@PathVariable final Integer sectionId) {
+    /**
+     * Get schedule items by section with calculated start times
+     * Equivalent to IPC: 'db:getScheduleItemsBySection'
+     */
+    @GetMapping("/sections/{sectionId}/items")
+    public ResponseEntity<List<ScheduleItemWithRaceAndSectionDto>> getScheduleItemsBySection(
+            @PathVariable final Integer sectionId) {
         log.debug("GET /api/schedules/sections/{}/items - Getting items by section", sectionId);
-
-        final List<ScheduleItemWithRaceAndSectionDto> items = this.scheduleService.getScheduleItemsBySection(sectionId);
-
+        
+        final List<ScheduleItemWithRaceAndSectionDto> items = scheduleService.getScheduleItemsBySection(sectionId);
+        
         log.debug("Found {} items for section {}", items.size(), sectionId);
         return ResponseEntity.ok(items);
     }
 
-    @GetMapping({"/{id}/with-sections"})
+    /**
+     * Get schedule with all its sections, schedule items, and PDF data if linked
+     * Equivalent to IPC: 'db:getScheduleWithSections'
+     */
+    @GetMapping("/{id}/with-sections")
     public ResponseEntity<ScheduleWithSectionsDto> getScheduleWithSections(@PathVariable final Integer id) {
         log.debug("GET /api/schedules/{}/with-sections - Getting schedule with sections", id);
-
-        final Optional<ScheduleWithSectionsDto> schedule = this.scheduleService.getScheduleWithSections(id);
-
+        
+        final Optional<ScheduleWithSectionsDto> schedule = scheduleService.getScheduleWithSections(id);
+        
         if (schedule.isPresent()) {
             log.debug("Found schedule {} with sections", id);
             return ResponseEntity.ok(schedule.get());
+        } else {
+            log.debug("Schedule not found: {}", id);
+            return ResponseEntity.notFound().build();
         }
-        log.debug("Schedule not found: {}", id);
-        return ResponseEntity.notFound().build();
     }
 
-    @GetMapping({"/{id}/pdf-context"})
+    /**
+     * Get schedule with PDF context restored for competitor-aware features
+     * Equivalent to IPC: 'db:getScheduleWithPDFContext'
+     */
+    @GetMapping("/{id}/pdf-context")
     public ResponseEntity<ScheduleWithPDFContextDto> getScheduleWithPDFContext(@PathVariable final Integer id) {
         log.debug("GET /api/schedules/{}/pdf-context - Getting schedule with PDF context", id);
-
-        final ScheduleWithPDFContextDto result = this.scheduleService.getScheduleWithPDFContext(id);
-
+        
+        final ScheduleWithPDFContextDto result = scheduleService.getScheduleWithPDFContext(id);
+        
         if (result.getSchedule() != null) {
             log.debug("Found schedule {} with PDF context (hasPDFData: {})", id, result.getHasPDFData());
             return ResponseEntity.ok(result);
+        } else {
+            log.debug("Schedule not found: {}", id);
+            return ResponseEntity.notFound().build();
         }
-        log.debug("Schedule not found: {}", id);
-        return ResponseEntity.notFound().build();
     }
 
-    @DeleteMapping({"/{id}"})
+    /**
+     * Delete a schedule and all its associated data
+     * Equivalent to IPC: 'db:deleteSchedule'
+     */
+    @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteSchedule(@PathVariable final Integer id) {
         log.debug("DELETE /api/schedules/{} - Deleting schedule", id);
-
-        this.scheduleService.deleteSchedule(id);
-
+        
+        scheduleService.deleteSchedule(id);
+        
         log.info("Deleted schedule: {}", id);
         return ResponseEntity.noContent().build();
+    }
+
+    // Request DTOs for endpoints that need them
+
+    @Data
+    public static class CreateScheduleRequest {
+
+        private String name;
+
     }
 
     @Data
@@ -179,13 +249,6 @@ public class ScheduleController {
         private Integer orderIndex;
         private Integer intervalMinutes;
         private String notes;
-
-    }
-
-    @Data
-    public static class CreateScheduleRequest {
-
-        private String name;
 
     }
 

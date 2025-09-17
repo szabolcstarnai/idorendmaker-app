@@ -1,0 +1,449 @@
+// import { prisma } from '../../../data/services/prisma'
+import { BackendAPIService } from '../src/data/services/BackendAPIService'
+import { CompetitorSchedule, CompetitorRaceDetails, ScheduleRace } from '../shared/types/race'
+
+export class CompetitorService {
+  /**
+   * Analyze competitor schedules from a set of schedule races
+   * 
+   * MIGRATED TO BACKEND: All complex logic moved to CompetitorServiceImpl.analyzeCompetitorSchedules()
+   * This method now makes a simple HTTP request to the Spring Boot backend
+   */
+  static async analyzeCompetitorSchedules(
+    scheduleRaces: ScheduleRace[], 
+    pdfExtractionId?: number
+  ): Promise<CompetitorSchedule[]> {
+    // Use backend HTTP API instead of direct Prisma queries
+    return await BackendAPIService.analyzeCompetitorSchedules(scheduleRaces, pdfExtractionId)
+
+    /* ORIGINAL PRISMA IMPLEMENTATION (KEPT FOR REFERENCE):
+    
+    if (!pdfExtractionId) {
+      return [] // No competitor data available
+    }
+
+    try {
+      // Get competitor data for this PDF extraction
+      const competitors = await prisma.competitorEntry.findMany({
+        where: { pdfExtractionId },
+        include: {
+          raceCompetitorAssociations: {
+            include: { race: true }
+          }
+        }
+      })
+
+      const competitorSchedules: CompetitorSchedule[] = []
+
+      for (const competitor of competitors) {
+        // Find races this competitor is entered in from the current schedule
+        const allCompetitorRaces = scheduleRaces.filter(scheduleRace =>
+          competitor.raceCompetitorAssociations.some(assoc => assoc.raceId === scheduleRace.race.id)
+        )
+
+        if (allCompetitorRaces.length === 0) continue
+
+        // Apply "worst case scenario" logic for multiple heats:
+        // Problem: Competitors enter ONE heat per level (e.g., either "I. Előfutam" OR "II. Előfutam"), 
+        //          but the system was treating them as being in ALL heats, creating false conflicts.
+        // Solution: 1. Group races by (race.id, level.levelType) to identify multiple heats of same level
+        //           2. For each group with multiple heats, assume competitor is in the heat that 
+        //              creates the WORST possible scheduling conflict with other races
+        //           3. This ensures conservative safety margins while eliminating false positives
+        const raceGroups = this.groupScheduleRacesByRaceAndLevel(allCompetitorRaces)
+        const competitorRaces = this.selectWorstCaseHeats(raceGroups, scheduleRaces)
+
+        // Sort races by scheduled time
+        competitorRaces.sort((a, b) => a.startTime.localeCompare(b.startTime))
+
+        // Calculate race details with intervals
+        const raceDetails: CompetitorRaceDetails[] = competitorRaces.map((race, index) => {
+          const nextRace = competitorRaces[index + 1]
+          
+          let intervalToNext: number | undefined
+          let recoveryTime: number | undefined
+          
+          if (nextRace) {
+            intervalToNext = this.calculateMinutesBetween(race.startTime, nextRace.startTime)
+            // Assume 5 minutes average race duration for recovery calculation
+            recoveryTime = intervalToNext - 5
+          }
+
+          // Determine conflict level based on recovery time
+          let conflictLevel: 'none' | 'warning' | 'critical' = 'none'
+          if (recoveryTime !== undefined) {
+            if (recoveryTime < 30) {
+              conflictLevel = 'critical'
+            } else if (recoveryTime < 60) {
+              conflictLevel = 'warning'
+            }
+          }
+
+          return {
+            raceId: race.race.id,
+            raceName: race.race.name,
+            scheduledTime: race.startTime,
+            estimatedDuration: 5, // Placeholder: 5 minutes average
+            intervalToNext,
+            recoveryTime,
+            conflictLevel
+          }
+        })
+
+        // Calculate overall statistics
+        const intervals = raceDetails
+          .map(r => r.intervalToNext)
+          .filter((interval): interval is number => interval !== undefined)
+
+        const shortestInterval = intervals.length > 0 ? Math.min(...intervals) : null
+        const longestInterval = intervals.length > 0 ? Math.max(...intervals) : null
+
+        // Determine risk level
+        let riskLevel: 'low' | 'medium' | 'high' = 'low'
+        const criticalCount = raceDetails.filter(r => r.conflictLevel === 'critical').length
+        const warningCount = raceDetails.filter(r => r.conflictLevel === 'warning').length
+
+        if (criticalCount > 0) {
+          riskLevel = 'high'
+        } else if (warningCount > 0) {
+          riskLevel = 'medium'
+        }
+
+        competitorSchedules.push({
+          competitorId: competitor.competitorId,
+          competitorName: competitor.competitorName,
+          organization: competitor.organization,
+          birthYear: competitor.birthYear,
+          races: raceDetails,
+          totalRaces: raceDetails.length,
+          shortestInterval,
+          longestInterval,
+          riskLevel
+        })
+      }
+
+      // Sort by risk level and total races (high risk first, then most races)
+      competitorSchedules.sort((a, b) => {
+        const riskOrder = { high: 3, medium: 2, low: 1 }
+        const riskDiff = riskOrder[b.riskLevel] - riskOrder[a.riskLevel]
+        if (riskDiff !== 0) return riskDiff
+        return b.totalRaces - a.totalRaces
+      })
+
+      console.log(`Analyzed ${competitorSchedules.length} competitor schedules`)
+      return competitorSchedules
+    } catch (error) {
+      console.error('Error analyzing competitor schedules:', error)
+      return []
+    }
+    
+    */
+  }
+
+  /**
+   * Check for competitor conflicts between two specific races
+   * 
+   * MIGRATED TO BACKEND: Logic moved to CompetitorServiceImpl.checkCompetitorConflicts()
+   */
+  static async checkCompetitorConflicts(
+    race1Id: number, 
+    race2Id: number, 
+    pdfExtractionId?: number
+  ): Promise<{
+    hasConflicts: boolean
+    conflictingCompetitors: string[]
+    competitorCount: number
+  }> {
+    // Use backend HTTP API instead of direct Prisma queries
+    return await BackendAPIService.checkCompetitorConflicts(race1Id, race2Id, pdfExtractionId)
+
+    /* ORIGINAL PRISMA IMPLEMENTATION (KEPT FOR REFERENCE):
+
+    if (!pdfExtractionId) {
+      return { hasConflicts: false, conflictingCompetitors: [], competitorCount: 0 }
+    }
+
+    try {
+      // Find competitors entered in both races
+      const race1Competitors = await prisma.raceCompetitorAssociation.findMany({
+        where: { 
+          pdfExtractionId, 
+          raceId: race1Id 
+        },
+        include: { competitorEntry: true }
+      })
+
+      const race2Competitors = await prisma.raceCompetitorAssociation.findMany({
+        where: { 
+          pdfExtractionId, 
+          raceId: race2Id 
+        },
+        include: { competitorEntry: true }
+      })
+
+      const race1CompetitorIds = new Set(race1Competitors.map(rc => rc.competitorId))
+      const conflictingCompetitors = race2Competitors
+        .filter(rc => race1CompetitorIds.has(rc.competitorId))
+        .map(rc => rc.competitorEntry.competitorName)
+
+      return {
+        hasConflicts: conflictingCompetitors.length > 0,
+        conflictingCompetitors,
+        competitorCount: conflictingCompetitors.length
+      }
+    } catch (error) {
+      console.error('Error checking competitor conflicts:', error)
+      return { hasConflicts: false, conflictingCompetitors: [], competitorCount: 0 }
+    }
+
+    */
+  }
+
+  /**
+   * Get competitor summary for a race
+   * 
+   * MIGRATED TO BACKEND: Logic moved to CompetitorServiceImpl.getRaceCompetitorSummary()
+   */
+  static async getRaceCompetitorSummary(
+    raceId: number, 
+    pdfExtractionId?: number
+  ): Promise<{
+    entryCount: number
+    topCompetitors: string[]
+    organizations: string[]
+  }> {
+    // Use backend HTTP API instead of direct Prisma queries
+    return await BackendAPIService.getRaceCompetitorSummary(raceId, pdfExtractionId)
+
+    /* ORIGINAL PRISMA IMPLEMENTATION (KEPT FOR REFERENCE):
+
+    if (!pdfExtractionId) {
+      return { entryCount: 0, topCompetitors: [], organizations: [] }
+    }
+
+    try {
+      const associations = await prisma.raceCompetitorAssociation.findMany({
+        where: { 
+          pdfExtractionId, 
+          raceId 
+        },
+        include: { competitorEntry: true }
+      })
+
+      const topCompetitors = associations
+        .slice(0, 3)
+        .map(assoc => assoc.competitorEntry.competitorName)
+
+      const organizations = [...new Set(
+        associations
+          .map(assoc => assoc.competitorEntry.organization)
+          .filter((org): org is string => org !== null)
+      )]
+
+      return {
+        entryCount: associations.length,
+        topCompetitors,
+        organizations
+      }
+    } catch (error) {
+      console.error('Error getting race competitor summary:', error)
+      return { entryCount: 0, topCompetitors: [], organizations: [] }
+    }
+
+    */
+  }
+
+  /**
+   * Get competitors at high risk (tight schedules)
+   * 
+   * MIGRATED TO BACKEND: Logic moved to CompetitorServiceImpl.getHighRiskCompetitors()
+   */
+  static async getHighRiskCompetitors(pdfExtractionId: number): Promise<CompetitorSchedule[]> {
+    // Use backend HTTP API instead of direct Prisma queries
+    return await BackendAPIService.getHighRiskCompetitors(pdfExtractionId)
+
+    /* ORIGINAL PRISMA IMPLEMENTATION (KEPT FOR REFERENCE):
+
+    const allSchedules = await this.analyzeCompetitorSchedules([], pdfExtractionId)
+    return allSchedules.filter(schedule => schedule.riskLevel === 'high')
+
+    */
+  }
+
+  /**
+   * Group ScheduleRaces by race and level type to handle multiple heats
+   */
+  private static groupScheduleRacesByRaceAndLevel(scheduleRaces: ScheduleRace[]): Map<string, ScheduleRace[]> {
+    const groups = new Map<string, ScheduleRace[]>()
+    
+    for (const scheduleRace of scheduleRaces) {
+      const key = `${scheduleRace.race.id}-${scheduleRace.level.levelType}`
+      if (!groups.has(key)) {
+        groups.set(key, [])
+      }
+      groups.get(key)!.push(scheduleRace)
+    }
+    
+    return groups
+  }
+
+  /**
+   * Select worst-case heats from groups for conflict checking
+   * For groups with multiple heats, choose the heat that creates worst possible conflicts
+   */
+  private static selectWorstCaseHeats(
+    raceGroups: Map<string, ScheduleRace[]>, 
+    allScheduleRaces: ScheduleRace[]
+  ): ScheduleRace[] {
+    const selectedHeats: ScheduleRace[] = []
+    
+    for (const [, heats] of raceGroups) {
+      if (heats.length === 1) {
+        // Only one heat, use it
+        selectedHeats.push(heats[0])
+        continue
+      }
+      
+      // Multiple heats - select worst case for conflict checking
+      // Sort heats by start time
+      const sortedHeats = heats.sort((a, b) => a.startTime.localeCompare(b.startTime))
+      
+      // Find races from OTHER groups to check conflicts against
+      const otherRaces = allScheduleRaces.filter(race => 
+        !heats.some(heat => heat.id === race.id)
+      )
+      
+      if (otherRaces.length === 0) {
+        // No other races to conflict with, just pick first heat
+        selectedHeats.push(sortedHeats[0])
+        continue
+      }
+      
+      // Find the heat that creates the worst (shortest) recovery time
+      let worstHeat = sortedHeats[0]
+      let worstRecoveryTime = Infinity
+      
+      for (const heat of sortedHeats) {
+        // Check conflicts with races before and after
+        const conflictBefore = this.findClosestRaceBefore(heat, otherRaces)
+        const conflictAfter = this.findClosestRaceAfter(heat, otherRaces)
+        
+        let minRecoveryTime = Infinity
+        
+        if (conflictBefore) {
+          const timeBefore = this.calculateMinutesBetween(conflictBefore.startTime, heat.startTime) - 5 // 5min race duration
+          minRecoveryTime = Math.min(minRecoveryTime, timeBefore)
+        }
+        
+        if (conflictAfter) {
+          const timeAfter = this.calculateMinutesBetween(heat.startTime, conflictAfter.startTime) - 5 // 5min race duration  
+          minRecoveryTime = Math.min(minRecoveryTime, timeAfter)
+        }
+        
+        // Select the heat with the worst (shortest) recovery time
+        if (minRecoveryTime < worstRecoveryTime) {
+          worstRecoveryTime = minRecoveryTime
+          worstHeat = heat
+        }
+      }
+      
+      selectedHeats.push(worstHeat)
+    }
+    
+    return selectedHeats
+  }
+
+  /**
+   * Find the closest race before the given race
+   */
+  private static findClosestRaceBefore(targetRace: ScheduleRace, otherRaces: ScheduleRace[]): ScheduleRace | null {
+    const racesBefore = otherRaces.filter(race => race.startTime < targetRace.startTime)
+    if (racesBefore.length === 0) return null
+    
+    return racesBefore.reduce((closest, race) => 
+      race.startTime > closest.startTime ? race : closest
+    )
+  }
+
+  /**
+   * Find the closest race after the given race  
+   */
+  private static findClosestRaceAfter(targetRace: ScheduleRace, otherRaces: ScheduleRace[]): ScheduleRace | null {
+    const racesAfter = otherRaces.filter(race => race.startTime > targetRace.startTime)
+    if (racesAfter.length === 0) return null
+    
+    return racesAfter.reduce((closest, race) => 
+      race.startTime < closest.startTime ? race : closest
+    )
+  }
+
+  /**
+   * Calculate minutes between two time strings (HH:MM format)
+   */
+  private static calculateMinutesBetween(startTime: string, endTime: string): number {
+    const [startHours, startMinutes] = startTime.split(':').map(Number)
+    const [endHours, endMinutes] = endTime.split(':').map(Number)
+    
+    const startTotalMinutes = startHours * 60 + startMinutes
+    const endTotalMinutes = endHours * 60 + endMinutes
+    
+    return endTotalMinutes - startTotalMinutes
+  }
+
+  /**
+   * Get competitor entry statistics for a PDF extraction
+   * 
+   * MIGRATED TO BACKEND: Logic moved to CompetitorServiceImpl.getCompetitorStats()
+   */
+  static async getCompetitorStats(pdfExtractionId: number) {
+    // Use backend HTTP API instead of direct Prisma queries
+    return await BackendAPIService.getCompetitorStats(pdfExtractionId)
+
+    /* ORIGINAL PRISMA IMPLEMENTATION (KEPT FOR REFERENCE):
+
+    try {
+      const stats = await prisma.$transaction([
+        // Total unique competitors
+        prisma.competitorEntry.count({
+          where: { pdfExtractionId }
+        }),
+        // Total race entries
+        prisma.raceCompetitorAssociation.count({
+          where: { pdfExtractionId }
+        }),
+        // Unique races with entries
+        prisma.raceCompetitorAssociation.findMany({
+          where: { pdfExtractionId },
+          select: { raceId: true },
+          distinct: ['raceId']
+        }),
+        // Organizations represented
+        prisma.competitorEntry.findMany({
+          where: { 
+            pdfExtractionId,
+            organization: { not: null }
+          },
+          select: { organization: true },
+          distinct: ['organization']
+        })
+      ])
+
+      return {
+        totalCompetitors: stats[0],
+        totalEntries: stats[1],
+        racesWithEntries: stats[2].length,
+        organizationsRepresented: stats[3].length
+      }
+    } catch (error) {
+      console.error('Error getting competitor stats:', error)
+      return {
+        totalCompetitors: 0,
+        totalEntries: 0,
+        racesWithEntries: 0,
+        organizationsRepresented: 0
+      }
+    }
+
+    */
+  }
+}
