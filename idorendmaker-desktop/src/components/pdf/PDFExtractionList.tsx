@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Trash2, Loader2, FileText, Database, Clock, Calendar, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Trash2, Loader2, FileText, Database, Clock, Calendar, AlertTriangle, ExternalLink, Plus } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -9,6 +9,7 @@ import StandardEmptyState from '../common/StandardEmptyState';
 import CompactPagination from '../common/CompactPagination';
 import TruncatedText from '../common/TruncatedText';
 import { ConfirmationDialog } from '../dialogs';
+import { TabbedPanelLoading } from '../ui/loading';
 
 // PDF Extraction interface matching our API
 interface PDFExtraction {
@@ -34,13 +35,14 @@ interface PDFExtractionListProps {
   selectedExtraction?: PDFExtraction;
   onSelect: (extraction: PDFExtraction) => void;
   onDelete: (extraction: PDFExtraction) => Promise<void>;
+  onNewPDF?: () => void;
 }
 
 // Ultra-compact PDF extraction card component
-const CompactExtractionCard = React.memo(({ 
-  extraction, 
+const CompactExtractionCard = React.memo(({
+  extraction,
   isSelected,
-  onSelect, 
+  onSelect,
   onRequestDelete
 }: {
   extraction: PDFExtraction;
@@ -103,9 +105,8 @@ const CompactExtractionCard = React.memo(({
 
   return (
     <Card
-      className={`transition-all hover:shadow-md group relative cursor-pointer ${
-        isSelected ? 'border-primary bg-primary/5' : 'hover:border-primary/50'
-      }`}
+      className={`transition-all hover:shadow-md group relative cursor-pointer ${isSelected ? 'border-primary bg-primary/5' : 'hover:border-primary/50'
+        }`}
       onClick={() => onSelect(extraction)}
     >
       <CardContent className="p-2">
@@ -133,7 +134,7 @@ const CompactExtractionCard = React.memo(({
             )}
           </div>
         </div>
-        
+
         <div className="flex items-center gap-1 mb-2 flex-wrap">
           {getStatusBadge()}
           {extraction.schedulesUsingCount > 0 && (
@@ -143,7 +144,7 @@ const CompactExtractionCard = React.memo(({
             </Badge>
           )}
         </div>
-        
+
         <div className="space-y-1 text-xs text-muted-foreground">
           <div className="flex justify-between items-center min-w-0">
             <TruncatedText>{`${extraction.totalRaces} versenyszám`}</TruncatedText>
@@ -168,10 +169,11 @@ const CompactExtractionCard = React.memo(({
 
 CompactExtractionCard.displayName = 'CompactExtractionCard';
 
-const PDFExtractionList: React.FC<PDFExtractionListProps> = ({ 
-  selectedExtraction, 
-  onSelect, 
-  onDelete 
+const PDFExtractionList: React.FC<PDFExtractionListProps> = ({
+  selectedExtraction,
+  onSelect,
+  onDelete,
+  onNewPDF
 }) => {
   const [extractions, setExtractions] = useState<PDFExtraction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -212,13 +214,13 @@ const PDFExtractionList: React.FC<PDFExtractionListProps> = ({
 
   const handleConfirmDelete = useCallback(async () => {
     if (!extractionToDelete) return;
-    
+
     setIsDeleting(true);
     try {
       await onDelete(extractionToDelete);
       await loadExtractions(); // Reload to get updated data
       setExtractionToDelete(null);
-      
+
       // Clear selection if deleted extraction was selected
       if (selectedExtraction?.id === extractionToDelete.id) {
         // The parent component should handle clearing the selection
@@ -302,15 +304,6 @@ const PDFExtractionList: React.FC<PDFExtractionListProps> = ({
     setCurrentPage(1);
   }, [searchTerm, activeTab]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mr-2" />
-        <span className="text-sm text-muted-foreground">PDF adatok betöltése...</span>
-      </div>
-    );
-  }
-
   return (
     <div className="h-full flex flex-col">
       {/* Header with expiring count indicator and Search and Filters */}
@@ -325,13 +318,26 @@ const PDFExtractionList: React.FC<PDFExtractionListProps> = ({
         )}
 
         <div className="px-2 space-y-3">
-          <ProfessionalSearch
-            value={searchTerm}
-            onChange={setSearchTerm}
-            placeholder="Keresés fájlnév vagy időrend szerint..."
-            isLoading={searchLoading}
-          />
-          
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <ProfessionalSearch
+                value={searchTerm}
+                onChange={setSearchTerm}
+                placeholder="Keresés fájlnév vagy időrend szerint..."
+                isLoading={searchLoading}
+              />
+            </div>
+            <Button
+              size="sm"
+              onClick={onNewPDF}
+              disabled={!onNewPDF}
+              className="h-8 px-3 flex-shrink-0"
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              Új PDF
+            </Button>
+          </div>
+
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)} className="w-full">
             <TabsList className="grid grid-cols-3 w-full h-8">
               <TabsTrigger value="all" className="text-xs">
@@ -347,14 +353,11 @@ const PDFExtractionList: React.FC<PDFExtractionListProps> = ({
           </Tabs>
         </div>
       </div>
-      
+
       {/* PDF Extractions List */}
       <div className="flex-1 overflow-auto pr-3">
         {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            <span className="text-sm text-muted-foreground">Betöltés...</span>
-          </div>
+          <TabbedPanelLoading message="PDF adatok betöltése..." />
         ) : loadError ? (
           <StandardEmptyState
             type='no-data'
@@ -369,7 +372,7 @@ const PDFExtractionList: React.FC<PDFExtractionListProps> = ({
             type={searchTerm ? 'no-results' : 'no-data'}
             icon={FileText}
             title={searchTerm ? 'Nincs találat' : 'Még nincs feldolgozott PDF'}
-            description={searchTerm 
+            description={searchTerm
               ? 'Próbáljon más keresési kifejezést használni.'
               : 'Töltsön fel egy PDF fájlt a jobb oldalon.'
             }
@@ -388,7 +391,7 @@ const PDFExtractionList: React.FC<PDFExtractionListProps> = ({
           </div>
         )}
       </div>
-      
+
       {/* Pagination */}
       {totalPages > 1 && (
         <CompactPagination
@@ -406,7 +409,7 @@ const PDFExtractionList: React.FC<PDFExtractionListProps> = ({
         onClose={handleCancelDelete}
         onConfirm={handleConfirmDelete}
         title="PDF adatok törlése"
-        description={extractionToDelete 
+        description={extractionToDelete
           ? `Biztosan törölni szeretnéd a "${extractionToDelete.filename}" PDF feldolgozás adatait? Ez a művelet nem vonható vissza.`
           : ''
         }

@@ -1,8 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import { TwoPanelLayout } from '../layout/TwoPanelLayout';
 import PDFExtractionList from './PDFExtractionList';
 import PDFExtractionDetails from './PDFExtractionDetails';
 import PDFUploadPanel from './PDFUploadPanel';
+import TwoPanelLayout from '../layout/TwoPanelLayout';
 
 // PDF Extraction interface matching our API
 interface PDFExtraction {
@@ -44,12 +44,12 @@ const PDFManager: React.FC<PDFManagerProps> = ({ onNavigateToSchedule }) => {
       if (!result.success) {
         throw new Error(result.error || 'Deletion failed');
       }
-      
+
       // Clear selection if the deleted extraction was selected
       if (selectedExtraction?.id === extraction.id) {
         setSelectedExtraction(undefined);
       }
-      
+
       console.log(`Successfully deleted PDF extraction: ${extraction.filename}`);
     } catch (error) {
       console.error('Failed to delete PDF extraction:', error);
@@ -102,9 +102,10 @@ const PDFManager: React.FC<PDFManagerProps> = ({ onNavigateToSchedule }) => {
           selectedExtraction={selectedExtraction}
           onSelect={handleExtractionSelect}
           onDelete={handleExtractionDelete}
+          onNewPDF={handleNewPDF}
         />
       </TwoPanelLayout.SidePanel>
-      
+
       <TwoPanelLayout.MainPanel>
         {selectedExtraction ? (
           <PDFExtractionDetails

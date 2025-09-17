@@ -33,13 +33,13 @@ interface TwoPanelLayoutComponent extends React.FC<TwoPanelLayoutProps> {
 
 /**
  * TwoPanelLayout
- * 
+ *
  * Provides the standard two-panel layout used throughout the application.
  * Matches the schedule builder's information-dense, professional aesthetic.
  */
-const TwoPanelLayoutBase: React.FC<TwoPanelLayoutProps> = ({ 
-  children, 
-  className 
+const TwoPanelLayoutBase: React.FC<TwoPanelLayoutProps> = ({
+  children,
+  className
 }) => {
   return (
     <div className={cn("h-full flex flex-col", className)}>
@@ -52,12 +52,13 @@ const TwoPanelLayoutBase: React.FC<TwoPanelLayoutProps> = ({
 
 /**
  * SidePanel
- * 
+ *
  * Left panel component for selection, filtering, and browsing.
  * Optimized for information density and professional functionality.
+ * FIXED: Added p-2 pt-0 padding to content area for consistent spacing.
  */
-export const SidePanel: React.FC<SidePanelProps> = ({ 
-  children, 
+export const SidePanel: React.FC<SidePanelProps> = ({
+  children,
   title,
   className,
   width = 'standard'
@@ -82,7 +83,9 @@ export const SidePanel: React.FC<SidePanelProps> = ({
         </div>
       )}
       <div className="flex-1 overflow-hidden">
-        {children}
+        <div className="p-2 pt-0">
+          {children}
+        </div>
       </div>
     </aside>
   );
@@ -90,13 +93,13 @@ export const SidePanel: React.FC<SidePanelProps> = ({
 
 /**
  * MainPanel
- * 
+ *
  * Right panel component for main workspace and detailed views.
  * Provides maximum space for content and actions.
  */
-export const MainPanel: React.FC<MainPanelProps> = ({ 
-  children, 
-  className 
+export const MainPanel: React.FC<MainPanelProps> = ({
+  children,
+  className
 }) => {
   return (
     <main className={cn("flex-1 flex flex-col overflow-hidden", className)}>
@@ -109,7 +112,7 @@ export const MainPanel: React.FC<MainPanelProps> = ({
 
 /**
  * ProfessionalHeader
- * 
+ *
  * Compact, professional header for consistent navigation across views.
  * Maximum 40px height to preserve screen real estate.
  */

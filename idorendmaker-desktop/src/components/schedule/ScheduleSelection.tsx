@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Calendar, Clock, FileText, Search, Database, Trash2, Download, Loader2 } from 'lucide-react';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
+import { FullContentLoading } from '../ui/loading';
 import { Schedule } from '../../../shared/types/race';
 import { ConfirmationDialog } from '../dialogs';
 
@@ -158,10 +159,7 @@ const ScheduleSelection: React.FC<ScheduleSelectionProps> = ({ onScheduleSelecte
 
         {/* Loading State */}
         {loading && (
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mr-2"></div>
-            <span className="text-sm text-muted-foreground">Időrendek betöltése...</span>
-          </div>
+           <FullContentLoading message="Időrendek betöltése..." />
         )}
 
         {/* Schedule List */}

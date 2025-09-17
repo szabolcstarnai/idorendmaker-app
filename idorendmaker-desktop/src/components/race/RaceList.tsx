@@ -11,6 +11,7 @@ import { LegacyCollapsible } from '../ui/collapsible';
 import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
 import { LevelSelectorModal } from './LevelSelectorModal';
 import { getAvailableLevels, getAddedLevels, getRaceLevelCombinations, getAvailableLevelsForMode } from '../../utils/levelUtils';
+import { TabbedPanelLoading } from '../ui/loading';
 
 interface RaceListProps {
   onRaceAdd?: (race: RaceWithAgeGroups, level: Level) => void;
@@ -55,9 +56,8 @@ const RaceCard = React.memo(({ race, onRaceClick, onToggleHidden, showAddButton 
 
   return (
     <Card
-      className={`transition-all hover:shadow-md hover:border-primary/50 group relative ${
-        race.hidden ? 'opacity-60 border-dashed' : ''
-      }`}
+      className={`transition-all hover:shadow-md hover:border-primary/50 group relative ${race.hidden ? 'opacity-60 border-dashed' : ''
+        }`}
     >
       <CardContent className="p-3">
         <div className="flex items-center justify-between mb-1">
@@ -86,9 +86,8 @@ const RaceCard = React.memo(({ race, onRaceClick, onToggleHidden, showAddButton 
             )}
             <button
               onClick={(e) => onToggleHidden(race, e)}
-              className={`opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-muted ${
-                race.hidden ? 'text-green-600 hover:text-green-700' : 'text-red-600 hover:text-red-700'
-              }`}
+              className={`opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-muted ${race.hidden ? 'text-green-600 hover:text-green-700' : 'text-red-600 hover:text-red-700'
+                }`}
               title={race.hidden ? 'Megjelenítés' : 'Elrejtés'}
             >
               {race.hidden ? (
@@ -99,7 +98,7 @@ const RaceCard = React.memo(({ race, onRaceClick, onToggleHidden, showAddButton 
             </button>
           </div>
         </div>
-        
+
         <div className="flex flex-wrap gap-1 mb-2">
           <Badge variant={getDisciplineVariant(race.discipline)} className="text-xs">
             {race.discipline}
@@ -114,7 +113,7 @@ const RaceCard = React.memo(({ race, onRaceClick, onToggleHidden, showAddButton 
             {race.distance}
           </Badge>
         </div>
-        
+
         {/* Competitor information from PDF */}
         {topCompetitors && topCompetitors.length > 0 && (
           <div className="text-xs text-blue-600 mb-1">
@@ -125,13 +124,13 @@ const RaceCard = React.memo(({ race, onRaceClick, onToggleHidden, showAddButton 
             )}
           </div>
         )}
-        
+
         {race.ageGroups.length > 0 && (
           <div className="text-xs text-muted-foreground">
             {race.ageGroups.map(ag => ag.name).join(', ')}
           </div>
         )}
-        
+
         {/* Level status indicators - ONLY visible on "Felvett versenyszámok" tab in full mode */}
         {scheduleMode === 'full' && activeTab === 'added' && (addedLevelsCount > 0 || availableLevelsCount > 0) && (
           <div className="flex items-center gap-2 mt-2 pt-2 border-t">
@@ -152,13 +151,13 @@ const RaceCard = React.memo(({ race, onRaceClick, onToggleHidden, showAddButton 
   );
 });
 
-const RaceList: React.FC<RaceListProps> = React.memo(({ 
-  onRaceAdd, 
-  scheduleRaces = [], 
+const RaceList: React.FC<RaceListProps> = React.memo(({
+  onRaceAdd,
+  scheduleRaces = [],
   scheduleMode = 'full',
   filteredRaces,
   raceSource = 'database',
-  pdfExtractionId 
+  pdfExtractionId
 }) => {
   const [races, setRaces] = useState<RaceWithAgeGroups[]>([]);
   const [allLevels, setAllLevels] = useState<Level[]>([]);
@@ -170,16 +169,16 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
   const [activeTab, setActiveTab] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(50); // Show 50 races per page
-  
+
   // Level selector modal state
   const [selectedRaceForLevel, setSelectedRaceForLevel] = useState<RaceWithAgeGroups | null>(null);
   const [isLevelSelectorOpen, setIsLevelSelectorOpen] = useState(false);
-  
+
   // Discipline filter state - default to Kajak and Kenu only
   const [selectedDisciplines, setSelectedDisciplines] = useState<Set<string>>(
     new Set(['Kajak', 'Kenu'])
   );
-  
+
   // Hidden races filter state - default to show only visible races
   const [showHiddenRaces, setShowHiddenRaces] = useState(false);
 
@@ -228,7 +227,7 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
     return races.map(race => {
       const availableLevels = getAvailableLevelsForMode(race, scheduleRaces, allLevels, scheduleMode);
       const addedLevels = getAddedLevels(race, scheduleRaces);
-      
+
       return {
         race,
         availableLevels,
@@ -259,7 +258,7 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
   // Memoized filtered races for performance with enhanced tab logic
   const displayedRaces = useMemo(() => {
     let filtered = racesWithSearchTextAndLevels;
-    
+
     // Enhanced tab filtering for cleaner navigation
     if (activeTab === 'added') {
       // Show races that have at least one level added
@@ -268,21 +267,21 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
       // Show races that have NO levels added yet (cleaner navigation)
       filtered = filtered.filter(raceStatus => !raceStatus.hasAddedLevels);
     }
-    
+
     // Filter by hidden status (unless showing hidden races)
     if (!showHiddenRaces) {
       filtered = filtered.filter(raceStatus => !raceStatus.race.hidden);
     }
-    
+
     // Filter by selected disciplines
     filtered = filtered.filter(raceStatus => selectedDisciplines.has(raceStatus.race.discipline));
-    
+
     // Filter by search term (using debounced term and pre-computed search text)
     if (debouncedSearchTerm.trim()) {
       const searchLower = debouncedSearchTerm.toLowerCase();
       filtered = filtered.filter(raceStatus => raceStatus.searchText.includes(searchLower));
     }
-    
+
     return filtered;
   }, [debouncedSearchTerm, racesWithSearchTextAndLevels, selectedDisciplines, showHiddenRaces, activeTab]);
 
@@ -312,7 +311,7 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
   const loadRaces = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       if (raceSource === 'pdf-filtered' && filteredRaces) {
         // Use filtered races from PDF
         // Convert RaceWithCompetitorData to RaceWithAgeGroups format
@@ -335,7 +334,7 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
         const raceData = await window.electronAPI.getAllRaces();
         setRaces(raceData);
       }
-      
+
       setError(null);
     } catch (err) {
       setError('Hiba a versenyszámok betöltése közben');
@@ -374,7 +373,7 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
   // Smart race click handler for level selection
   const handleRaceClick = useCallback((race: RaceWithAgeGroups) => {
     const availableLevels = getAvailableLevelsForMode(race, scheduleRaces, allLevels, scheduleMode);
-    
+
     if (availableLevels.length === 0) {
       // All levels exhausted - no action
       return;
@@ -406,14 +405,14 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
   const handleToggleRaceHidden = useCallback(async (race: RaceWithAgeGroups, event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
-    
+
     try {
       const newHiddenStatus = !race.hidden;
       const success = await window.electronAPI.updateRaceHidden(race.id, newHiddenStatus);
-      
+
       if (success) {
         // Update the local state
-        setRaces(prev => prev.map(r => 
+        setRaces(prev => prev.map(r =>
           r.id === race.id ? { ...r, hidden: newHiddenStatus } : r
         ));
       } else {
@@ -424,24 +423,13 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
     }
   }, []);
 
-  if (loading) {
-    return (
-      <div className="p-4">
-        <h2 className="text-lg font-semibold mb-4">Versenyszámok</h2>
-        <div className="flex items-center justify-center h-32">
-          <div className="text-gray-500">Betöltés...</div>
-        </div>
-      </div>
-    );
-  }
-
   if (error) {
     return (
       <div className="p-4">
         <h2 className="text-lg font-semibold mb-4">Versenyszámok</h2>
         <div className="bg-red-50 border border-red-200 rounded p-3">
           <div className="text-red-700">{error}</div>
-          <button 
+          <button
             onClick={loadRaces}
             className="mt-2 text-sm text-red-600 underline"
           >
@@ -457,7 +445,7 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
       <h2 className="text-base font-semibold mb-2">
         {raceSource === 'pdf-filtered' ? 'Nevezési lista' : 'Versenyszámok'}
       </h2>
-      
+
       {/* PDF extraction info */}
       {raceSource === 'pdf-filtered' && pdfExtractionId && (
         <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-lg">
@@ -469,7 +457,7 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
           </div>
         </div>
       )}
-      
+
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-3">
         <TabsList className="grid w-full grid-cols-2">
@@ -481,7 +469,7 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
           </TabsTrigger>
         </TabsList>
       </Tabs>
-      
+
       {/* Search */}
       <div className="relative mb-3">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -505,7 +493,7 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
               <Checkbox
                 id={`discipline-${discipline}`}
                 checked={selectedDisciplines.has(discipline)}
-                onCheckedChange={(checked) => 
+                onCheckedChange={(checked) =>
                   handleDisciplineToggle(discipline, checked === true)
                 }
               />
@@ -518,7 +506,7 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
             </div>
           ))}
         </div>
-        
+
         {/* Show Hidden Races Toggle */}
         <div className="flex items-center space-x-2 pt-3 border-t border-border">
           <Checkbox
@@ -547,7 +535,11 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
       {/* Race List */}
       <ScrollArea className="flex-1">
         <div className="space-y-2 pr-4">
-          {paginatedRaces.length === 0 ? (
+          {loading ? (
+            <TabbedPanelLoading
+              message={raceSource === 'pdf-filtered' ? 'Nevezési lista betöltése...' : 'Versenyszámok betöltése...'}
+            />
+          ) : paginatedRaces.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
               {debouncedSearchTerm ? 'Nincs találat' : 'Nincsenek versenyszámok'}
             </div>
@@ -555,7 +547,7 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
             paginatedRaces.map((raceStatus) => {
               // Find competitor data if this is from PDF filtering
               const competitorRace = filteredRaces?.find(fr => fr.id === raceStatus.race.id);
-              
+
               return (
                 <RaceCard
                   key={raceStatus.race.id}
@@ -564,7 +556,7 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
                   onToggleHidden={handleToggleRaceHidden}
                   showAddButton={
                     activeTab === 'all' ? true :  // Always show on "Versenyszámok" 
-                    (activeTab === 'added' && raceStatus.hasAvailableLevels)  // Show on "Felvett" if more levels available
+                      (activeTab === 'added' && raceStatus.hasAvailableLevels)  // Show on "Felvett" if more levels available
                   }
                   availableLevelsCount={raceStatus.availableLevelsCount}
                   addedLevelsCount={raceStatus.addedLevelsCount}
@@ -591,11 +583,11 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
           >
             <ChevronLeft className="w-3 h-3" />
           </Button>
-          
+
           <span className="text-xs text-muted-foreground px-1 min-w-[2rem] text-center">
             {currentPage}/{totalPages}
           </span>
-          
+
           <Button
             variant="outline"
             size="sm"

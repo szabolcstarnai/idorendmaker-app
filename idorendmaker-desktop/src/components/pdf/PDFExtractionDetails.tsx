@@ -42,13 +42,11 @@ interface PDFExtraction {
 interface PDFExtractionDetailsProps {
   extraction: PDFExtraction;
   onCreateSchedule: (pdfExtractionId: number) => void;
-  onNewPDF?: () => void;
 }
 
 const PDFExtractionDetails: React.FC<PDFExtractionDetailsProps> = ({ 
   extraction, 
-  onCreateSchedule,
-  onNewPDF
+  onCreateSchedule
 }) => {
   const [detailedStats, setDetailedStats] = useState<any>(null);
   const [loadingStats, setLoadingStats] = useState(false);
@@ -192,17 +190,6 @@ const PDFExtractionDetails: React.FC<PDFExtractionDetailsProps> = ({
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {onNewPDF && (
-                <Button 
-                  variant="outline" 
-                  onClick={onNewPDF} 
-                  className="gap-2"
-                  size="sm"
-                >
-                  <Upload className="h-4 w-4" />
-                  Új PDF
-                </Button>
-              )}
               <Button onClick={handleCreateSchedule} className="gap-2">
                 <Calendar className="h-4 w-4" />
                 Időrend készítése
