@@ -83,7 +83,7 @@ export const SidePanel: React.FC<SidePanelProps> = ({
         </div>
       )}
       <div className="flex-1 overflow-hidden flex flex-col">
-        <div className="p-2 pt-0 flex-1 min-h-0">
+        <div className="p-2 pt-0 flex-1 min-h-0 overflow-auto">
           {children}
         </div>
       </div>
@@ -103,7 +103,7 @@ export const MainPanel: React.FC<MainPanelProps> = ({
 }) => {
   return (
     <main className={cn("flex-1 flex flex-col overflow-hidden", className)}>
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-auto">
         {children}
       </div>
     </main>

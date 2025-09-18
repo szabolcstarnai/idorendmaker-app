@@ -4,6 +4,7 @@ import hu.szabolcst.idorendmaker.model.dto.schedule.CreateScheduleSectionDataDto
 import hu.szabolcst.idorendmaker.model.dto.schedule.ScheduleDto;
 import hu.szabolcst.idorendmaker.model.dto.schedule.ScheduleItemWithRaceAndSectionDto;
 import hu.szabolcst.idorendmaker.model.dto.schedule.ScheduleSectionDto;
+import hu.szabolcst.idorendmaker.model.dto.schedule.ScheduleStatisticsDto;
 import hu.szabolcst.idorendmaker.model.dto.schedule.ScheduleWithPDFContextDto;
 import hu.szabolcst.idorendmaker.model.dto.schedule.ScheduleWithSectionsDto;
 import hu.szabolcst.idorendmaker.service.ScheduleService;
@@ -232,6 +233,37 @@ public class ScheduleController {
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * Update schedule name
+     * Equivalent to IPC: 'db:renameSchedule'
+     */
+    @PutMapping("/{id}/name")
+    public ResponseEntity<Void> updateScheduleName(
+            @PathVariable final Integer id,
+            @RequestBody final UpdateScheduleNameRequest request) {
+        log.debug("PUT /api/schedules/{}/name - Updating schedule name to: {}", id, request.getName());
+
+        scheduleService.updateScheduleName(id, request.getName());
+
+        log.info("Updated schedule {} name to: {}", id, request.getName());
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Get schedule statistics
+     * Equivalent to IPC: 'db:getScheduleStatistics'
+     */
+    @GetMapping("/{id}/statistics")
+    public ResponseEntity<ScheduleStatisticsDto> getScheduleStatistics(@PathVariable final Integer id) {
+        log.debug("GET /api/schedules/{}/statistics - Getting schedule statistics", id);
+
+        final ScheduleStatisticsDto statistics = scheduleService.getScheduleStatistics(id);
+
+        log.debug("Retrieved statistics for schedule {}: {} sections, {} races",
+                id, statistics.getTotalSections(), statistics.getTotalRaces());
+        return ResponseEntity.ok(statistics);
+    }
+
     // Request DTOs for endpoints that need them
 
     @Data
@@ -267,6 +299,13 @@ public class ScheduleController {
         private String name;
         private List<CreateScheduleSectionDataDto> sectionsData;
         private Integer pdfExtractionId;
+
+    }
+
+    @Data
+    public static class UpdateScheduleNameRequest {
+
+        private String name;
 
     }
 }

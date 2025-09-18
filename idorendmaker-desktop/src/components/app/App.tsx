@@ -549,9 +549,10 @@ const App: React.FC = () => {
         return (
           <div className="h-screen flex flex-col">
             <Navbar currentView={currentView} onNavigateHome={handleBackToMainMenu} />
-            <div className="flex-1">
+            <div className="flex-1 min-h-0">
               <ScheduleSelection
                 onScheduleSelected={handleScheduleSelected}
+                onCreateNewSchedule={handleCreateNewSchedule}
               />
             </div>
           </div>

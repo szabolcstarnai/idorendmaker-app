@@ -14,4 +14,6 @@ public interface ScheduleItemRepository {
     void deleteAllByScheduleId(Integer paramInteger);
 
     void deleteAllBySectionId(Integer paramInteger);
+
+    List<ScheduleItem> findAllByScheduleIdOrderByOrderIndexAsc(Integer scheduleId);
 }

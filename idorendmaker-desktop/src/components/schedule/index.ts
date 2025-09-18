@@ -7,3 +7,6 @@ export { default as ScheduleRaceList } from './ScheduleRaceList';
 export { default as DaySectionManager } from './DaySectionManager';
 export { default as SectionNavigator } from './SectionNavigator';
 export { default as IntervalSeparator } from './IntervalSeparator';
+export { default as CompactScheduleCard } from './CompactScheduleCard';
+export { default as ScheduleListPanel } from './ScheduleListPanel';
+export { default as ScheduleDetailsPanel } from './ScheduleDetailsPanel';

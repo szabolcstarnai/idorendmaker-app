@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { RaceWithAgeGroups, Schedule, ScheduleItemWithRace, RuleWithConditions, CreateRuleData, RuleViolation, ScheduleRace, ScheduleSection, ScheduleItemWithRaceAndSection, ScheduleWithSections, CreateScheduleSectionData, Level, PDFProcessingResult, RaceWithCompetitorData, CompetitorSchedule } from '../shared/types/race';
+import { ScheduleStatistics } from './data/services/BackendAPIService';
 
 export interface ElectronAPI {
   // Database operations
@@ -74,7 +75,9 @@ export interface ElectronAPI {
     hasPDFData: boolean;
   }>;
   deleteSchedule: (scheduleId: number) => Promise<void>;
-  
+  renameSchedule: (scheduleId: number, newName: string) => Promise<void>;
+  getScheduleStatistics: (scheduleId: number) => Promise<ScheduleStatistics>;
+
   // Export operations
   exportScheduleToExcel: (scheduleId: number, scheduleName: string) => Promise<{
     success: boolean;
@@ -231,9 +234,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('db:getScheduleWithSections', scheduleId),
   getScheduleWithPDFContext: (scheduleId: number) => 
     ipcRenderer.invoke('db:getScheduleWithPDFContext', scheduleId),
-  deleteSchedule: (scheduleId: number) => 
+  deleteSchedule: (scheduleId: number) =>
     ipcRenderer.invoke('db:deleteSchedule', scheduleId),
-  
+  renameSchedule: (scheduleId: number, newName: string) =>
+    ipcRenderer.invoke('db:renameSchedule', scheduleId, newName),
+  getScheduleStatistics: (scheduleId: number) =>
+    ipcRenderer.invoke('db:getScheduleStatistics', scheduleId),
+
   // Export operations
   exportScheduleToExcel: (scheduleId: number, scheduleName: string) => 
     ipcRenderer.invoke('export:scheduleToExcel', scheduleId, scheduleName),

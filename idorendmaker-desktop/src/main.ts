@@ -321,6 +321,14 @@ const initializeApp = async () => {
     return await BackendAPIService.deleteSchedule(scheduleId); // NEW BACKEND VERSION
   });
 
+  ipcMain.handle('db:renameSchedule', async (_, scheduleId: number, newName: string) => {
+    return await BackendAPIService.renameSchedule(scheduleId, newName); // NEW BACKEND VERSION
+  });
+
+  ipcMain.handle('db:getScheduleStatistics', async (_, scheduleId: number) => {
+    return await BackendAPIService.getScheduleStatistics(scheduleId); // NEW BACKEND VERSION
+  });
+
   // Schedule item operations - MIGRATED TO BACKEND API
   ipcMain.handle('db:createScheduleItem', async (_, scheduleId: number, sectionId: number, raceId: number, levelId: number, orderIndex: number, intervalMinutes?: number, notes?: string) => {
     // return await ScheduleService.createScheduleItem(scheduleId, sectionId, raceId, levelId, orderIndex, intervalMinutes || 15, notes); // OLD PRISMA VERSION

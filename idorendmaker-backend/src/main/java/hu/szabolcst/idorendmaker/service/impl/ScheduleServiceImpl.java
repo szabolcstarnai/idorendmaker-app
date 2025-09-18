@@ -6,6 +6,7 @@ import hu.szabolcst.idorendmaker.model.dto.schedule.CreateScheduleSectionDataDto
 import hu.szabolcst.idorendmaker.model.dto.schedule.ScheduleDto;
 import hu.szabolcst.idorendmaker.model.dto.schedule.ScheduleItemWithRaceAndSectionDto;
 import hu.szabolcst.idorendmaker.model.dto.schedule.ScheduleSectionDto;
+import hu.szabolcst.idorendmaker.model.dto.schedule.ScheduleStatisticsDto;
 import hu.szabolcst.idorendmaker.model.dto.schedule.ScheduleWithPDFContextDto;
 import hu.szabolcst.idorendmaker.model.dto.schedule.ScheduleWithSectionsDto;
 import hu.szabolcst.idorendmaker.model.entity.PDFExtraction;
@@ -378,5 +379,101 @@ public class ScheduleServiceImpl implements ScheduleService {
         scheduleRepository.deleteById(scheduleId);
         
         log.info("Schedule {} and all associated data deleted successfully", scheduleId);
+    }
+
+    @Override
+    @Transactional
+    public void updateScheduleName(final Integer scheduleId, final String newName) {
+        log.debug("Updating schedule {} name to: {}", scheduleId, newName);
+
+        final Optional<Schedule> scheduleOpt = scheduleRepository.findById(scheduleId);
+        if (scheduleOpt.isEmpty()) {
+            throw new IllegalArgumentException("Schedule not found with ID: " + scheduleId);
+        }
+
+        final Schedule schedule = scheduleOpt.get();
+        schedule.setName(newName);
+        schedule.setUpdatedAt(LocalDateTime.now());
+
+        scheduleRepository.save(schedule);
+
+        log.info("Schedule {} name updated successfully to: {}", scheduleId, newName);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ScheduleStatisticsDto getScheduleStatistics(final Integer scheduleId) {
+        log.debug("Getting statistics for schedule: {}", scheduleId);
+
+        // Check if schedule exists
+        final Optional<Schedule> scheduleOpt = scheduleRepository.findById(scheduleId);
+        if (scheduleOpt.isEmpty()) {
+            throw new IllegalArgumentException("Schedule not found with ID: " + scheduleId);
+        }
+
+        final Schedule schedule = scheduleOpt.get();
+
+        // Get all sections for this schedule
+        final List<ScheduleSection> sections = scheduleSectionRepository.findAllByScheduleIdOrderByDayNumberAscSectionTypeAsc(scheduleId);
+        final int totalSections = sections.size();
+
+        // Get all schedule items for this schedule
+        final List<ScheduleItem> allItems = scheduleItemRepository.findAllByScheduleIdOrderByOrderIndexAsc(scheduleId);
+        final int totalRaces = allItems.size();
+
+        // Calculate unique race types (distinct race IDs)
+        final long uniqueRaceTypes = allItems.stream()
+                .mapToInt(ScheduleItem::getRaceId)
+                .distinct()
+                .count();
+
+        // Calculate most common interval
+        final int mostCommonInterval = allItems.stream()
+                .map(ScheduleItem::getIntervalMinutes)
+                .filter(interval -> interval != null && interval > 0)
+                .collect(java.util.stream.Collectors.groupingBy(
+                        java.util.function.Function.identity(),
+                        java.util.stream.Collectors.counting()
+                ))
+                .entrySet().stream()
+                .max(java.util.Map.Entry.comparingByValue())
+                .map(java.util.Map.Entry::getKey)
+                .orElse(15); // Default to 15 minutes if no intervals found
+
+        // Calculate average races per section
+        final Double averageRacesPerSection = totalSections > 0 ? (double) totalRaces / totalSections : 0.0;
+
+        // Calculate total duration (simplified - this could be more sophisticated)
+        int totalDurationMinutes = 0;
+        for (final ScheduleSection section : sections) {
+            // Count items in this section
+            final long itemsInSection = allItems.stream()
+                    .filter(item -> item.getSectionId().equals(section.getId()))
+                    .count();
+
+            if (itemsInSection > 0) {
+                // Calculate section duration: (items - 1) * average interval + estimated race duration
+                final int sectionDuration = (int) ((itemsInSection - 1) * mostCommonInterval + itemsInSection * 10); // Assume 10 min per race
+                totalDurationMinutes += sectionDuration;
+            }
+        }
+
+        // Check if schedule has PDF data
+        final boolean hasPDFData = schedule.getPdfExtractionId() != null;
+
+        final ScheduleStatisticsDto statistics = new ScheduleStatisticsDto(
+                totalSections,
+                totalRaces,
+                totalDurationMinutes,
+                averageRacesPerSection,
+                hasPDFData,
+                (int) uniqueRaceTypes,
+                mostCommonInterval
+        );
+
+        log.debug("Generated statistics for schedule {}: {} sections, {} races, {} minutes total",
+                scheduleId, totalSections, totalRaces, totalDurationMinutes);
+
+        return statistics;
     }
 }

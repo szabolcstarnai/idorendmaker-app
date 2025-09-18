@@ -4,6 +4,7 @@ import hu.szabolcst.idorendmaker.model.dto.schedule.CreateScheduleSectionDataDto
 import hu.szabolcst.idorendmaker.model.dto.schedule.ScheduleDto;
 import hu.szabolcst.idorendmaker.model.dto.schedule.ScheduleItemWithRaceAndSectionDto;
 import hu.szabolcst.idorendmaker.model.dto.schedule.ScheduleSectionDto;
+import hu.szabolcst.idorendmaker.model.dto.schedule.ScheduleStatisticsDto;
 import hu.szabolcst.idorendmaker.model.dto.schedule.ScheduleWithPDFContextDto;
 import hu.szabolcst.idorendmaker.model.dto.schedule.ScheduleWithSectionsDto;
 import java.util.List;
@@ -101,4 +102,18 @@ public interface ScheduleService {
      * Equivalent to IPC: 'db:deleteSchedule'
      */
     void deleteSchedule(Integer scheduleId);
+
+    /**
+     * Update schedule name
+     * Equivalent to TypeScript: renameSchedule(scheduleId: number, newName: string): Promise<void>
+     * Equivalent to IPC: 'db:renameSchedule'
+     */
+    void updateScheduleName(Integer scheduleId, String newName);
+
+    /**
+     * Get schedule statistics
+     * Equivalent to TypeScript: getScheduleStatistics(scheduleId: number): Promise<ScheduleStatistics>
+     * Equivalent to IPC: 'db:getScheduleStatistics'
+     */
+    ScheduleStatisticsDto getScheduleStatistics(Integer scheduleId);
 }

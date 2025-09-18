@@ -151,7 +151,14 @@
 						<buildArg>-H:+AddAllCharsets</buildArg>
 						<buildArg>--add-opens</buildArg>
 						<buildArg>java.base/java.nio=ALL-UNNAMED</buildArg>
-					</buildArgs>
+                        <!-- new useful native-image flags -->
+                        <!-- emit the build report (HTML) -->
+                        <buildArg>--emit</buildArg>
+                        <buildArg>build-report</buildArg>
+
+                        <!-- enable SBOM generation -->
+                        <buildArg>--enable-sbom=export,classpath,cyclonedx</buildArg>
+                    </buildArgs>
 				</configuration>
 			</plugin>
 		</plugins>

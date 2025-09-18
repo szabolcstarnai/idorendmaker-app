@@ -116,6 +116,12 @@ public class ScheduleItemJdbcRepository
         this.jdbcTemplate.update("DELETE FROM schedule_items WHERE section_id = ?", sectionId);
     }
 
+    @Override
+    public List<ScheduleItem> findAllByScheduleIdOrderByOrderIndexAsc(final Integer scheduleId) {
+        final String sql = "SELECT si.id as si_id, si.schedule_id as si_schedule_id, si.section_id as si_section_id, si.race_id as si_race_id, si.level_id as si_level_id, si.order_index as si_order_index, si.interval_minutes as si_interval_minutes, si.notes as si_notes, si.created_at as si_created_at, r.id as r_id, r.name as r_name, r.discipline as r_discipline, r.boat_class as r_boat_class, r.gender as r_gender, r.distance as r_distance, r.occurrence as r_occurrence, r.hidden as r_hidden, r.created_at as r_created_at, r.updated_at as r_updated_at, rag.race_id as rag_race_id, rag.age_group_id as rag_age_group_id, ag.id as ag_id, ag.name as ag_name, ag.created_at as ag_created_at, l.id as l_id, l.name as l_name, l.level_type as l_level_type, l.sort_order as l_sort_order, l.is_default as l_is_default, l.created_at as l_created_at FROM schedule_items si JOIN races r ON si.race_id = r.id LEFT JOIN race_age_groups rag ON r.id = rag.race_id LEFT JOIN age_groups ag ON rag.age_group_id = ag.id LEFT JOIN levels l ON si.level_id = l.id WHERE si.schedule_id = ? ORDER BY si.order_index ASC";
+        return (List<ScheduleItem>) jdbcTemplate.query(sql, (ResultSetExtractor) new ScheduleItemWithRelationshipsExtractor(), scheduleId);
+    }
+
     static class ScheduleItemWithRelationshipsAndSectionExtractor
         implements ResultSetExtractor<List<ScheduleItem>> {
 

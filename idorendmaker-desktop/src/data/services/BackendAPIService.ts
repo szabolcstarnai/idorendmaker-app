@@ -32,6 +32,17 @@ export interface DatabaseStats {
   schedules: number
 }
 
+// Type for schedule statistics
+export interface ScheduleStatistics {
+  totalSections: number
+  totalRaces: number
+  totalDurationMinutes: number
+  averageRacesPerSection: number
+  hasPDFData: boolean
+  uniqueRaceTypes: number
+  mostCommonInterval: number
+}
+
 // Minimal types needed for backend API that aren't already defined in shared types
 export interface ProcessedVersenyszam {
   nev: string
@@ -131,10 +142,17 @@ export class BackendAPIService {
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
-      
+
+      // Handle void responses (like PUT/DELETE that return 204 No Content)
+      if (response.status === 204 || response.headers.get('content-length') === '0') {
+        console.log(`✅ Backend API Response: No Content (${response.status})`)
+        return undefined as T
+      }
+
+      // Parse JSON response for non-void responses
       const data = await response.json()
       console.log(`✅ Backend API Response: ${JSON.stringify(data).substring(0, 100)}...`)
-      
+
       return data as T
       
     } catch (error) {
@@ -422,6 +440,22 @@ export class BackendAPIService {
    */
   static async deleteSchedule(scheduleId: number): Promise<void> {
     await this.delete<void>(`${BackendConfig.ENDPOINTS.SCHEDULES}/${scheduleId}`)
+  }
+
+  /**
+   * Update schedule name
+   * Endpoint: PUT /api/schedules/{id}/name
+   */
+  static async renameSchedule(scheduleId: number, newName: string): Promise<void> {
+    await this.put<void>(`${BackendConfig.ENDPOINTS.SCHEDULES}/${scheduleId}/name`, { name: newName })
+  }
+
+  /**
+   * Get schedule statistics
+   * Endpoint: GET /api/schedules/{id}/statistics
+   */
+  static async getScheduleStatistics(scheduleId: number): Promise<ScheduleStatistics> {
+    return this.get<ScheduleStatistics>(`${BackendConfig.ENDPOINTS.SCHEDULES}/${scheduleId}/statistics`)
   }
 
   // ========================
