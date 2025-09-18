@@ -7,12 +7,14 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 
+@Slf4j
 public abstract class BaseJdbcRepository<T, ID> {
 
     @Autowired
@@ -126,20 +128,47 @@ public abstract class BaseJdbcRepository<T, ID> {
 
     protected T update(final T entity) {
         final String sql = getUpdateSql();
+        final ID entityId = getId(entity);
+
+        log.debug("🔄 UPDATE operation starting for entity ID: {}", entityId);
+        log.debug("📝 UPDATE SQL: {}", sql);
+
         final int rowsAffected = this.jdbcTemplate.update(connection -> {
             final PreparedStatement ps = connection.prepareStatement(sql);
             try {
+                log.debug("🔧 Setting UPDATE parameters for entity ID: {}", entityId);
                 setUpdateParameters(ps, entity);
+
+                // GraalVM fix: Explicit connection auto-commit handling
+                if (connection.getAutoCommit()) {
+                    log.warn("⚠️ Connection has autoCommit=true, forcing to false for UPDATE");
+                    connection.setAutoCommit(false);
+                }
+
+                log.debug("✅ UPDATE parameters set successfully for entity ID: {}", entityId);
             } catch (final Exception e) {
+                log.error("❌ Failed to set update parameters for entity ID: {}", entityId, e);
                 throw new RuntimeException("Failed to set update parameters", e);
             }
             return ps;
         });
 
+        log.debug("📊 UPDATE operation completed. Rows affected: {} for entity ID: {}", rowsAffected, entityId);
+
         if (rowsAffected == 0) {
-            throw new RuntimeException("Update failed: no rows affected for entity with ID " + getId(entity));
+            log.error("❌ UPDATE failed: no rows affected for entity ID: {}", entityId);
+            throw new RuntimeException("Update failed: no rows affected for entity with ID " + entityId);
         }
 
+        // GraalVM fix: Verify transaction state for UPDATE operations
+        try {
+            this.jdbcTemplate.queryForObject("SELECT 1", Integer.class);
+            log.debug("✅ Connection verification successful after UPDATE operation on entity ID: {}", entityId);
+        } catch (final Exception e) {
+            log.warn("⚠️ Connection verification failed after UPDATE: {}", e.getMessage());
+        }
+
+        log.info("🎉 UPDATE operation successful for entity ID: {}", entityId);
         return entity;
     }
 

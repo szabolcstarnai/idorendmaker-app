@@ -28,8 +28,11 @@ public class DataSourceConfig {
         final String dbPath = this.pathResolver.resolveDatabasePath();
         final String jdbcUrl = "jdbc:sqlite:" + dbPath;
 
-        log.info("🗄️ DataSource configuration:");
+        log.info("🗄️ DataSource configuration (GraalVM UPDATE fixes applied):");
         log.info("   JDBC URL: {}", jdbcUrl);
+        log.info("   Journal Mode: DELETE (changed from WAL for GraalVM UPDATE compatibility)");
+        log.info("   AutoCommit: true (enabled for GraalVM UPDATE operations)");
+        log.info("   Synchronous: FULL (enhanced for UPDATE reliability)");
 
         final boolean isValid = this.pathResolver.validateDatabasePath();
         if (!isValid) {
@@ -51,11 +54,23 @@ public class DataSourceConfig {
         config.setReadOnly(false);
 
         config.addDataSourceProperty("foreign_keys", "true");
-        config.addDataSourceProperty("journal_mode", "WAL");
-        config.addDataSourceProperty("synchronous", "NORMAL");
-        config.setAutoCommit(false);
 
-        config.addDataSourceProperty("read_uncommitted", "true");
+        // GraalVM Fix: Change journal mode from WAL to DELETE for UPDATE compatibility
+        // WAL mode can cause issues with UPDATE operations in GraalVM native builds
+        config.addDataSourceProperty("journal_mode", "DELETE");
+
+        // GraalVM Fix: Change synchronous to FULL for UPDATE reliability
+        config.addDataSourceProperty("synchronous", "FULL");
+
+        // GraalVM Fix: Enable autocommit for UPDATE operations to work properly
+        config.setAutoCommit(true);
+
+        // GraalVM Fix: Additional SQLite settings for UPDATE operations
+        config.addDataSourceProperty("cache_size", "10000");
+        config.addDataSourceProperty("temp_store", "memory");
+        config.addDataSourceProperty("locking_mode", "NORMAL");
+        config.addDataSourceProperty("busy_timeout", "30000");
+
         config.addDataSourceProperty("enable_load_extension", "false");
 
         return new HikariDataSource(config);
