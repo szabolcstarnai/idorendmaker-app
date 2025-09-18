@@ -100,7 +100,7 @@ const ScheduleRaceList: React.FC<ScheduleRaceListProps> = React.memo(({
             <div
               ref={provided.innerRef}
               {...provided.droppableProps}
-              className={`space-y-0.5 px-2 ${snapshot.isDraggingOver ? 'bg-blue-50 rounded-lg p-1' : ''}`}
+              className={`space-y-0.5 p-2 ${snapshot.isDraggingOver ? 'bg-blue-50 rounded-lg' : ''}`}
             >
               {scheduleRaces.length === 0 ? (
                 <div className="text-center text-muted-foreground py-12">
@@ -129,7 +129,7 @@ const ScheduleRaceList: React.FC<ScheduleRaceListProps> = React.memo(({
                             hasViolation={violationData.hasViolation}
                             violationCount={violationData.violationCount}
                             isHighlighted={violationData.isHighlighted}
-                            onCardClick={() => onRaceClick?.(scheduleRace.id)}
+                            onCardClick={violationData.hasViolation && onRaceClick ? () => onRaceClick(scheduleRace.id) : undefined}
                           />
                         );
                       }}

@@ -45,9 +45,10 @@ const ScheduleRaceCard: React.FC<ScheduleRaceCardProps> = React.memo(({
     <Card
       ref={innerRef}
       {...draggableProps}
+      {...dragHandleProps}
       onClick={onCardClick}
       className={`
-        hover:shadow-md transition-all duration-200 cursor-grab
+        hover:shadow-md transition-all duration-200 cursor-grab active:cursor-grabbing
         ${isDragging ? 'shadow-lg rotate-1' : ''}
         ${hasViolation ? 'border-amber-400 bg-amber-50/80 hover:bg-amber-50' : ''}
         ${isHighlighted ? 'ring-2 ring-amber-400 ring-offset-2 shadow-lg hover:ring-amber-500' : ''}
@@ -58,10 +59,9 @@ const ScheduleRaceCard: React.FC<ScheduleRaceCardProps> = React.memo(({
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1">
-                <div 
-                  {...dragHandleProps}
+                <div
                   className={`
-                    text-sm font-mono font-bold cursor-grab active:cursor-grabbing px-2 py-1 rounded
+                    text-sm font-mono font-bold px-2 py-1 rounded
                     ${hasViolation ? 'bg-amber-300 text-amber-900 font-bold' : 'text-primary'}
                   `}
                 >

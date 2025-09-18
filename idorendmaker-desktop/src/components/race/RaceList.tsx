@@ -441,100 +441,102 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
   }
 
   return (
-    <div className="p-2 flex flex-col h-full">
-      <h2 className="text-base font-semibold mb-2">
+    <div className="flex flex-col h-full">
+      <h2 className="text-base font-semibold mb-2 px-2">
         {raceSource === 'pdf-filtered' ? 'Nevezési lista' : 'Versenyszámok'}
       </h2>
 
-      {/* PDF extraction info */}
-      {raceSource === 'pdf-filtered' && pdfExtractionId && (
-        <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-lg">
-          <div className="text-sm text-green-800">
-            <div className="font-medium">PDF alapú versenyprogramozás</div>
-            <div className="text-xs text-green-700 mt-1">
-              Csak a nevezési listában szereplő versenyszámok
+      <div className="flex flex-col px-2 flex-shrink-0">
+        {/* PDF extraction info */}
+        {raceSource === 'pdf-filtered' && pdfExtractionId && (
+          <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-lg">
+            <div className="text-sm text-green-800">
+              <div className="font-medium">PDF alapú versenyprogramozás</div>
+              <div className="text-xs text-green-700 mt-1">
+                Csak a nevezési listában szereplő versenyszámok
+              </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-3">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="all">
-            {raceSource === 'pdf-filtered' ? 'Nevezési lista' : 'Versenyszámok'} ({allRacesCount})
-          </TabsTrigger>
-          <TabsTrigger value="added">
-            Felvett versenyszámok ({addedRacesCount})
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
-
-      {/* Search */}
-      <div className="relative mb-3">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-        {searching && (
-          <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4 animate-spin" />
         )}
-        <Input
-          type="text"
-          placeholder="Keresés..."
-          value={searchTerm}
-          onChange={handleSearchChange}
-          className={`pl-10 ${searching ? 'pr-10' : ''}`}
-        />
-      </div>
 
-      {/* Discipline Filters */}
-      <LegacyCollapsible title="Szűrők" defaultOpen={true} className="mb-3">
-        <div className="grid grid-cols-2 gap-2 mb-3">
-          {availableDisciplines.map((discipline) => (
-            <div key={discipline} className="flex items-center space-x-2">
-              <Checkbox
-                id={`discipline-${discipline}`}
-                checked={selectedDisciplines.has(discipline)}
-                onCheckedChange={(checked) =>
-                  handleDisciplineToggle(discipline, checked === true)
-                }
-              />
-              <label
-                htmlFor={`discipline-${discipline}`}
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                {discipline}
-              </label>
-            </div>
-          ))}
-        </div>
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-3">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="all">
+              {raceSource === 'pdf-filtered' ? 'Nevezési lista' : 'Versenyszámok'} ({allRacesCount})
+            </TabsTrigger>
+            <TabsTrigger value="added">
+              Felvett versenyszámok ({addedRacesCount})
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
 
-        {/* Show Hidden Races Toggle */}
-        <div className="flex items-center space-x-2 pt-3 border-t border-border">
-          <Checkbox
-            id="show-hidden-races"
-            checked={showHiddenRaces}
-            onCheckedChange={(checked) => setShowHiddenRaces(checked === true)}
+        {/* Search */}
+        <div className="relative mb-3">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+          {searching && (
+            <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4 animate-spin" />
+          )}
+          <Input
+            type="text"
+            placeholder="Keresés..."
+            value={searchTerm}
+            onChange={handleSearchChange}
+            className={`pl-10 ${searching ? 'pr-10' : ''}`}
           />
-          <label
-            htmlFor="show-hidden-races"
-            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1"
-          >
-            {showHiddenRaces ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-            Rejtett versenyszámok mutatása
-          </label>
         </div>
-      </LegacyCollapsible>
 
-      {/* Count Display and Pagination Info */}
-      <div className="flex justify-between items-center text-xs text-muted-foreground mb-2">
-        <span>{displayedRaces.length} versenyszám ({paginatedRaces.length} megjelenítve)</span>
-        {totalPages > 1 && (
-          <span>Oldal {currentPage}/{totalPages}</span>
-        )}
+        {/* Discipline Filters */}
+        <LegacyCollapsible title="Szűrők" defaultOpen={true} className="mb-3">
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            {availableDisciplines.map((discipline) => (
+              <div key={discipline} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`discipline-${discipline}`}
+                  checked={selectedDisciplines.has(discipline)}
+                  onCheckedChange={(checked) =>
+                    handleDisciplineToggle(discipline, checked === true)
+                  }
+                />
+                <label
+                  htmlFor={`discipline-${discipline}`}
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  {discipline}
+                </label>
+              </div>
+            ))}
+          </div>
+
+          {/* Show Hidden Races Toggle */}
+          <div className="flex items-center space-x-2 pt-3 border-t border-border">
+            <Checkbox
+              id="show-hidden-races"
+              checked={showHiddenRaces}
+              onCheckedChange={(checked) => setShowHiddenRaces(checked === true)}
+            />
+            <label
+              htmlFor="show-hidden-races"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1"
+            >
+              {showHiddenRaces ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              Rejtett versenyszámok mutatása
+            </label>
+          </div>
+        </LegacyCollapsible>
+
+        {/* Count Display and Pagination Info */}
+        <div className="flex justify-between items-center text-xs text-muted-foreground mb-2">
+          <span>{displayedRaces.length} versenyszám ({paginatedRaces.length} megjelenítve)</span>
+          {totalPages > 1 && (
+            <span>Oldal {currentPage}/{totalPages}</span>
+          )}
+        </div>
       </div>
 
       {/* Race List */}
-      <ScrollArea className="flex-1">
-        <div className="space-y-2 pr-4">
+      <ScrollArea className="flex-1 min-h-0">
+        <div className="space-y-2 px-2">
           {loading ? (
             <TabbedPanelLoading
               message={raceSource === 'pdf-filtered' ? 'Nevezési lista betöltése...' : 'Versenyszámok betöltése...'}
@@ -555,7 +557,7 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
                   onRaceClick={handleRaceClick}
                   onToggleHidden={handleToggleRaceHidden}
                   showAddButton={
-                    activeTab === 'all' ? true :  // Always show on "Versenyszámok" 
+                    activeTab === 'all' ? true :  // Always show on "Versenyszámok"
                       (activeTab === 'added' && raceStatus.hasAvailableLevels)  // Show on "Felvett" if more levels available
                   }
                   availableLevelsCount={raceStatus.availableLevelsCount}
@@ -573,7 +575,7 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
 
       {/* Pagination Controls */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-1 px-2 py-1 border-t border-border">
+        <div className="flex items-center justify-center gap-1 px-2 py-1 border-t border-border flex-shrink-0">
           <Button
             variant="outline"
             size="sm"

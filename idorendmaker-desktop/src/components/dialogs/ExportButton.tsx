@@ -100,14 +100,14 @@ const ExportButton: React.FC<ExportButtonProps> = ({
   const isButtonDisabled = disabled || !scheduleId || isExporting
 
   return (
-    <div className={cn('flex flex-col items-center gap-2', className)}>
+    <div className={cn('flex flex-col items-start gap-2', className)}>
       <Button
         onClick={handleExport}
         disabled={isButtonDisabled}
         variant={getButtonVariant()}
         size={size}
         className={cn(
-          'transition-all duration-200',
+          'transition-all duration-200 w-full',
           exportStatus === 'success' && 'bg-green-600 hover:bg-green-700',
           exportStatus === 'error' && 'bg-red-600 hover:bg-red-700'
         )}
@@ -116,13 +116,6 @@ const ExportButton: React.FC<ExportButtonProps> = ({
         <span className="ml-2">{getButtonText()}</span>
       </Button>
       
-      {/* Info badge showing schedule status */}
-      {scheduleId && !isExporting && exportStatus === 'idle' && (
-        <Badge variant="secondary" className="text-xs">
-          <Download className="h-3 w-3 mr-1" />
-          {scheduleName}
-        </Badge>
-      )}
       
       {/* Success message */}
       {exportStatus === 'success' && (
