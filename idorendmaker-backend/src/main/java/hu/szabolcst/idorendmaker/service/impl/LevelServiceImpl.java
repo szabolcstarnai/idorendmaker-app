@@ -18,25 +18,25 @@ public class LevelServiceImpl implements LevelService {
 	private final LevelMapper levelMapper;
 
 	@Override
-	@Transactional(readOnly = true)
+	@Transactional
 	public List<LevelDto> getAllLevels() {
 		return levelRepository.findAllByOrderBySortOrderAsc().stream().map(levelMapper::toDto).toList();
 	}
 
 	@Override
-	@Transactional(readOnly = true)
+	@Transactional
 	public LevelDto getDefaultLevel() {
 		return levelMapper.toDto(levelRepository.findFirstByIsDefaultTrue());
 	}
 
 	@Override
-	@Transactional(readOnly = true)
+	@Transactional
 	public Optional<LevelDto> getLevelById(final Integer id) {
 		return levelRepository.findById(id).map(levelMapper::toDto);
 	}
 
 	@Override
-	@Transactional(readOnly = true)
+	@Transactional
 	public List<LevelDto> getLevelsByType(final String levelType) {
 		return levelRepository.findAllByLevelTypeOrderBySortOrder(levelType).stream().map(levelMapper::toDto).toList();
 	}

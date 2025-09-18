@@ -40,7 +40,7 @@ public class ScheduleServiceImpl implements ScheduleService {
     private final ScheduleMapper scheduleMapper;
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<ScheduleDto> getAllSchedules() {
         log.debug("Getting all schedules");
         return scheduleRepository.findAllByOrderByCreatedAtDesc()
@@ -65,7 +65,7 @@ public class ScheduleServiceImpl implements ScheduleService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<ScheduleItemWithRaceAndSectionDto> getScheduleItems(final Integer scheduleId) {
         log.debug("Getting schedule items for schedule id: {}", scheduleId);
         
@@ -260,7 +260,7 @@ public class ScheduleServiceImpl implements ScheduleService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<ScheduleSectionDto> getScheduleSections(final Integer scheduleId) {
         log.debug("Getting schedule sections for schedule id: {}", scheduleId);
         
@@ -276,7 +276,7 @@ public class ScheduleServiceImpl implements ScheduleService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<ScheduleItemWithRaceAndSectionDto> getScheduleItemsBySection(final Integer sectionId) {
         log.debug("Getting schedule items for section id: {}", sectionId);
         
@@ -296,7 +296,7 @@ public class ScheduleServiceImpl implements ScheduleService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public Optional<ScheduleWithSectionsDto> getScheduleWithSections(final Integer scheduleId) {
         log.debug("Getting schedule with sections for id: {}", scheduleId);
         
@@ -331,7 +331,7 @@ public class ScheduleServiceImpl implements ScheduleService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public ScheduleWithPDFContextDto getScheduleWithPDFContext(final Integer scheduleId) {
         log.debug("Getting schedule with PDF context for id: {}", scheduleId);
         

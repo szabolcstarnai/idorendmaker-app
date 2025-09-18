@@ -126,13 +126,20 @@ public abstract class BaseJdbcRepository<T, ID> {
 
     protected T update(final T entity) {
         final String sql = getUpdateSql();
-        this.jdbcTemplate.update(sql, ps -> {
+        final int rowsAffected = this.jdbcTemplate.update(connection -> {
+            final PreparedStatement ps = connection.prepareStatement(sql);
             try {
-                setUpdateParameters(ps, (T) entity);
+                setUpdateParameters(ps, entity);
             } catch (final Exception e) {
-                throw new RuntimeException(e);
+                throw new RuntimeException("Failed to set update parameters", e);
             }
+            return ps;
         });
+
+        if (rowsAffected == 0) {
+            throw new RuntimeException("Update failed: no rows affected for entity with ID " + getId(entity));
+        }
+
         return entity;
     }
 

@@ -35,7 +35,7 @@ public class CompetitorServiceImpl implements CompetitorService {
 	private final CompetitorMapper competitorMapper;
 
 	@Override
-	@Transactional(readOnly = true)
+	@Transactional
 	public List<CompetitorScheduleDto> analyzeCompetitorSchedules(final List<ScheduleRaceDto> scheduleRaces,
 			final Integer pdfExtractionId) {
 		if (pdfExtractionId == null) {
@@ -157,7 +157,7 @@ public class CompetitorServiceImpl implements CompetitorService {
 	}
 
 	@Override
-	@Transactional(readOnly = true)
+	@Transactional
 	public CompetitorConflictResultDto checkCompetitorConflicts(final Integer race1Id, final Integer race2Id,
 			final Integer pdfExtractionId) {
 		if (pdfExtractionId == null) {
@@ -184,7 +184,7 @@ public class CompetitorServiceImpl implements CompetitorService {
 	}
 
 	@Override
-	@Transactional(readOnly = true)
+	@Transactional
 	public RaceCompetitorSummaryDto getRaceCompetitorSummary(final Integer raceId, final Integer pdfExtractionId) {
 		if (pdfExtractionId == null) {
 			return competitorMapper.toRaceCompetitorSummaryDto(0, List.of(), List.of());
@@ -217,7 +217,7 @@ public class CompetitorServiceImpl implements CompetitorService {
 	}
 
 	@Override
-	@Transactional(readOnly = true)
+	@Transactional
 	public List<CompetitorScheduleDto> getHighRiskCompetitors(final Integer pdfExtractionId) {
 		final List<CompetitorScheduleDto> allSchedules = analyzeCompetitorSchedules(List.of(), pdfExtractionId);
 		return allSchedules.stream()
@@ -226,7 +226,7 @@ public class CompetitorServiceImpl implements CompetitorService {
 	}
 
 	@Override
-	@Transactional(readOnly = true)
+	@Transactional
 	public CompetitorStatsDto getCompetitorStats(final Integer pdfExtractionId) {
 		try {
 			// Total unique competitors

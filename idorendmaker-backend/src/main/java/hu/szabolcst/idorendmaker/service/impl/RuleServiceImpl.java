@@ -49,19 +49,19 @@ public class RuleServiceImpl implements RuleService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<RuleWithConditionsDto> getAllRules() {
         return ruleMapper.toRuleWithConditionsDtoList(findAllRulesWithConditionsAndMatchings());
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<RuleWithConditionsDto> getActiveRules() {
         return ruleMapper.toRuleWithConditionsDtoList(findActiveRulesWithConditionsAndMatchings());
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public Optional<RuleWithConditionsDto> getRuleById(final Integer id) {
         return findRuleByIdWithConditionsAndMatchings(id).map(ruleMapper::toRuleWithConditionsDto);
     }
@@ -167,6 +167,7 @@ public class RuleServiceImpl implements RuleService {
         try {
             final Optional<Rule> ruleOpt = ruleRepository.findById(id);
             if (ruleOpt.isEmpty()) {
+                log.error("Error toggling rule active status: Rule does not exist with id {}", id);
                 return false;
             }
 
@@ -182,7 +183,7 @@ public class RuleServiceImpl implements RuleService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public RuleStatsDto getRuleStats() {
         final long totalRules = ruleRepository.count();
         final long activeRules = ruleRepository.countByIsActiveTrue();
@@ -192,7 +193,7 @@ public class RuleServiceImpl implements RuleService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<RuleWithConditionsDto> searchRules(final String searchTerm) {
         final List<Rule> rules = searchRulesWithConditionsAndMatchings(searchTerm);
         return ruleMapper.toRuleWithConditionsDtoList(rules);
@@ -215,7 +216,7 @@ public class RuleServiceImpl implements RuleService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<String> getDismissedViolations(final Integer scheduleId) {
         try {
             return dismissedRuleViolationRepository.findViolationHashesByScheduleId(scheduleId);
@@ -250,7 +251,7 @@ public class RuleServiceImpl implements RuleService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public Integer getDismissedViolationCount(final Integer scheduleId) {
         try {
             return (int) dismissedRuleViolationRepository.countByScheduleId(scheduleId);

@@ -18,6 +18,7 @@ interface RuleManagerProps {
   onEditRule?: (rule: RuleWithConditions) => void;
   selectedRule?: RuleWithConditions;
   children?: React.ReactNode; // For right panel content (RuleEditor)
+  refreshTrigger?: number; // Optional trigger for external refresh requests
 }
 
 // Ultra-compact rule card component matching schedule builder aesthetic
@@ -118,11 +119,12 @@ const CompactRuleCard = React.memo(({
   );
 });
 
-const RuleManager: React.FC<RuleManagerProps> = ({ 
-  onCreateRule, 
-  onEditRule, 
+const RuleManager: React.FC<RuleManagerProps> = ({
+  onCreateRule,
+  onEditRule,
   selectedRule,
-  children 
+  children,
+  refreshTrigger
 }) => {
   const [rules, setRules] = useState<RuleWithConditions[]>([]);
   const [loading, setLoading] = useState(true);
@@ -156,6 +158,13 @@ const RuleManager: React.FC<RuleManagerProps> = ({
   useEffect(() => {
     loadRules();
   }, [loadRules]);
+
+  // Handle external refresh requests
+  useEffect(() => {
+    if (refreshTrigger !== undefined && refreshTrigger > 0) {
+      loadRules();
+    }
+  }, [refreshTrigger, loadRules]);
 
   // Handle rule operations
   const handleToggleActive = useCallback(async (rule: RuleWithConditions, isActive: boolean) => {

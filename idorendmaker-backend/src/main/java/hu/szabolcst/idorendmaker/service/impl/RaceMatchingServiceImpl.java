@@ -127,7 +127,7 @@ public class RaceMatchingServiceImpl implements RaceMatchingService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<RaceWithCompetitorDataDto> getFilteredRaces(final Integer pdfExtractionId) {
         try {
             // Get races that have competitor associations from this PDF extraction
@@ -186,7 +186,7 @@ public class RaceMatchingServiceImpl implements RaceMatchingService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public Map<String, CompetitorDataDto> getCompetitorData(final Integer pdfExtractionId) {
         try {
             final List<CompetitorEntry> competitors = competitorEntryRepository
@@ -222,7 +222,7 @@ public class RaceMatchingServiceImpl implements RaceMatchingService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public PDFExtractionStatsDto getPDFExtractionStats(final Integer pdfExtractionId) {
         try {
             final Optional<PDFExtraction> extractionOpt = pdfExtractionRepository.findById(pdfExtractionId);
@@ -322,7 +322,7 @@ public class RaceMatchingServiceImpl implements RaceMatchingService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<PDFExtractionDto> getAllPDFExtractions() {
         try {
             final List<PDFExtraction> extractions = pdfExtractionRepository.findAllWithSchedulesOrderByCreatedAtDesc();

@@ -25,7 +25,7 @@ public class RaceServiceImpl implements RaceService {
     private final RaceMapper raceMapper;
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<RaceWithAgeGroupsDto> getAllRaces() {
         return raceRepository.findAllWithAgeGroupsOrdered().stream()
                 .map(raceMapper::toRaceWithAgeGroupsDto)
@@ -33,7 +33,7 @@ public class RaceServiceImpl implements RaceService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<RaceWithAgeGroupsDto> searchRaces(final String searchTerm) {
         return raceRepository.findBySearchTermWithAgeGroups(searchTerm).stream()
                 .map(raceMapper::toRaceWithAgeGroupsDto)
@@ -60,7 +60,7 @@ public class RaceServiceImpl implements RaceService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<AgeGroupDto> getAllAgeGroups() {
         return ageGroupRepository.findAllByOrderByNameAsc().stream()
                 .map(raceMapper::toAgeGroupDto)
@@ -68,7 +68,7 @@ public class RaceServiceImpl implements RaceService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public DatabaseStatsDto getStats() {
         final long raceCount = raceRepository.count();
         final long ageGroupCount = ageGroupRepository.count();

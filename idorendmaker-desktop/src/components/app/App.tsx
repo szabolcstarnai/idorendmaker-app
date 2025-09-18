@@ -558,37 +558,26 @@ const App: React.FC = () => {
         );
 
       case 'rule-management':
-        return (
-          <div className="h-screen flex flex-col">
-            <Navbar currentView={currentView} onNavigateHome={handleBackToMainMenu} />
-            <div className="flex-1 min-h-0">
-              <RuleManager
-                onCreateRule={handleCreateRule}
-                onEditRule={handleEditRule}
-                selectedRule={editingRule}
-              />
-            </div>
-          </div>
-        );
-
       case 'rule-editor':
         return (
           <div className="h-screen flex flex-col">
             <Navbar currentView={currentView} onNavigateHome={handleBackToMainMenu} />
             <div className="flex-1 min-h-0">
               <RuleManager
-                key={ruleListRefreshKey}
+                refreshTrigger={ruleListRefreshKey}
                 onCreateRule={handleCreateRule}
                 onEditRule={handleEditRule}
                 selectedRule={editingRule}
               >
-                <RuleEditor
-                  rule={editingRule}
-                  onSave={handleSaveRule}
-                  onCancel={handleCancelRuleEdit}
-                  compact
-                  onUnsavedChanges={setUnsavedChanges}
-                />
+                {currentView === 'rule-editor' && (
+                  <RuleEditor
+                    rule={editingRule}
+                    onSave={handleSaveRule}
+                    onCancel={handleCancelRuleEdit}
+                    compact
+                    onUnsavedChanges={setUnsavedChanges}
+                  />
+                )}
               </RuleManager>
             </div>
           </div>
