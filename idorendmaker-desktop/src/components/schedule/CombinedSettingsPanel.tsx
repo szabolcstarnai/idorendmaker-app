@@ -152,7 +152,32 @@ const CombinedSettingsPanel: React.FC<CombinedSettingsPanelProps> = ({
         <Card>
           <CardContent className="p-3">
             <div className="space-y-3">
-              <div className="text-sm font-medium text-foreground mb-2">Alapbeállítások</div>
+              {/* Title row with stats and buttons */}
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium text-foreground">Alapbeállítások</div>
+                <div className="flex items-center gap-2">
+                  <div className="text-xs text-muted-foreground">
+                    {totalDuration} • {raceCount} {hungarianStrings.races}
+                  </div>
+                  <ExportButton
+                    scheduleId={scheduleId}
+                    scheduleName={scheduleName}
+                    size="sm"
+                    variant="outline"
+                    disabled={!scheduleId || scheduleId <= 0}
+                    className="h-6"
+                  />
+                  <Button
+                    onClick={onSave}
+                    disabled={!canSave}
+                    className="flex items-center h-6 px-2"
+                    size="sm"
+                  >
+                    <Save className="w-3 h-3 mr-1" />
+                    {hungarianStrings.save}
+                  </Button>
+                </div>
+              </div>
 
               <div className="space-y-2">
                 {/* Schedule name and interval on same line */}
@@ -187,31 +212,6 @@ const CombinedSettingsPanel: React.FC<CombinedSettingsPanelProps> = ({
                   </div>
                 </div>
               </div>
-
-              <div className="flex justify-between items-center pt-2 border-t">
-                <div className="text-xs text-muted-foreground">
-                  {totalDuration} • {raceCount} {hungarianStrings.races}
-                </div>
-                <div className="flex items-center gap-2">
-                  <ExportButton
-                    scheduleId={scheduleId}
-                    scheduleName={scheduleName}
-                    size="sm"
-                    variant="outline"
-                    disabled={!scheduleId || scheduleId <= 0}
-                    className="h-8"
-                  />
-                  <Button
-                    onClick={onSave}
-                    disabled={!canSave}
-                    className="flex items-center h-8 px-3"
-                    size="sm"
-                  >
-                    <Save className="w-3 h-3 mr-1" />
-                    {hungarianStrings.save}
-                  </Button>
-                </div>
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -225,7 +225,25 @@ const CombinedSettingsPanel: React.FC<CombinedSettingsPanelProps> = ({
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="text-sm font-medium text-foreground mb-2">Napok és szakaszok</div>
+                {/* Title row with stats and add day button */}
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-medium text-foreground">Napok és szakaszok</div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-xs text-muted-foreground">
+                      {sections.length} szakasz • {sectionsByDay.size} nap
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAddNewDay}
+                      className="h-6 px-2 text-xs border-blue-300 text-blue-700 hover:bg-blue-50"
+                      disabled={!canAddNewDay() || (!schedule?.id && !allowInMemory)}
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      {hungarianStrings.addNewDay}
+                    </Button>
+                  </div>
+                </div>
 
                 <div className="max-h-24 overflow-y-auto border rounded">
                   <div className="p-2 space-y-1">
@@ -343,25 +361,6 @@ const CombinedSettingsPanel: React.FC<CombinedSettingsPanelProps> = ({
                       );
                     })}
                   </div>
-                </div>
-
-                {/* Add Day Button */}
-                <div className="pt-2 border-t">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleAddNewDay}
-                    className="w-full h-7 text-xs border-blue-300 text-blue-700 hover:bg-blue-50"
-                    disabled={!canAddNewDay() || (!schedule?.id && !allowInMemory)}
-                  >
-                    <Plus className="w-3 h-3 mr-2" />
-                    {hungarianStrings.addNewDay}
-                  </Button>
-                </div>
-
-                {/* Summary */}
-                <div className="text-xs text-muted-foreground pt-1 border-t">
-                  {sections.length} szakasz • {sectionsByDay.size} nap
                 </div>
               </div>
             )}
