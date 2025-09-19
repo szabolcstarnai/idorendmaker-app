@@ -397,35 +397,61 @@ const ScheduleBuilder: React.FC<ScheduleBuilderProps> = React.memo(({
           onSectionEmpty={emptySectionRaces}
           allowInMemory={true}
         />
-
-        {/* Competitor Tracker - Only in PDF mode */}
-        {pdfExtractionId && (
-          <CompetitorTracker
-            scheduleRaces={allScheduleRaces}
-            pdfExtractionId={pdfExtractionId}
-            onHighlightRaces={(raceIds) => {
-              setHighlightedRaceIds(raceIds);
-              // Auto clear highlight after 3 seconds
-              setTimeout(() => {
-                setHighlightedRaceIds([]);
-              }, 3000);
-            }}
-          />
-        )}
       </div>
 
-      {/* Schedule Race List - Extracted Component */}
-      <ScheduleRaceList
-        scheduleRaces={scheduleRaces}
-        intervals={intervals}
-        onDragEnd={handleDragEnd}
-        onRemoveRace={removeRaceFromSchedule}
-        onUpdateInterval={updateInterval}
-        formatInterval={formatInterval}
-        violations={violations}
-        highlightedRaceIds={highlightedRaceIds}
-        onRaceClick={handleRaceClick}
-      />
+      {/* Main Content Area - Horizontal Layout for Competitor Tracker and Schedule */}
+      <div className="flex-1 flex gap-2">
+        {/* Left Panel - Competitor Tracking (Only in PDF mode) */}
+        {pdfExtractionId && (
+          <div className="w-80 flex-shrink-0 lg:block hidden">
+            <CompetitorTracker
+              scheduleRaces={allScheduleRaces}
+              pdfExtractionId={pdfExtractionId}
+              onHighlightRaces={(raceIds) => {
+                setHighlightedRaceIds(raceIds);
+                // Auto clear highlight after 3 seconds
+                setTimeout(() => {
+                  setHighlightedRaceIds([]);
+                }, 3000);
+              }}
+              layout="sidebar"
+            />
+          </div>
+        )}
+
+        {/* Mobile Competitor Tracker - Vertical fallback on small screens */}
+        {pdfExtractionId && (
+          <div className="lg:hidden mb-2">
+            <CompetitorTracker
+              scheduleRaces={allScheduleRaces}
+              pdfExtractionId={pdfExtractionId}
+              onHighlightRaces={(raceIds) => {
+                setHighlightedRaceIds(raceIds);
+                // Auto clear highlight after 3 seconds
+                setTimeout(() => {
+                  setHighlightedRaceIds([]);
+                }, 3000);
+              }}
+              layout="full"
+            />
+          </div>
+        )}
+
+        {/* Right Panel - Schedule Race List */}
+        <div className="flex-1">
+          <ScheduleRaceList
+            scheduleRaces={scheduleRaces}
+            intervals={intervals}
+            onDragEnd={handleDragEnd}
+            onRemoveRace={removeRaceFromSchedule}
+            onUpdateInterval={updateInterval}
+            formatInterval={formatInterval}
+            violations={violations}
+            highlightedRaceIds={highlightedRaceIds}
+            onRaceClick={handleRaceClick}
+          />
+        </div>
+      </div>
     </div>
   );
 });

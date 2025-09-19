@@ -12,12 +12,14 @@ interface CompetitorTrackerProps {
   scheduleRaces: ScheduleRace[];
   pdfExtractionId?: number;
   onHighlightRaces?: (raceIds: string[]) => void;
+  layout?: 'sidebar' | 'full';
 }
 
 const CompetitorTracker: React.FC<CompetitorTrackerProps> = ({
   scheduleRaces,
   pdfExtractionId,
-  onHighlightRaces
+  onHighlightRaces,
+  layout = 'full'
 }) => {
   const [competitorSchedules, setCompetitorSchedules] = useState<CompetitorSchedule[]>([]);
   const [loading, setLoading] = useState(false);
@@ -166,7 +168,7 @@ const CompetitorTracker: React.FC<CompetitorTrackerProps> = ({
               {competitorSchedules.length === 0 ? 'Nincsenek versenyző adatok' : 'Nincs megfelelő versenyző'}
             </div>
           ) : (
-            <ScrollArea className="h-64">
+            <ScrollArea className={layout === 'sidebar' ? "h-full" : "h-64"}>
               <div className="space-y-2">
                 {filteredCompetitors.map(competitor => (
                   <Card 
