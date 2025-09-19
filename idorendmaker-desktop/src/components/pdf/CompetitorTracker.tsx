@@ -55,9 +55,9 @@ const CompetitorTracker: React.FC<CompetitorTrackerProps> = ({
 
   // Group competitors by risk level
   const competitorsByRisk = {
-    high: filteredCompetitors.filter(c => c.riskLevel === 'high'),
-    medium: filteredCompetitors.filter(c => c.riskLevel === 'medium'),
-    low: filteredCompetitors.filter(c => c.riskLevel === 'low')
+    high: competitorSchedules.filter(c => c.riskLevel === 'high'),
+    medium: competitorSchedules.filter(c => c.riskLevel === 'medium'),
+    low: competitorSchedules.filter(c => c.riskLevel === 'low')
   };
 
   // Toggle risk level filter
