@@ -12,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
 import { LevelSelectorModal } from './LevelSelectorModal';
 import { getAvailableLevels, getAddedLevels, getRaceLevelCombinations, getAvailableLevelsForMode } from '../../utils/levelUtils';
 import { TabbedPanelLoading } from '../ui/loading';
+import { toast } from 'sonner';
 
 interface RaceListProps {
   onRaceAdd?: (race: RaceWithAgeGroups, level: Level) => void;
@@ -216,6 +217,15 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
   useEffect(() => {
     setCurrentPage(1);
   }, [debouncedSearchTerm, selectedDisciplines, showHiddenRaces, activeTab]);
+
+  useEffect(() => {
+    if (raceSource === 'pdf-filtered' && pdfExtractionId) {
+      toast.info("Nevezési lista alapú programozás aktív", {
+        description: "Csak a nevezési listában szereplő versenyszámok választhatóak",
+        duration: 5000
+      });
+    }
+  }, [raceSource, pdfExtractionId]);
 
   // Get race+level combinations for enhanced filtering
   const raceLevelCombinations = useMemo(() => {
@@ -447,18 +457,6 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
       </h2>
 
       <div className="flex flex-col px-2 flex-shrink-0">
-        {/* PDF extraction info */}
-        {raceSource === 'pdf-filtered' && pdfExtractionId && (
-          <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-lg">
-            <div className="text-sm text-green-800">
-              <div className="font-medium">Nevezési lista alapú versenyprogramozás</div>
-              <div className="text-xs text-green-700 mt-1">
-                Csak a nevezési listában szereplő versenyszámok
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-3">
           <TabsList className="grid w-full grid-cols-2">
