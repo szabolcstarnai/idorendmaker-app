@@ -10,7 +10,7 @@ public class CompetitorScheduleDto {
     private String competitorName;
     private String organization;
     private Integer birthYear;
-    private List<CompetitorRaceDetailsDto> races;
+    private List<CompetitorRacePairDetailsDto> racePairs;
     private Integer totalRaces;
     private Integer shortestInterval;
     private Integer longestInterval;

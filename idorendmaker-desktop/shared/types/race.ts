@@ -151,13 +151,14 @@ export type CompetitorSchedule = {
   competitorName: string
   organization: string | null
   birthYear: number | null
-  races: CompetitorRaceDetails[]
+  racePairs: CompetitorRacePairDetails[]
   totalRaces: number
   shortestInterval: number | null
   longestInterval: number | null
   riskLevel: 'low' | 'medium' | 'high'
 }
 
+// Legacy type - kept for backward compatibility
 export type CompetitorRaceDetails = {
   raceId: number
   raceName: string
@@ -165,6 +166,24 @@ export type CompetitorRaceDetails = {
   estimatedDuration: number
   intervalToNext?: number
   recoveryTime?: number
+  conflictLevel: 'none' | 'warning' | 'critical'
+}
+
+// New type for race pair analysis - matches CompetitorRacePairDetailsDto from backend
+export type CompetitorRacePairDetails = {
+  race1Id: number
+  levelType1: string
+  level1Id: number
+  race1Name: string
+  race1StartTime: string
+  race2Id: number | null
+  levelType2: string | null
+  level2Id: number | null
+  race2Name: string | null
+  race2StartTime: string | null
+  estimatedDuration: number
+  intervalToNext: number | null
+  recoveryTime: number | null
   conflictLevel: 'none' | 'warning' | 'critical'
 }
 

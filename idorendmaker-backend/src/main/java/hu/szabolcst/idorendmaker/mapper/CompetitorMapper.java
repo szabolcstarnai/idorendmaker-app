@@ -1,7 +1,7 @@
 package hu.szabolcst.idorendmaker.mapper;
 
 import hu.szabolcst.idorendmaker.model.dto.competitor.CompetitorConflictResultDto;
-import hu.szabolcst.idorendmaker.model.dto.competitor.CompetitorRaceDetailsDto;
+import hu.szabolcst.idorendmaker.model.dto.competitor.CompetitorRacePairDetailsDto;
 import hu.szabolcst.idorendmaker.model.dto.competitor.CompetitorScheduleDto;
 import hu.szabolcst.idorendmaker.model.dto.competitor.CompetitorStatsDto;
 import hu.szabolcst.idorendmaker.model.dto.competitor.RaceCompetitorSummaryDto;
@@ -13,31 +13,18 @@ import org.mapstruct.Mapper;
 @Mapper
 public interface CompetitorMapper {
 
-    default CompetitorScheduleDto toCompetitorScheduleDto(final CompetitorEntry competitor, final List<CompetitorRaceDetailsDto> races,
+    default CompetitorScheduleDto toCompetitorScheduleDto(final CompetitorEntry competitor, final List<CompetitorRacePairDetailsDto> races,
         final Integer totalRaces, final Integer shortestInterval, final Integer longestInterval, final String riskLevel) {
         final CompetitorScheduleDto dto = new CompetitorScheduleDto();
         dto.setCompetitorId(competitor.getCompetitorId());
         dto.setCompetitorName(competitor.getCompetitorName());
         dto.setOrganization(competitor.getOrganization());
         dto.setBirthYear(competitor.getBirthYear());
-        dto.setRaces(races);
+        dto.setRacePairs(races);
         dto.setTotalRaces(totalRaces);
         dto.setShortestInterval(shortestInterval);
         dto.setLongestInterval(longestInterval);
         dto.setRiskLevel(riskLevel);
-        return dto;
-    }
-
-    default CompetitorRaceDetailsDto toCompetitorRaceDetailsDto(final Integer raceId, final String raceName, final String scheduledTime,
-        final Integer estimatedDuration, final Integer intervalToNext, final Integer recoveryTime, final String conflictLevel) {
-        final CompetitorRaceDetailsDto dto = new CompetitorRaceDetailsDto();
-        dto.setRaceId(raceId);
-        dto.setRaceName(raceName);
-        dto.setScheduledTime(scheduledTime);
-        dto.setEstimatedDuration(estimatedDuration);
-        dto.setIntervalToNext(intervalToNext);
-        dto.setRecoveryTime(recoveryTime);
-        dto.setConflictLevel(conflictLevel);
         return dto;
     }
 

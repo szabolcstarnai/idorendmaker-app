@@ -21,6 +21,7 @@ import {
   CreateRuleData,
   CompetitorSchedule,
   CompetitorRaceDetails,
+  CompetitorRacePairDetails,
   ScheduleRace
 } from '../../../shared/types/race'
 import { backendService } from '../../features/common/services/BackendService'

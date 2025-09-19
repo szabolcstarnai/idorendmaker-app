@@ -37,7 +37,7 @@ public interface RaceMatchingMapper {
 
     ExtractedCompetitorDto toExtractedCompetitorDto(ExtractedCompetitorDto paramExtractedCompetitorDto);
 
-    @Mappings({@Mapping(target = "races", ignore = true), @Mapping(target = "totalRaces", ignore = true),
+    @Mappings({@Mapping(target = "racePairs", ignore = true), @Mapping(target = "totalRaces", ignore = true),
         @Mapping(target = "shortestInterval", ignore = true), @Mapping(target = "longestInterval", ignore = true),
         @Mapping(target = "riskLevel", ignore = true)})
     CompetitorScheduleDto toCompetitorScheduleDto(CompetitorEntry paramCompetitorEntry);

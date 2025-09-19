@@ -2,7 +2,7 @@ package hu.szabolcst.idorendmaker.service.impl;
 
 import hu.szabolcst.idorendmaker.mapper.CompetitorMapper;
 import hu.szabolcst.idorendmaker.model.dto.competitor.CompetitorConflictResultDto;
-import hu.szabolcst.idorendmaker.model.dto.competitor.CompetitorRaceDetailsDto;
+import hu.szabolcst.idorendmaker.model.dto.competitor.CompetitorRacePairDetailsDto;
 import hu.szabolcst.idorendmaker.model.dto.competitor.CompetitorScheduleDto;
 import hu.szabolcst.idorendmaker.model.dto.competitor.CompetitorStatsDto;
 import hu.szabolcst.idorendmaker.model.dto.competitor.RaceCompetitorSummaryDto;
@@ -18,7 +18,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -60,54 +59,19 @@ public class CompetitorServiceImpl implements CompetitorService {
                     continue;
                 }
 
-				// Apply "worst case scenario" logic for multiple heats
-				final Map<String, List<ScheduleRaceDto>> raceGroups =
-						groupScheduleRacesByRaceAndLevel(allCompetitorRaces);
-				final List<ScheduleRaceDto> competitorRaces = selectWorstCaseHeats(raceGroups, scheduleRaces);
+				// NEW ALGORITHM: Include ALL races and analyze gaps between meaningful pairs
+				// No longer selecting "worst case heats" - instead showing all potential conflict scenarios
+				final List<ScheduleRaceDto> competitorRaces = new ArrayList<>(allCompetitorRaces);
 
 				// Sort races by scheduled time
 				competitorRaces.sort(Comparator.comparing(ScheduleRaceDto::getStartTime));
 
-				// Calculate race details with intervals
-				final List<CompetitorRaceDetailsDto> raceDetails = new ArrayList<>();
-				for (int i = 0; i < competitorRaces.size(); i++) {
-					final ScheduleRaceDto race = competitorRaces.get(i);
-					final ScheduleRaceDto nextRace = i < competitorRaces.size() - 1 ? competitorRaces.get(i + 1) : null;
-
-					Integer intervalToNext = null;
-					Integer recoveryTime = null;
-
-					if (nextRace != null) {
-						intervalToNext = calculateMinutesBetween(race.getStartTime(), nextRace.getStartTime());
-						// Assume 5 minutes average race duration for recovery calculation
-						recoveryTime = intervalToNext - 5;
-					}
-
-					// Determine conflict level based on recovery time
-					String conflictLevel = "none";
-					if (recoveryTime != null) {
-						if (recoveryTime < 30) {
-							conflictLevel = "critical";
-						} else if (recoveryTime < 60) {
-							conflictLevel = "warning";
-						}
-					}
-
-					final CompetitorRaceDetailsDto raceDetail = competitorMapper.toCompetitorRaceDetailsDto(
-							race.getRace().getId(),
-							race.getRace().getName(),
-							race.getStartTime(),
-							5, // Placeholder: 5 minutes average
-							intervalToNext,
-							recoveryTime,
-							conflictLevel
-					);
-					raceDetails.add(raceDetail);
-				}
+				// Calculate race details with gap analysis between meaningful pairs
+				final List<CompetitorRacePairDetailsDto> raceDetails = analyzeCompetitorRacePairs(competitorRaces);
 
 				// Calculate overall statistics
 				final List<Integer> intervals = raceDetails.stream()
-						.map(CompetitorRaceDetailsDto::getIntervalToNext)
+						.map(CompetitorRacePairDetailsDto::getIntervalToNext)
 						.filter(Objects::nonNull)
 						.toList();
 
@@ -261,7 +225,9 @@ public class CompetitorServiceImpl implements CompetitorService {
 
 	/**
 	 * Group ScheduleRaces by race and level type to handle multiple heats
+	 * NOTE: This method is now unused in the new algorithm but kept for potential future use
 	 */
+	@SuppressWarnings("unused")
 	private Map<String, List<ScheduleRaceDto>> groupScheduleRacesByRaceAndLevel(
 			final List<ScheduleRaceDto> scheduleRaces) {
 		final Map<String, List<ScheduleRaceDto>> groups = new HashMap<>();
@@ -275,77 +241,92 @@ public class CompetitorServiceImpl implements CompetitorService {
 	}
 
 	/**
-	 * Select worst-case heats from groups for conflict checking
-	 * For groups with multiple heats, choose the heat that creates worst possible conflicts
+	 * Analyze gaps between all meaningful race pairs for a competitor
+	 * NEW ALGORITHM: Include all races, analyze gaps between pairs with different race-leveltype
+	 * Skip gaps between same race-leveltype (e.g., Előfutam I vs Előfutam II of same race)
 	 */
-	private List<ScheduleRaceDto> selectWorstCaseHeats(final Map<String, List<ScheduleRaceDto>> raceGroups,
-			final List<ScheduleRaceDto> allScheduleRaces) {
-		final List<ScheduleRaceDto> selectedHeats = new ArrayList<>();
+	private List<CompetitorRacePairDetailsDto> analyzeCompetitorRacePairs(final List<ScheduleRaceDto> competitorRaces) {
+		final List<CompetitorRacePairDetailsDto> raceDetails = new ArrayList<>();
 
-		for (final List<ScheduleRaceDto> heats : raceGroups.values()) {
-			if (heats.size() == 1) {
-				// Only one heat, use it
-				selectedHeats.add(heats.getFirst());
-				continue;
-			}
+		for (int i = 0; i < competitorRaces.size(); i++) {
+			final ScheduleRaceDto currentRace = competitorRaces.get(i);
 
-			// Multiple heats - select worst case for conflict checking
-			// Sort heats by start time
-			final List<ScheduleRaceDto> sortedHeats = heats.stream()
-					.sorted(Comparator.comparing(ScheduleRaceDto::getStartTime))
-					.toList();
+			// Find the next meaningful race (different race-leveltype) for interval calculation
+			ScheduleRaceDto nextMeaningfulRace = null;
+			Integer intervalToNext = null;
+			Integer recoveryTime = null;
 
-			// Find races from OTHER groups to check conflicts against
-			final Set<String> heatIds = heats.stream().map(ScheduleRaceDto::getId).collect(Collectors.toSet());
-			final List<ScheduleRaceDto> otherRaces = allScheduleRaces.stream()
-					.filter(race -> !heatIds.contains(race.getId()))
-					.toList();
+			for (int j = i + 1; j < competitorRaces.size(); j++) {
+				final ScheduleRaceDto candidateRace = competitorRaces.get(j);
 
-			if (otherRaces.isEmpty()) {
-				// No other races to conflict with, just pick first heat
-				selectedHeats.add(sortedHeats.getFirst());
-				continue;
-			}
-
-			// Find the heat that creates the worst (shortest) recovery time
-			ScheduleRaceDto worstHeat = sortedHeats.getFirst();
-			int worstRecoveryTime = Integer.MAX_VALUE;
-
-			for (final ScheduleRaceDto heat : sortedHeats) {
-				// Check conflicts with races before and after
-				final ScheduleRaceDto conflictBefore = findClosestRaceBefore(heat, otherRaces);
-				final ScheduleRaceDto conflictAfter = findClosestRaceAfter(heat, otherRaces);
-
-				int minRecoveryTime = Integer.MAX_VALUE;
-
-				if (conflictBefore != null) {
-					// 5min race duration
-					minRecoveryTime =
-							calculateMinutesBetween(conflictBefore.getStartTime(), heat.getStartTime()) - 5;
-				}
-
-				if (conflictAfter != null) {
-					final int timeAfter = calculateMinutesBetween(heat.getStartTime(), conflictAfter.getStartTime()) -
-							5; // 5min race duration
-					minRecoveryTime = Math.min(minRecoveryTime, timeAfter);
-				}
-
-				// Select the heat with the worst (shortest) recovery time
-				if (minRecoveryTime < worstRecoveryTime) {
-					worstRecoveryTime = minRecoveryTime;
-					worstHeat = heat;
+				// Check if this is a meaningful pair (different race-leveltype)
+				if (isDifferentRaceLevelType(currentRace, candidateRace)) {
+					nextMeaningfulRace = candidateRace;
+					intervalToNext = calculateMinutesBetween(currentRace.getStartTime(), candidateRace.getStartTime());
+					recoveryTime = intervalToNext - 5; // Assume 5 minutes average race duration
+					break; // Take the first (chronologically next) meaningful race
 				}
 			}
 
-			selectedHeats.add(worstHeat);
+			// Determine conflict level based on recovery time
+			String conflictLevel = "none";
+			if (recoveryTime != null) {
+				if (recoveryTime < 30) {
+					conflictLevel = "critical";
+				} else if (recoveryTime < 60) {
+					conflictLevel = "warning";
+				}
+			}
+
+            final CompetitorRacePairDetailsDto racePairDetail = CompetitorRacePairDetailsDto.builder()
+                .race1Id(currentRace.getRace().getId())
+                .levelType1(currentRace.getLevel().getLevelType())
+                .level1Id(currentRace.getLevel().getId())
+                .race1Name(currentRace.getRace().getName() + " " + currentRace.getLevel().getName())
+                .race1StartTime(currentRace.getStartTime())
+                .race2Id(nextMeaningfulRace != null ? nextMeaningfulRace.getRace().getId() : null)
+                .levelType2(nextMeaningfulRace != null ? nextMeaningfulRace.getLevel().getLevelType() : null)
+                .level2Id(nextMeaningfulRace != null ? nextMeaningfulRace.getLevel().getId() : null)
+                .race2Name(
+                    nextMeaningfulRace != null ? nextMeaningfulRace.getRace().getName() + " " + nextMeaningfulRace.getLevel().getName()
+                        : null)
+                .race2StartTime(nextMeaningfulRace != null ? nextMeaningfulRace.getStartTime() : null)
+                .estimatedDuration(5)
+                .intervalToNext(intervalToNext)
+                .recoveryTime(recoveryTime)
+                .conflictLevel(conflictLevel)
+                .build();
+            raceDetails.add(racePairDetail);
 		}
 
-		return selectedHeats;
+        return raceDetails.stream()
+            .filter(dto -> dto.getRace2Id() != null)
+            .collect(Collectors.groupingBy(dto ->
+                dto.getRace1Id().toString() + "-" + dto.getLevelType1() + ";" + dto.getRace2Id() + "-" + dto.getLevelType2()))
+            .values().stream()
+            .map(competitorRaceDetailsDtos -> competitorRaceDetailsDtos.stream()
+                .min(Comparator.comparing(CompetitorRacePairDetailsDto::getIntervalToNext)))
+            .map(optional -> optional.orElse(null))
+            .filter(Objects::nonNull)
+            .toList();
+	}
+
+	/**
+	 * Check if two races have different race-leveltype combinations
+	 * Returns true if they represent meaningful conflict scenarios
+	 * Returns false if they're the same race-leveltype (e.g., Előfutam I vs Előfutam II of same race)
+	 */
+	private boolean isDifferentRaceLevelType(final ScheduleRaceDto race1, final ScheduleRaceDto race2) {
+		final String race1Key = race1.getRace().getId() + "-" + race1.getLevel().getLevelType();
+		final String race2Key = race2.getRace().getId() + "-" + race2.getLevel().getLevelType();
+		return !race1Key.equals(race2Key);
 	}
 
 	/**
 	 * Find the closest race before the given race
+	 * NOTE: This method is now unused in the new algorithm but kept for potential future use
 	 */
+	@SuppressWarnings("unused")
 	private ScheduleRaceDto findClosestRaceBefore(final ScheduleRaceDto targetRace,
 			final List<ScheduleRaceDto> otherRaces) {
 		return otherRaces.stream()
@@ -356,7 +337,9 @@ public class CompetitorServiceImpl implements CompetitorService {
 
 	/**
 	 * Find the closest race after the given race
+	 * NOTE: This method is now unused in the new algorithm but kept for potential future use
 	 */
+	@SuppressWarnings("unused")
 	private ScheduleRaceDto findClosestRaceAfter(final ScheduleRaceDto targetRace,
 			final List<ScheduleRaceDto> otherRaces) {
 		return otherRaces.stream()

@@ -71,15 +71,34 @@ const CompetitorTracker: React.FC<CompetitorTrackerProps> = ({
     setSelectedRiskLevels(newLevels);
   };
 
-  // Highlight competitor races
+  // Highlight competitor races (from race pairs)
   const highlightCompetitorRaces = (competitor: CompetitorSchedule) => {
     if (onHighlightRaces) {
-      const raceIds = competitor.races.map(race => 
-        // Find the corresponding schedule race ID
-        scheduleRaces.find(sr => sr.race.id === race.raceId)?.id
-      ).filter(id => id !== undefined) as string[];
-      
-      onHighlightRaces(raceIds);
+      const raceIds: string[] = [];
+
+      competitor.racePairs.forEach(racePair => {
+        // Find the exact schedule race ID for race1 (match both race and level)
+        const race1ScheduleId = scheduleRaces.find(sr =>
+          sr.race.id === racePair.race1Id && sr.level.id === racePair.level1Id
+        )?.id;
+        if (race1ScheduleId) {
+          raceIds.push(race1ScheduleId);
+        }
+
+        // Find the exact schedule race ID for race2 (match both race and level)
+        if (racePair.race2Id && racePair.level2Id) {
+          const race2ScheduleId = scheduleRaces.find(sr =>
+            sr.race.id === racePair.race2Id && sr.level.id === racePair.level2Id
+          )?.id;
+          if (race2ScheduleId) {
+            raceIds.push(race2ScheduleId);
+          }
+        }
+      });
+
+      // Remove duplicates and highlight
+      const uniqueRaceIds = [...new Set(raceIds)];
+      onHighlightRaces(uniqueRaceIds);
     }
   };
 
@@ -194,7 +213,7 @@ const CompetitorTracker: React.FC<CompetitorTrackerProps> = ({
                         </Badge>
                       </div>
                       <Badge variant="outline" className="text-xs">
-                        {competitor.totalRaces} futam
+                        {competitor.racePairs.length} konfliktus
                       </Badge>
                     </div>
 
@@ -205,27 +224,39 @@ const CompetitorTracker: React.FC<CompetitorTrackerProps> = ({
                       </div>
                     )}
 
-                    {/* Race timeline */}
+                    {/* Race pair timeline */}
                     <div className="space-y-1">
-                      {competitor.races.map((race, index) => (
-                        <div key={`${race.raceId}-${race.scheduledTime}`} className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-1">
-                            {getConflictIcon(race.conflictLevel)}
-                            <span className="text-muted-foreground">{race.scheduledTime}</span>
+                      {competitor.racePairs.map((racePair, index) => (
+                        <div key={`${racePair.race1Id}-${racePair.race1StartTime}-${racePair.race2Id || 'single'}`} className="text-xs">
+                          {/* First race in pair */}
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                            <span className="text-xs">{racePair.race1StartTime}</span>
                             <TruncatedText className={layout === 'sidebar' ? "max-w-50" : "max-w-32"}>
-                              {race.raceName}
+                              {racePair.race1Name}
                             </TruncatedText>
                           </div>
-                          {race.intervalToNext !== undefined && race.intervalToNext !== null && (
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-3 w-3 text-muted-foreground" />
-                              <span className={`text-xs ${
-                                race.conflictLevel === 'critical' ? 'text-red-600 font-medium' :
-                                race.conflictLevel === 'warning' ? 'text-yellow-600' :
-                                'text-muted-foreground'
-                              }`}>
-                                {formatInterval(race.intervalToNext)}
-                              </span>
+
+                          {/* Gap analysis to second race */}
+                          {racePair.race2Id && racePair.intervalToNext !== null && (
+                            <div className="flex items-center justify-between mt-0.5 ml-2">
+                              <div className="flex items-center gap-1">
+                                <span className="text-xs">→</span>
+                                <span className="text-xs text-muted-foreground">{racePair.race2StartTime}</span>
+                                <TruncatedText className={layout === 'sidebar' ? "max-w-40" : "max-w-28"}>
+                                  {racePair.race2Name}
+                                </TruncatedText>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                {getConflictIcon(racePair.conflictLevel)}
+                                <Clock className="h-3 w-3 text-muted-foreground" />
+                                <span className={`text-xs ${
+                                  racePair.conflictLevel === 'critical' ? 'text-red-600 font-medium' :
+                                  racePair.conflictLevel === 'warning' ? 'text-yellow-600' :
+                                  'text-muted-foreground'
+                                }`}>
+                                  {formatInterval(racePair.intervalToNext)}
+                                </span>
+                              </div>
                             </div>
                           )}
                         </div>
