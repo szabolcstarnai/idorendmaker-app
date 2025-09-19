@@ -103,8 +103,8 @@ const CompetitorTracker: React.FC<CompetitorTrackerProps> = ({
   };
 
   // Format time interval
-  const formatInterval = (minutes?: number) => {
-    if (minutes === undefined) return '-';
+  const formatInterval = (minutes?: number | null) => {
+    if (minutes === undefined || minutes === null) return '-';
     if (minutes >= 60) {
       const hours = Math.floor(minutes / 60);
       const mins = minutes % 60;
@@ -177,7 +177,7 @@ const CompetitorTracker: React.FC<CompetitorTrackerProps> = ({
               {filteredCompetitors.map(competitor => (
                 <Card
                   key={competitor.competitorId}
-                  className="p-2 hover:shadow-sm cursor-pointer transition-shadow"
+                  className="p-3 hover:shadow-sm cursor-pointer transition-shadow"
                   onClick={() => highlightCompetitorRaces(competitor)}
                 >
                   <div className="space-y-2">
@@ -212,11 +212,11 @@ const CompetitorTracker: React.FC<CompetitorTrackerProps> = ({
                           <div className="flex items-center gap-1">
                             {getConflictIcon(race.conflictLevel)}
                             <span className="text-muted-foreground">{race.scheduledTime}</span>
-                            <TruncatedText className={layout === 'sidebar' ? "max-w-24" : "max-w-32"}>
+                            <TruncatedText className={layout === 'sidebar' ? "max-w-50" : "max-w-32"}>
                               {race.raceName}
                             </TruncatedText>
                           </div>
-                          {race.intervalToNext !== undefined && (
+                          {race.intervalToNext !== undefined && race.intervalToNext !== null && (
                             <div className="flex items-center gap-1">
                               <Clock className="h-3 w-3 text-muted-foreground" />
                               <span className={`text-xs ${
@@ -233,7 +233,7 @@ const CompetitorTracker: React.FC<CompetitorTrackerProps> = ({
                     </div>
 
                     {/* Summary stats */}
-                    {(competitor.shortestInterval !== null || competitor.longestInterval !== null) && (
+                    {(typeof competitor.shortestInterval === 'number' || typeof competitor.longestInterval === 'number') && (
                       <div className="flex justify-between text-xs text-muted-foreground pt-1 border-t">
                         <span>Legrövidebb: {formatInterval(competitor.shortestInterval)}</span>
                         <span>Leghosszabb: {formatInterval(competitor.longestInterval)}</span>
