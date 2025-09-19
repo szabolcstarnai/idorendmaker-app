@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { RaceWithAgeGroups, ScheduleWithSections, SectionWorkingData, ScheduleRace, RuleViolation, Level, ScheduleMode } from '../../../shared/types/race';
 import SectionNavigator from './SectionNavigator';
-import DaySectionManager from './DaySectionManager';
-import ScheduleSettings from './ScheduleSettings';
+import CombinedSettingsPanel from './CombinedSettingsPanel';
 import ScheduleRaceList from './ScheduleRaceList';
 import RuleViolationDisplay from '../rules/RuleViolationDisplay';
 import CompetitorTracker from '../pdf/CompetitorTracker';
@@ -378,8 +377,8 @@ const ScheduleBuilder: React.FC<ScheduleBuilderProps> = React.memo(({
           </div>
         )}
 
-        {/* Schedule Settings - Extracted Component */}
-        <ScheduleSettings
+        {/* Combined Settings and Section Management Panel */}
+        <CombinedSettingsPanel
           scheduleName={scheduleName}
           setScheduleName={setScheduleName}
           startTime={startTime}
@@ -391,21 +390,13 @@ const ScheduleBuilder: React.FC<ScheduleBuilderProps> = React.memo(({
           canSave={canSave}
           onSave={saveSchedule}
           scheduleId={schedule?.id}
+          schedule={schedule}
+          onSectionAdd={onSectionAdd || (() => {})}
+          onSectionRemove={onSectionRemove || (() => {})}
+          onSectionStartTimeChange={onSectionStartTimeChange || (() => {})}
+          onSectionEmpty={emptySectionRaces}
+          allowInMemory={true}
         />
-
-        {/* Section management */}
-        {schedule && (
-          <DaySectionManager
-            scheduleId={schedule.id > 0 ? schedule.id : undefined}
-            sections={schedule.sections}
-            onSectionAdd={onSectionAdd || (() => {})}
-            onSectionRemove={onSectionRemove || (() => {})}
-            onSectionStartTimeChange={onSectionStartTimeChange || (() => {})}
-            onSectionEmpty={emptySectionRaces}
-            allowInMemory={true}
-            className="mb-2"
-          />
-        )}
 
         {/* Competitor Tracker - Only in PDF mode */}
         {pdfExtractionId && (

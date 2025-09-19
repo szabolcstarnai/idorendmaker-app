@@ -1,5 +1,6 @@
 export { default as ScheduleBuilder } from './ScheduleBuilder';
 export { default as ScheduleSettings } from './ScheduleSettings';
+export { default as CombinedSettingsPanel } from './CombinedSettingsPanel';
 export { default as ScheduleSelection } from './ScheduleSelection';
 export { default as ScheduleModeSelector } from './ScheduleModeSelector';
 export { default as ScheduleRaceCard } from './ScheduleRaceCard';
