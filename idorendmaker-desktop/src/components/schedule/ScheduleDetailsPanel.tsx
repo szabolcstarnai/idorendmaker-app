@@ -303,7 +303,7 @@ const ScheduleDetailsPanel: React.FC<ScheduleDetailsPanelProps> = ({
               <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                 <div className="flex items-center gap-2 text-sm text-blue-800">
                   <Database className="h-4 w-4" />
-                  <span className="font-medium">PDF adatok elérhetők</span>
+                  <span className="font-medium">Nevezési adatok adatok elérhetők</span>
                 </div>
                 <p className="text-xs text-blue-700 mt-1">
                   Ez az időrend versenyzőadatokkal rendelkezik PDF feldolgozásból
