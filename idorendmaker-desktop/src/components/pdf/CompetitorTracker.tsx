@@ -116,7 +116,7 @@ const CompetitorTracker: React.FC<CompetitorTrackerProps> = ({
       <LegacyCollapsible title="Versenyző követés" defaultOpen={false}>
         <Card>
           <CardContent className="flex items-center justify-center h-32 text-sm text-muted-foreground">
-            Csak PDF alapú programozásban érhető el
+            Csak nevezési lista alapú programozásban érhető el
           </CardContent>
         </Card>
       </LegacyCollapsible>

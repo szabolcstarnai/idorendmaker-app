@@ -451,7 +451,7 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
         {raceSource === 'pdf-filtered' && pdfExtractionId && (
           <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-lg">
             <div className="text-sm text-green-800">
-              <div className="font-medium">PDF alapú versenyprogramozás</div>
+              <div className="font-medium">Nevezési lista alapú versenyprogramozás</div>
               <div className="text-xs text-green-700 mt-1">
                 Csak a nevezési listában szereplő versenyszámok
               </div>
