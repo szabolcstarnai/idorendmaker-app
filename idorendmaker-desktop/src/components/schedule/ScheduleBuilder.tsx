@@ -400,10 +400,10 @@ const ScheduleBuilder: React.FC<ScheduleBuilderProps> = React.memo(({
       </div>
 
       {/* Main Content Area - Horizontal Layout for Competitor Tracker and Schedule */}
-      <div className="flex-1 flex gap-2">
+      <div className="flex-1 flex gap-2 min-h-0 overflow-hidden">
         {/* Left Panel - Competitor Tracking (Only in PDF mode) */}
         {pdfExtractionId && (
-          <div className="w-80 flex-shrink-0 lg:block hidden">
+          <div className="w-[400px] flex-shrink-0 lg:block hidden flex flex-col">
             <CompetitorTracker
               scheduleRaces={allScheduleRaces}
               pdfExtractionId={pdfExtractionId}
@@ -438,7 +438,7 @@ const ScheduleBuilder: React.FC<ScheduleBuilderProps> = React.memo(({
         )}
 
         {/* Right Panel - Schedule Race List */}
-        <div className="flex-1">
+        <div className="flex-1 flex flex-col min-h-0">
           <ScheduleRaceList
             scheduleRaces={scheduleRaces}
             intervals={intervals}

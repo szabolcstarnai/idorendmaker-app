@@ -93,7 +93,7 @@ const ScheduleRaceList: React.FC<ScheduleRaceListProps> = React.memo(({
   }, [violations, highlightedRaceIds]);
 
   return (
-    <ScrollArea className={`flex-1 ${className}`}>
+    <ScrollArea className={`flex-1 h-0 ${className}`}>
       <DragDropContext onDragEnd={onDragEnd}>
         <Droppable droppableId="schedule-list">
           {(provided, snapshot) => (

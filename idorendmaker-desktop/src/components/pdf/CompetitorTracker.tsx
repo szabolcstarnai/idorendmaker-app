@@ -129,119 +129,143 @@ const CompetitorTracker: React.FC<CompetitorTrackerProps> = ({
     ? `Versenyző követés (${filteredCompetitors.length})` 
     : "Versenyző követés";
 
+  // Render content for both layouts
+  const cardContent = (
+    <>
+      {/* Title header for sidebar layout */}
+      {layout === 'sidebar' && (
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">{titleWithBadge}</CardTitle>
+        </CardHeader>
+      )}
+
+      {/* Risk level filters */}
+      {competitorSchedules.length > 0 && (
+        <CardHeader className={layout === 'sidebar' ? "pt-0 pb-2" : "pb-2"}>
+          <div className="flex gap-1 flex-wrap">
+            {['high', 'medium', 'low'].map(level => {
+              const count = competitorsByRisk[level as keyof typeof competitorsByRisk].length;
+              return (
+                <Button
+                  key={level}
+                  variant={selectedRiskLevels.has(level) ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => toggleRiskLevel(level)}
+                  className="h-5 px-1 text-xs"
+                  disabled={count === 0}
+                >
+                  {level === 'high' ? 'Magas' : level === 'medium' ? 'Közepes' : 'Alacsony'} ({count})
+                </Button>
+              );
+            })}
+          </div>
+        </CardHeader>
+      )}
+
+      <CardContent className={`${competitorSchedules.length > 0 ? "pt-0" : ""} ${layout === 'sidebar' ? 'flex-1 flex flex-col min-h-0' : ''}`}>
+        {loading ? (
+          <div className={`flex items-center justify-center text-sm text-muted-foreground ${layout === 'sidebar' ? 'flex-1' : 'h-32'}`}>
+            Versenyző adatok elemzése...
+          </div>
+        ) : filteredCompetitors.length === 0 ? (
+          <div className={`flex items-center justify-center text-sm text-muted-foreground ${layout === 'sidebar' ? 'flex-1' : 'h-32'}`}>
+            {competitorSchedules.length === 0 ? 'Nincsenek versenyző adatok' : 'Nincs megfelelő versenyző'}
+          </div>
+        ) : (
+          <ScrollArea className={layout === 'sidebar' ? "flex-1 h-0" : "h-64"}>
+            <div className="space-y-2">
+              {filteredCompetitors.map(competitor => (
+                <Card
+                  key={competitor.competitorId}
+                  className="p-2 hover:shadow-sm cursor-pointer transition-shadow"
+                  onClick={() => highlightCompetitorRaces(competitor)}
+                >
+                  <div className="space-y-2">
+                    {/* Competitor header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium text-sm">{competitor.competitorName}</div>
+                        <Badge
+                          variant="outline"
+                          className={`text-xs px-1 py-0 ${getRiskLevelColor(competitor.riskLevel)}`}
+                        >
+                          {competitor.riskLevel === 'high' ? 'Magas' :
+                           competitor.riskLevel === 'medium' ? 'Közepes' : 'Alacsony'}
+                        </Badge>
+                      </div>
+                      <Badge variant="outline" className="text-xs">
+                        {competitor.totalRaces} futam
+                      </Badge>
+                    </div>
+
+                    {/* Organization */}
+                    {competitor.organization && (
+                      <div className="text-xs text-muted-foreground">
+                        {competitor.organization}
+                      </div>
+                    )}
+
+                    {/* Race timeline */}
+                    <div className="space-y-1">
+                      {competitor.races.map((race, index) => (
+                        <div key={`${race.raceId}-${race.scheduledTime}`} className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-1">
+                            {getConflictIcon(race.conflictLevel)}
+                            <span className="text-muted-foreground">{race.scheduledTime}</span>
+                            <TruncatedText className={layout === 'sidebar' ? "max-w-24" : "max-w-32"}>
+                              {race.raceName}
+                            </TruncatedText>
+                          </div>
+                          {race.intervalToNext !== undefined && (
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-3 w-3 text-muted-foreground" />
+                              <span className={`text-xs ${
+                                race.conflictLevel === 'critical' ? 'text-red-600 font-medium' :
+                                race.conflictLevel === 'warning' ? 'text-yellow-600' :
+                                'text-muted-foreground'
+                              }`}>
+                                {formatInterval(race.intervalToNext)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Summary stats */}
+                    {(competitor.shortestInterval !== null || competitor.longestInterval !== null) && (
+                      <div className="flex justify-between text-xs text-muted-foreground pt-1 border-t">
+                        <span>Legrövidebb: {formatInterval(competitor.shortestInterval)}</span>
+                        <span>Leghosszabb: {formatInterval(competitor.longestInterval)}</span>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </ScrollArea>
+        )}
+      </CardContent>
+    </>
+  );
+
+  // Return appropriate layout based on layout prop
+  if (layout === 'sidebar') {
+    return (
+      <Card className="h-full flex flex-col">
+        {cardContent}
+      </Card>
+    );
+  }
+
+  // Default collapsible layout for backward compatibility
   return (
-    <LegacyCollapsible 
-      title={titleWithBadge} 
+    <LegacyCollapsible
+      title={titleWithBadge}
       defaultOpen={false}
     >
       <Card>
-        {/* Risk level filters */}
-        {competitorSchedules.length > 0 && (
-          <CardHeader className="pb-2">
-            <div className="flex gap-1">
-              {['high', 'medium', 'low'].map(level => {
-                const count = competitorsByRisk[level as keyof typeof competitorsByRisk].length;
-                return (
-                  <Button
-                    key={level}
-                    variant={selectedRiskLevels.has(level) ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => toggleRiskLevel(level)}
-                    className="h-5 px-1 text-xs"
-                    disabled={count === 0}
-                  >
-                    {level === 'high' ? 'Magas' : level === 'medium' ? 'Közepes' : 'Alacsony'} ({count})
-                  </Button>
-                );
-              })}
-            </div>
-          </CardHeader>
-        )}
-
-        <CardContent className={competitorSchedules.length > 0 ? "pt-0" : ""}>
-          {loading ? (
-            <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">
-              Versenyző adatok elemzése...
-            </div>
-          ) : filteredCompetitors.length === 0 ? (
-            <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">
-              {competitorSchedules.length === 0 ? 'Nincsenek versenyző adatok' : 'Nincs megfelelő versenyző'}
-            </div>
-          ) : (
-            <ScrollArea className={layout === 'sidebar' ? "h-full" : "h-64"}>
-              <div className="space-y-2">
-                {filteredCompetitors.map(competitor => (
-                  <Card 
-                    key={competitor.competitorId} 
-                    className="p-2 hover:shadow-sm cursor-pointer transition-shadow"
-                    onClick={() => highlightCompetitorRaces(competitor)}
-                  >
-                    <div className="space-y-2">
-                      {/* Competitor header */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="font-medium text-sm">{competitor.competitorName}</div>
-                          <Badge 
-                            variant="outline" 
-                            className={`text-xs px-1 py-0 ${getRiskLevelColor(competitor.riskLevel)}`}
-                          >
-                            {competitor.riskLevel === 'high' ? 'Magas' : 
-                             competitor.riskLevel === 'medium' ? 'Közepes' : 'Alacsony'}
-                          </Badge>
-                        </div>
-                        <Badge variant="outline" className="text-xs">
-                          {competitor.totalRaces} futam
-                        </Badge>
-                      </div>
-
-                      {/* Organization */}
-                      {competitor.organization && (
-                        <div className="text-xs text-muted-foreground">
-                          {competitor.organization}
-                        </div>
-                      )}
-
-                      {/* Race timeline */}
-                      <div className="space-y-1">
-                        {competitor.races.map((race, index) => (
-                          <div key={`${race.raceId}-${race.scheduledTime}`} className="flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-1">
-                              {getConflictIcon(race.conflictLevel)}
-                              <span className="text-muted-foreground">{race.scheduledTime}</span>
-                              <TruncatedText className="max-w-32">
-                                {race.raceName}
-                              </TruncatedText>
-                            </div>
-                            {race.intervalToNext !== undefined && (
-                              <div className="flex items-center gap-1">
-                                <Clock className="h-3 w-3 text-muted-foreground" />
-                                <span className={`text-xs ${
-                                  race.conflictLevel === 'critical' ? 'text-red-600 font-medium' :
-                                  race.conflictLevel === 'warning' ? 'text-yellow-600' :
-                                  'text-muted-foreground'
-                                }`}>
-                                  {formatInterval(race.intervalToNext)}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Summary stats */}
-                      {(competitor.shortestInterval !== null || competitor.longestInterval !== null) && (
-                        <div className="flex justify-between text-xs text-muted-foreground pt-1 border-t">
-                          <span>Legrövidebb: {formatInterval(competitor.shortestInterval)}</span>
-                          <span>Leghosszabb: {formatInterval(competitor.longestInterval)}</span>
-                        </div>
-                      )}
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </ScrollArea>
-          )}
-        </CardContent>
+        {cardContent}
       </Card>
     </LegacyCollapsible>
   );
