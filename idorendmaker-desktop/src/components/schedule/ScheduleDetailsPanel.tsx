@@ -18,6 +18,7 @@ import StandardEmptyState from '../common/StandardEmptyState';
 import { ConfirmationDialog } from '../dialogs';
 import { ScheduleWithPDFStatus } from './CompactScheduleCard';
 import { ScheduleStatistics } from '../../data/services/BackendAPIService';
+import { toast } from 'sonner';
 
 interface ScheduleDetailsPanelProps {
   selectedSchedule?: ScheduleWithPDFStatus;
@@ -120,13 +121,14 @@ const ScheduleDetailsPanel: React.FC<ScheduleDetailsPanelProps> = ({
       if (result.success) {
         console.log('Schedule exported successfully:', result.fullPath);
         // Optional: Show success toast/notification
+        toast.success(`Excel exportálás sikeres: ${result.filename}`)
       } else {
         console.error('Export failed:', result.error);
-        alert(`Hiba az exportálás során: ${result.error}`);
+        toast.error(`Hiba az exportálás során: ${result.error}`);
       }
     } catch (error) {
       console.error('Export error:', error);
-      alert('Hiba történt az exportálás során.');
+      toast.error('Hiba történt az exportálás során.');
     } finally {
       setIsExporting(false);
     }

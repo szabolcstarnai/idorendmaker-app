@@ -130,7 +130,8 @@ export class ExportService {
         race: item.race,
         level: item.level,
         startTime: item.calculatedStartTime || '00:00',
-        order: item.orderIndex
+        order: item.orderIndex,
+        day: item.section.dayNumber
       }))
 
       // Use existing rule engine
@@ -494,7 +495,7 @@ export class ExportService {
    */
   static generateFilename(scheduleName: string): string {
     const timestamp = new Date().toISOString().split('T')[0] // YYYY-MM-DD
-    const safeName = scheduleName.replace(/[^a-zA-Z0-9_\-\s]/g, '').trim()
+    const safeName = require('diacritics').remove(scheduleName).trim().replace(/\s+/g, '_');
     return `${safeName}_${timestamp}.xlsx`
   }
 }
