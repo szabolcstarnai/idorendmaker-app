@@ -371,10 +371,10 @@ const PDFExtractionList: React.FC<PDFExtractionListProps> = ({
           <StandardEmptyState
             type={searchTerm ? 'no-results' : 'no-data'}
             icon={FileText}
-            title={searchTerm ? 'Nincs találat' : 'Még nincs feldolgozott PDF'}
+            title={searchTerm ? 'Nincs találat' : 'Még nincs feldolgozott nevezési lista'}
             description={searchTerm
               ? 'Próbáljon más keresési kifejezést használni.'
-              : 'Töltsön fel egy PDF fájlt a jobb oldalon.'
+              : 'Töltsön fel egy megfelelő formátumú nevezési listaPDF fájlt a jobb oldalon.'
             }
           />
         ) : (

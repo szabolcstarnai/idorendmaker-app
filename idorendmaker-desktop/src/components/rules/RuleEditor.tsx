@@ -411,7 +411,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
       <div className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center gap-2">
           <h1 className="text-lg font-semibold">
-            {rule ? 'Szabály Szerkesztése' : 'Új Szabály Létrehozása'}
+            {rule ? 'Szabály Szerkesztése' : 'Új szabály létrehozása'}
           </h1>
           {!isValid && (
             <Badge variant="destructive" className="gap-1">
@@ -459,7 +459,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     onKeyDown={handleNameInputKeyDown}
-                    placeholder="pl. Kajak egyes/páros minimum távolság"
+                    placeholder="pl. Kajak egyes/páros minimum időköz"
                     className={!name.trim() ? 'border-destructive' : ''}
                     autoFocus={!rule && isNameInputActive}
                   />
@@ -487,7 +487,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
                     className={minIntervalMinutes <= 0 ? 'border-destructive' : ''}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Minimum {minIntervalMinutes} perc kell eltelnie a két versenyszám között.
+                    Minimum {minIntervalMinutes} percnek kell eltelnie a két versenyszám között.
                   </p>
                 </div>
               </CardContent>

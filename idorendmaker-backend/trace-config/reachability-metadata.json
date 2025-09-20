@@ -430,6 +430,9 @@
       "allDeclaredFields": true
     },
     {
+      "type": "com.zaxxer.hikari.pool.HikariProxyConnection"
+    },
+    {
       "type": "com.zaxxer.hikari.pool.PoolBase",
       "fields": [
         {
@@ -444,6 +447,9 @@
           "name": "state"
         }
       ]
+    },
+    {
+      "type": "com.zaxxer.hikari.pool.ProxyConnection"
     },
     {
       "type": "freemarker.template$Configuration"
@@ -661,6 +667,13 @@
         {
           "name": "getAllRaces",
           "parameterTypes": []
+        },
+        {
+          "name": "updateRaceHidden",
+          "parameterTypes": [
+            "java.lang.Integer",
+            "boolean"
+          ]
         }
       ]
     },
@@ -677,6 +690,12 @@
         {
           "name": "cleanupExpiredSessions",
           "parameterTypes": []
+        },
+        {
+          "name": "deletePDFExtraction",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
         },
         {
           "name": "getAllPDFExtractions",
@@ -747,6 +766,18 @@
           ]
         },
         {
+          "name": "createRule",
+          "parameterTypes": [
+            "hu.szabolcst.idorendmaker.model.dto.rule.CreateRuleDataDto"
+          ]
+        },
+        {
+          "name": "deleteRule",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
           "name": "getActiveRules",
           "parameterTypes": []
         },
@@ -765,6 +796,24 @@
           "parameterTypes": [
             "java.lang.Integer"
           ]
+        },
+        {
+          "name": "getRuleStats",
+          "parameterTypes": []
+        },
+        {
+          "name": "toggleRuleActive",
+          "parameterTypes": [
+            "java.lang.Integer",
+            "java.lang.Boolean"
+          ]
+        },
+        {
+          "name": "updateRule",
+          "parameterTypes": [
+            "java.lang.Integer",
+            "hu.szabolcst.idorendmaker.model.dto.rule.CreateRuleDataDto"
+          ]
         }
       ]
     },
@@ -779,11 +828,23 @@
           ]
         },
         {
+          "name": "deleteSchedule",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
           "name": "getAllSchedules",
           "parameterTypes": []
         },
         {
           "name": "getScheduleItemsBySection",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
+          "name": "getScheduleStatistics",
           "parameterTypes": [
             "java.lang.Integer"
           ]
@@ -804,6 +865,13 @@
           "name": "saveScheduleWithSections",
           "parameterTypes": [
             "hu.szabolcst.idorendmaker.controller.ScheduleController$SaveScheduleWithSectionsRequest"
+          ]
+        },
+        {
+          "name": "updateScheduleName",
+          "parameterTypes": [
+            "java.lang.Integer",
+            "hu.szabolcst.idorendmaker.controller.ScheduleController$UpdateScheduleNameRequest"
           ]
         },
         {
@@ -839,6 +907,22 @@
           "name": "setSectionsData",
           "parameterTypes": [
             "java.util.List"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "hu.szabolcst.idorendmaker.controller.ScheduleController$UpdateScheduleNameRequest",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "setName",
+          "parameterTypes": [
+            "java.lang.String"
           ]
         }
       ]
@@ -950,7 +1034,25 @@
       ]
     },
     {
-      "type": "hu.szabolcst.idorendmaker.model.dto.competitor.CompetitorRaceDetailsDto",
+      "type": "hu.szabolcst.idorendmaker.model.dto.competitor.CompetitorRaceInfoDto",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "getPdfRaceName",
+          "parameterTypes": []
+        },
+        {
+          "name": "getRaceId",
+          "parameterTypes": []
+        },
+        {
+          "name": "getRaceName",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "hu.szabolcst.idorendmaker.model.dto.competitor.CompetitorRacePairDetailsDto",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -966,37 +1068,47 @@
           "parameterTypes": []
         },
         {
-          "name": "getRaceId",
+          "name": "getLevel1Id",
           "parameterTypes": []
         },
         {
-          "name": "getRaceName",
+          "name": "getLevel2Id",
+          "parameterTypes": []
+        },
+        {
+          "name": "getLevelType1",
+          "parameterTypes": []
+        },
+        {
+          "name": "getLevelType2",
+          "parameterTypes": []
+        },
+        {
+          "name": "getRace1Id",
+          "parameterTypes": []
+        },
+        {
+          "name": "getRace1Name",
+          "parameterTypes": []
+        },
+        {
+          "name": "getRace1StartTime",
+          "parameterTypes": []
+        },
+        {
+          "name": "getRace2Id",
+          "parameterTypes": []
+        },
+        {
+          "name": "getRace2Name",
+          "parameterTypes": []
+        },
+        {
+          "name": "getRace2StartTime",
           "parameterTypes": []
         },
         {
           "name": "getRecoveryTime",
-          "parameterTypes": []
-        },
-        {
-          "name": "getScheduledTime",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "hu.szabolcst.idorendmaker.model.dto.competitor.CompetitorRaceInfoDto",
-      "allDeclaredFields": true,
-      "methods": [
-        {
-          "name": "getPdfRaceName",
-          "parameterTypes": []
-        },
-        {
-          "name": "getRaceId",
-          "parameterTypes": []
-        },
-        {
-          "name": "getRaceName",
           "parameterTypes": []
         }
       ]
@@ -1026,7 +1138,7 @@
           "parameterTypes": []
         },
         {
-          "name": "getRaces",
+          "name": "getRacePairs",
           "parameterTypes": []
         },
         {
@@ -1241,6 +1353,20 @@
         },
         {
           "name": "getDeletedRecords",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "hu.szabolcst.idorendmaker.model.dto.matching.PDFDeletionResultDto",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "getError",
+          "parameterTypes": []
+        },
+        {
+          "name": "getSuccess",
           "parameterTypes": []
         }
       ]
@@ -1596,6 +1722,90 @@
       ]
     },
     {
+      "type": "hu.szabolcst.idorendmaker.model.dto.rule.CreateRuleDataDto",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "setConditions",
+          "parameterTypes": [
+            "java.util.List"
+          ]
+        },
+        {
+          "name": "setMatchings",
+          "parameterTypes": [
+            "java.util.List"
+          ]
+        },
+        {
+          "name": "setMinIntervalMinutes",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
+          "name": "setName",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "hu.szabolcst.idorendmaker.model.dto.rule.CreateRuleDataDto$CreateRuleConditionDto",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "setConditionSet",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "setField",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "setOperator",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "setValue",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "hu.szabolcst.idorendmaker.model.dto.rule.CreateRuleDataDto$CreateRuleMatchingDto",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "setField",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
       "type": "hu.szabolcst.idorendmaker.model.dto.rule.RuleConditionDto",
       "allDeclaredFields": true,
       "methods": [
@@ -1639,6 +1849,24 @@
         },
         {
           "name": "getRuleId",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "hu.szabolcst.idorendmaker.model.dto.rule.RuleStatsDto",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "getActiveRules",
+          "parameterTypes": []
+        },
+        {
+          "name": "getInactiveRules",
+          "parameterTypes": []
+        },
+        {
+          "name": "getTotalRules",
           "parameterTypes": []
         }
       ]
@@ -1956,6 +2184,40 @@
       ]
     },
     {
+      "type": "hu.szabolcst.idorendmaker.model.dto.schedule.ScheduleStatisticsDto",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "getAverageRacesPerSection",
+          "parameterTypes": []
+        },
+        {
+          "name": "getHasPDFData",
+          "parameterTypes": []
+        },
+        {
+          "name": "getMostCommonInterval",
+          "parameterTypes": []
+        },
+        {
+          "name": "getTotalDurationMinutes",
+          "parameterTypes": []
+        },
+        {
+          "name": "getTotalRaces",
+          "parameterTypes": []
+        },
+        {
+          "name": "getTotalSections",
+          "parameterTypes": []
+        },
+        {
+          "name": "getUniqueRaceTypes",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "hu.szabolcst.idorendmaker.model.dto.schedule.ScheduleWithPDFContextDto",
       "allDeclaredFields": true,
       "methods": [
@@ -2016,12 +2278,53 @@
     },
     {
       "type": "hu.szabolcst.idorendmaker.model.entity.CompetitorEntry",
-      "fields": [
+      "allDeclaredFields": true,
+      "methods": [
         {
-          "name": "hashCode"
+          "name": "<init>",
+          "parameterTypes": []
         },
         {
-          "name": "toString"
+          "name": "setBirthYear",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
+          "name": "setCompetitorId",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "setCompetitorName",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "setCreatedAt",
+          "parameterTypes": [
+            "java.time.LocalDateTime"
+          ]
+        },
+        {
+          "name": "setId",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
+          "name": "setOrganization",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "setPdfExtractionId",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
         }
       ]
     },
@@ -2252,12 +2555,53 @@
     },
     {
       "type": "hu.szabolcst.idorendmaker.model.entity.Rule",
-      "fields": [
+      "allDeclaredFields": true,
+      "methods": [
         {
-          "name": "hashCode"
+          "name": "<init>",
+          "parameterTypes": []
         },
         {
-          "name": "toString"
+          "name": "setCreatedAt",
+          "parameterTypes": [
+            "java.time.LocalDateTime"
+          ]
+        },
+        {
+          "name": "setDescription",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "setId",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
+          "name": "setIsActive",
+          "parameterTypes": [
+            "java.lang.Boolean"
+          ]
+        },
+        {
+          "name": "setMinIntervalMinutes",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
+          "name": "setName",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "setUpdatedAt",
+          "parameterTypes": [
+            "java.time.LocalDateTime"
+          ]
         }
       ]
     },
@@ -2336,12 +2680,47 @@
     },
     {
       "type": "hu.szabolcst.idorendmaker.model.entity.ScheduleSection",
-      "fields": [
+      "allDeclaredFields": true,
+      "methods": [
         {
-          "name": "hashCode"
+          "name": "<init>",
+          "parameterTypes": []
         },
         {
-          "name": "toString"
+          "name": "setCreatedAt",
+          "parameterTypes": [
+            "java.time.LocalDateTime"
+          ]
+        },
+        {
+          "name": "setDayNumber",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
+          "name": "setId",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
+          "name": "setScheduleId",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
+          "name": "setSectionType",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "setStartTime",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
         }
       ]
     },
@@ -2410,6 +2789,22 @@
       "allDeclaredFields": true,
       "methods": [
         {
+          "name": "count",
+          "parameterTypes": []
+        },
+        {
+          "name": "delete",
+          "parameterTypes": [
+            "java.lang.Object"
+          ]
+        },
+        {
+          "name": "deleteAll",
+          "parameterTypes": [
+            "java.lang.Iterable"
+          ]
+        },
+        {
           "name": "findAll",
           "parameterTypes": []
         },
@@ -2424,6 +2819,12 @@
           "parameterTypes": [
             "java.lang.Object"
           ]
+        },
+        {
+          "name": "saveAll",
+          "parameterTypes": [
+            "java.lang.Iterable"
+          ]
         }
       ]
     },
@@ -2437,6 +2838,12 @@
         },
         {
           "name": "countByPdfExtractionId",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
+          "name": "findAllByPdfExtractionId",
           "parameterTypes": [
             "java.lang.Integer"
           ]
@@ -2470,6 +2877,12 @@
         },
         {
           "name": "countByScheduleId",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
+          "name": "deleteByScheduleId",
           "parameterTypes": [
             "java.lang.Integer"
           ]
@@ -2534,6 +2947,12 @@
           "name": "findByFileHash",
           "parameterTypes": [
             "java.lang.String"
+          ]
+        },
+        {
+          "name": "findByIdWithSchedules",
+          "parameterTypes": [
+            "java.lang.Integer"
           ]
         },
         {
@@ -2647,6 +3066,12 @@
         {
           "name": "<init>",
           "parameterTypes": []
+        },
+        {
+          "name": "deleteByRuleId",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
         }
       ]
     },
@@ -2670,12 +3095,28 @@
           "parameterTypes": []
         },
         {
+          "name": "countByIsActiveTrue",
+          "parameterTypes": []
+        },
+        {
+          "name": "deleteById",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
           "name": "findActiveWithConditionsAndMatchings",
           "parameterTypes": []
         },
         {
           "name": "findAllWithConditionsAndMatchings",
           "parameterTypes": []
+        },
+        {
+          "name": "findByIdWithConditionsAndMatchings",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
         }
       ]
     },
@@ -2697,6 +3138,12 @@
         {
           "name": "<init>",
           "parameterTypes": []
+        },
+        {
+          "name": "deleteByRuleId",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
         }
       ]
     },
@@ -2718,6 +3165,18 @@
         {
           "name": "<init>",
           "parameterTypes": []
+        },
+        {
+          "name": "deleteAllByScheduleId",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
+          "name": "findAllByScheduleIdOrderByOrderIndexAsc",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
         },
         {
           "name": "findAllByScheduleIdWithRaceAndLevel",
@@ -2753,6 +3212,12 @@
           "parameterTypes": []
         },
         {
+          "name": "deleteById",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
           "name": "findAllByOrderByCreatedAtDesc",
           "parameterTypes": []
         },
@@ -2785,6 +3250,12 @@
         },
         {
           "name": "deleteAllByScheduleId",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
+          "name": "findAllByScheduleIdOrderByDayNumberAscSectionTypeAsc",
           "parameterTypes": [
             "java.lang.Integer"
           ]
@@ -2909,6 +3380,12 @@
           "parameterTypes": []
         },
         {
+          "name": "deletePDFExtraction",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
           "name": "getAllPDFExtractions",
           "parameterTypes": []
         },
@@ -2967,6 +3444,13 @@
         {
           "name": "getAllRaces",
           "parameterTypes": []
+        },
+        {
+          "name": "updateRaceHidden",
+          "parameterTypes": [
+            "java.lang.Integer",
+            "boolean"
+          ]
         }
       ]
     },
@@ -2996,6 +3480,18 @@
           ]
         },
         {
+          "name": "createRule",
+          "parameterTypes": [
+            "hu.szabolcst.idorendmaker.model.dto.rule.CreateRuleDataDto"
+          ]
+        },
+        {
+          "name": "deleteRule",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
           "name": "getActiveRules",
           "parameterTypes": []
         },
@@ -3013,6 +3509,24 @@
           "name": "getDismissedViolations",
           "parameterTypes": [
             "java.lang.Integer"
+          ]
+        },
+        {
+          "name": "getRuleStats",
+          "parameterTypes": []
+        },
+        {
+          "name": "toggleRuleActive",
+          "parameterTypes": [
+            "java.lang.Integer",
+            "java.lang.Boolean"
+          ]
+        },
+        {
+          "name": "updateRule",
+          "parameterTypes": [
+            "java.lang.Integer",
+            "hu.szabolcst.idorendmaker.model.dto.rule.CreateRuleDataDto"
           ]
         }
       ]
@@ -3043,11 +3557,23 @@
           ]
         },
         {
+          "name": "deleteSchedule",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
           "name": "getAllSchedules",
           "parameterTypes": []
         },
         {
           "name": "getScheduleItemsBySection",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
+          "name": "getScheduleStatistics",
           "parameterTypes": [
             "java.lang.Integer"
           ]
@@ -3070,6 +3596,13 @@
             "java.lang.String",
             "java.util.List",
             "java.lang.Integer"
+          ]
+        },
+        {
+          "name": "updateScheduleName",
+          "parameterTypes": [
+            "java.lang.Integer",
+            "java.lang.String"
           ]
         },
         {
@@ -3365,6 +3898,10 @@
       "type": "java.lang.Thread$Builder"
     },
     {
+      "type": "java.lang.Void",
+      "allDeclaredFields": true
+    },
+    {
       "type": "java.lang.WrongThreadException"
     },
     {
@@ -3396,6 +3933,9 @@
     },
     {
       "type": "java.lang.reflect.GenericDeclaration"
+    },
+    {
+      "type": "java.lang.reflect.Method"
     },
     {
       "type": "java.lang.reflect.ParameterizedType",
@@ -3473,6 +4013,14 @@
     },
     {
       "type": "java.sql.DriverManager"
+    },
+    {
+      "type": "java.sql.SQLException",
+      "fields": [
+        {
+          "name": "next"
+        }
+      ]
     },
     {
       "type": "java.sql.Types",
@@ -3603,6 +4151,9 @@
       "type": "jdk.internal.misc.Unsafe"
     },
     {
+      "type": "jdk.internal.reflect.DirectMethodHandleAccessor"
+    },
+    {
       "type": "kotlin$Metadata"
     },
     {
@@ -3654,7 +4205,28 @@
       "type": "org.aopalliance.intercept.MethodInterceptor"
     },
     {
+      "type": "org.apache.catalina.authenticator.AuthenticatorBase"
+    },
+    {
+      "type": "org.apache.catalina.connector.CoyoteAdapter"
+    },
+    {
       "type": "org.apache.catalina.core.ApplicationContextFacade"
+    },
+    {
+      "type": "org.apache.catalina.core.ApplicationFilterChain"
+    },
+    {
+      "type": "org.apache.catalina.core.StandardContextValve"
+    },
+    {
+      "type": "org.apache.catalina.core.StandardEngineValve"
+    },
+    {
+      "type": "org.apache.catalina.core.StandardHostValve"
+    },
+    {
+      "type": "org.apache.catalina.core.StandardWrapperValve"
     },
     {
       "type": "org.apache.catalina.loader.JdbcLeakPrevention",
@@ -3682,7 +4254,13 @@
       ]
     },
     {
+      "type": "org.apache.catalina.valves.ErrorReportValve"
+    },
+    {
       "type": "org.apache.commons.dbcp2.BasicDataSource"
+    },
+    {
+      "type": "org.apache.coyote.AbstractProcessorLight"
     },
     {
       "type": "org.apache.coyote.AbstractProtocol",
@@ -3711,6 +4289,9 @@
       ]
     },
     {
+      "type": "org.apache.coyote.AbstractProtocol$ConnectionHandler"
+    },
+    {
       "type": "org.apache.coyote.UpgradeProtocol"
     },
     {
@@ -3724,6 +4305,9 @@
     },
     {
       "type": "org.apache.coyote.http11.Http11NioProtocol"
+    },
+    {
+      "type": "org.apache.coyote.http11.Http11Processor"
     },
     {
       "type": "org.apache.derby.jdbc$EmbeddedDriver"
@@ -3774,6 +4358,21 @@
     },
     {
       "type": "org.apache.tomcat.util.net.NioEndpoint"
+    },
+    {
+      "type": "org.apache.tomcat.util.net.NioEndpoint$SocketProcessor"
+    },
+    {
+      "type": "org.apache.tomcat.util.net.SocketProcessorBase"
+    },
+    {
+      "type": "org.apache.tomcat.util.threads.TaskThread$WrappingRunnable"
+    },
+    {
+      "type": "org.apache.tomcat.util.threads.ThreadPoolExecutor"
+    },
+    {
+      "type": "org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker"
     },
     {
       "type": "org.apache.tomcat.websocket.server.WsFilter"
@@ -3872,11 +4471,26 @@
       "type": "org.springframework.aop.PointcutAdvisor"
     },
     {
+      "type": "org.springframework.aop.SpringProxy"
+    },
+    {
+      "type": "org.springframework.aop.TargetClassAware"
+    },
+    {
       "type": "org.springframework.aop.framework.AbstractAdvisingBeanPostProcessor",
       "allDeclaredFields": true
     },
     {
+      "type": "org.springframework.aop.framework.Advised"
+    },
+    {
       "type": "org.springframework.aop.framework.AopInfrastructureBean"
+    },
+    {
+      "type": "org.springframework.aop.framework.CglibAopProxy$CglibMethodInvocation"
+    },
+    {
+      "type": "org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor"
     },
     {
       "type": "org.springframework.aop.framework.ProxyConfig",
@@ -3901,6 +4515,9 @@
           ]
         }
       ]
+    },
+    {
+      "type": "org.springframework.aop.framework.ReflectiveMethodInvocation"
     },
     {
       "type": "org.springframework.aop.framework.autoproxy.AbstractAdvisorAutoProxyCreator",
@@ -6138,6 +6755,15 @@
       "type": "org.springframework.cache.interceptor.CacheAspectSupport"
     },
     {
+      "type": "org.springframework.cglib.proxy.Dispatcher"
+    },
+    {
+      "type": "org.springframework.cglib.proxy.MethodInterceptor"
+    },
+    {
+      "type": "org.springframework.cglib.proxy.NoOp"
+    },
+    {
       "type": "org.springframework.context.ApplicationContextAware"
     },
     {
@@ -6433,6 +7059,9 @@
       "allDeclaredFields": true
     },
     {
+      "type": "org.springframework.jdbc.datasource.DataSourceUtils"
+    },
+    {
       "type": "org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType"
     },
     {
@@ -6724,8 +7353,14 @@
       "allDeclaredFields": true
     },
     {
+      "type": "org.springframework.web.method.annotation.ExceptionHandlerMethodResolver"
+    },
+    {
       "type": "org.springframework.web.method.support.CompositeUriComponentsContributor",
       "allDeclaredFields": true
+    },
+    {
+      "type": "org.springframework.web.method.support.InvocableHandlerMethod"
     },
     {
       "type": "org.springframework.web.method.support.UriComponentsContributor"
@@ -7021,6 +7656,9 @@
       "allDeclaredFields": true
     },
     {
+      "type": "org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod"
+    },
+    {
       "type": "org.springframework.web.servlet.resource.ResourceUrlProvider",
       "allDeclaredFields": true
     },
@@ -7078,6 +7716,9 @@
           "parameterTypes": []
         }
       ]
+    },
+    {
+      "type": "org.sqlite.jdbc3.JDBC3Connection"
     },
     {
       "type": "org.thymeleaf.spring6$SpringTemplateEngine"

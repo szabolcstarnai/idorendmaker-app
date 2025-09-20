@@ -146,14 +146,14 @@ const ScheduleListPanel: React.FC<ScheduleListPanelProps> = ({
           ) : filteredSchedules.length === 0 ? (
             <div className="py-8">
               <StandardEmptyState
-                type="empty"
+                type="no-data"
                 title={searchTerm ? 'Nincs találat' : 'Még nincs mentett időrend'}
                 description={
                   searchTerm
                     ? 'Próbáljon más keresési kifejezést használni.'
                     : 'Kezdjen egy új időrend készítésével.'
                 }
-                actionLabel={searchTerm ? undefined : "Új Időrend Készítése"}
+                actionLabel={searchTerm ? undefined : "Új időrend készítése"}
                 onAction={searchTerm ? undefined : onCreateNewSchedule}
               />
             </div>

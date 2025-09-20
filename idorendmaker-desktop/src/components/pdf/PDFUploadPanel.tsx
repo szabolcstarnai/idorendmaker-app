@@ -11,8 +11,10 @@ import {
   Loader2, 
   Calendar,
   Server,
-  Trash2
+  Trash2,
+  CircleX
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface PDFProcessorResult {
   totalCompetitors: number;
@@ -48,10 +50,6 @@ const PDFUploadPanel: React.FC<PDFUploadPanelProps> = ({
   const [isLoadingStatus, setIsLoadingStatus] = useState(false);
   const [pdfExtractionId, setPdfExtractionId] = useState<number | null>(null);
   const [racesToProcess, setRacesToProcess] = useState<number | null>(null);
-  const [cleanupStats, setCleanupStats] = useState<{
-    deletedExtractions: number;
-    deletedRecords: number;
-  } | null>(null);
   const [isCleaningUp, setIsCleaningUp] = useState(false);
 
   // Load processor status
@@ -169,14 +167,15 @@ const PDFUploadPanel: React.FC<PDFUploadPanelProps> = ({
     setIsCleaningUp(true);
     try {
       const result = await window.electronAPI.pdfCleanupExpiredSessions();
-      setCleanupStats(result);
       onRefreshExtractions?.();
-      
-      // Clear cleanup stats after showing them
-      setTimeout(() => setCleanupStats(null), 5000);
+      if (result.deletedExtractions === 0 || result.deletedRecords === 0) {
+        toast.info('Nincs törlendő adat');
+      } else {
+        toast.success(`Törölve: ${result.deletedExtractions} feldolgozás, ${result.deletedRecords} rekord`);
+      }
     } catch (error) {
       console.error('Cleanup error:', error);
-      alert('Hiba a takarítás során');
+      toast.error('Hiba a takarítás során');
     } finally {
       setIsCleaningUp(false);
     }
@@ -261,14 +260,6 @@ const PDFUploadPanel: React.FC<PDFUploadPanelProps> = ({
                 Takarítás
               </Button>
             </div>
-            
-            {cleanupStats && (
-              <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded-md">
-                <div className="text-sm text-green-800">
-                  ✅ Törölve: {cleanupStats.deletedExtractions} feldolgozás, {cleanupStats.deletedRecords} rekord
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -277,7 +268,7 @@ const PDFUploadPanel: React.FC<PDFUploadPanelProps> = ({
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <FileText className="h-4 w-4" />
-              Új PDF feldolgozása
+              Új PDF nevezési lista feldolgozása
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0 space-y-4">
@@ -287,14 +278,13 @@ const PDFUploadPanel: React.FC<PDFUploadPanelProps> = ({
                   <div className="flex items-center gap-2">
                     <FileText className="h-4 w-4 text-blue-600" />
                     <span className="font-medium">{selectedFile.name}</span>
-                    <Badge variant="outline" className="text-xs">PDF</Badge>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={handleClearFile}
                       className="h-6 w-6 p-0 ml-2"
                     >
-                      <AlertCircle className="h-3 w-3" />
+                      <CircleX className="h-5 w-5" />
                     </Button>
                   </div>
                 ) : (
@@ -323,12 +313,12 @@ const PDFUploadPanel: React.FC<PDFUploadPanelProps> = ({
                 {isProcessing ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    PDF feldolgozása...
+                    PDF nevezési lista feldolgozása...
                   </>
                 ) : (
                   <>
                     <FileText className="h-4 w-4" />
-                    PDF Feldolgozása
+                    PDF nevezési lista feldolgozása
                   </>
                 )}
               </Button>

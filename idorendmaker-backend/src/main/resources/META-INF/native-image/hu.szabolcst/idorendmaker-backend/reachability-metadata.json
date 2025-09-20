@@ -778,12 +778,6 @@
           ]
         },
         {
-          "name": "dismissViolation",
-          "parameterTypes": [
-            "hu.szabolcst.idorendmaker.controller.RuleController$DismissViolationRequest"
-          ]
-        },
-        {
           "name": "getActiveRules",
           "parameterTypes": []
         },
@@ -813,27 +807,12 @@
             "java.lang.Integer",
             "java.lang.Boolean"
           ]
-        }
-      ]
-    },
-    {
-      "type": "hu.szabolcst.idorendmaker.controller.RuleController$DismissViolationRequest",
-      "allDeclaredFields": true,
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
         },
         {
-          "name": "setScheduleId",
+          "name": "updateRule",
           "parameterTypes": [
-            "java.lang.Integer"
-          ]
-        },
-        {
-          "name": "setViolationHash",
-          "parameterTypes": [
-            "java.lang.String"
+            "java.lang.Integer",
+            "hu.szabolcst.idorendmaker.model.dto.rule.CreateRuleDataDto"
           ]
         }
       ]
@@ -883,6 +862,12 @@
           ]
         },
         {
+          "name": "saveScheduleWithSections",
+          "parameterTypes": [
+            "hu.szabolcst.idorendmaker.controller.ScheduleController$SaveScheduleWithSectionsRequest"
+          ]
+        },
+        {
           "name": "updateScheduleName",
           "parameterTypes": [
             "java.lang.Integer",
@@ -894,6 +879,34 @@
           "parameterTypes": [
             "java.lang.Integer",
             "hu.szabolcst.idorendmaker.controller.ScheduleController$UpdateScheduleWithSectionsRequest"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "hu.szabolcst.idorendmaker.controller.ScheduleController$SaveScheduleWithSectionsRequest",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "setName",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "setPdfExtractionId",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
+          "name": "setSectionsData",
+          "parameterTypes": [
+            "java.util.List"
           ]
         }
       ]
@@ -926,6 +939,12 @@
           "name": "setName",
           "parameterTypes": [
             "java.lang.String"
+          ]
+        },
+        {
+          "name": "setPdfExtractionId",
+          "parameterTypes": [
+            "java.lang.Integer"
           ]
         },
         {
@@ -1015,7 +1034,25 @@
       ]
     },
     {
-      "type": "hu.szabolcst.idorendmaker.model.dto.competitor.CompetitorRaceDetailsDto",
+      "type": "hu.szabolcst.idorendmaker.model.dto.competitor.CompetitorRaceInfoDto",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "getPdfRaceName",
+          "parameterTypes": []
+        },
+        {
+          "name": "getRaceId",
+          "parameterTypes": []
+        },
+        {
+          "name": "getRaceName",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "hu.szabolcst.idorendmaker.model.dto.competitor.CompetitorRacePairDetailsDto",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -1031,37 +1068,47 @@
           "parameterTypes": []
         },
         {
-          "name": "getRaceId",
+          "name": "getLevel1Id",
           "parameterTypes": []
         },
         {
-          "name": "getRaceName",
+          "name": "getLevel2Id",
+          "parameterTypes": []
+        },
+        {
+          "name": "getLevelType1",
+          "parameterTypes": []
+        },
+        {
+          "name": "getLevelType2",
+          "parameterTypes": []
+        },
+        {
+          "name": "getRace1Id",
+          "parameterTypes": []
+        },
+        {
+          "name": "getRace1Name",
+          "parameterTypes": []
+        },
+        {
+          "name": "getRace1StartTime",
+          "parameterTypes": []
+        },
+        {
+          "name": "getRace2Id",
+          "parameterTypes": []
+        },
+        {
+          "name": "getRace2Name",
+          "parameterTypes": []
+        },
+        {
+          "name": "getRace2StartTime",
           "parameterTypes": []
         },
         {
           "name": "getRecoveryTime",
-          "parameterTypes": []
-        },
-        {
-          "name": "getScheduledTime",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "hu.szabolcst.idorendmaker.model.dto.competitor.CompetitorRaceInfoDto",
-      "allDeclaredFields": true,
-      "methods": [
-        {
-          "name": "getPdfRaceName",
-          "parameterTypes": []
-        },
-        {
-          "name": "getRaceId",
-          "parameterTypes": []
-        },
-        {
-          "name": "getRaceName",
           "parameterTypes": []
         }
       ]
@@ -1091,7 +1138,7 @@
           "parameterTypes": []
         },
         {
-          "name": "getRaces",
+          "name": "getRacePairs",
           "parameterTypes": []
         },
         {
@@ -3445,13 +3492,6 @@
           ]
         },
         {
-          "name": "dismissViolation",
-          "parameterTypes": [
-            "java.lang.Integer",
-            "java.lang.String"
-          ]
-        },
-        {
           "name": "getActiveRules",
           "parameterTypes": []
         },
@@ -3480,6 +3520,13 @@
           "parameterTypes": [
             "java.lang.Integer",
             "java.lang.Boolean"
+          ]
+        },
+        {
+          "name": "updateRule",
+          "parameterTypes": [
+            "java.lang.Integer",
+            "hu.szabolcst.idorendmaker.model.dto.rule.CreateRuleDataDto"
           ]
         }
       ]
@@ -3540,6 +3587,14 @@
         {
           "name": "getScheduleWithSections",
           "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
+          "name": "saveScheduleWithSections",
+          "parameterTypes": [
+            "java.lang.String",
+            "java.util.List",
             "java.lang.Integer"
           ]
         },
@@ -4416,8 +4471,17 @@
       "type": "org.springframework.aop.PointcutAdvisor"
     },
     {
+      "type": "org.springframework.aop.SpringProxy"
+    },
+    {
+      "type": "org.springframework.aop.TargetClassAware"
+    },
+    {
       "type": "org.springframework.aop.framework.AbstractAdvisingBeanPostProcessor",
       "allDeclaredFields": true
+    },
+    {
+      "type": "org.springframework.aop.framework.Advised"
     },
     {
       "type": "org.springframework.aop.framework.AopInfrastructureBean"
@@ -6689,6 +6753,15 @@
     },
     {
       "type": "org.springframework.cache.interceptor.CacheAspectSupport"
+    },
+    {
+      "type": "org.springframework.cglib.proxy.Dispatcher"
+    },
+    {
+      "type": "org.springframework.cglib.proxy.MethodInterceptor"
+    },
+    {
+      "type": "org.springframework.cglib.proxy.NoOp"
     },
     {
       "type": "org.springframework.context.ApplicationContextAware"

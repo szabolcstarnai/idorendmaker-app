@@ -70,6 +70,9 @@ export const calculateTotalDuration = (
   const minutes = duration % 60;
   
   if (hours > 0) {
+    if (minutes === 0) {
+      return `${hours} ${hungarianStrings.hours}`;
+    }
     return `${hours} ${hungarianStrings.hours} ${minutes} ${hungarianStrings.minutes}`;
   }
   return `${minutes} ${hungarianStrings.minutes}`;

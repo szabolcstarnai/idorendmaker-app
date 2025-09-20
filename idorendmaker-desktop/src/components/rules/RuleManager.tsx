@@ -337,7 +337,7 @@ const RuleManager: React.FC<RuleManagerProps> = ({
                 type={searchTerm ? 'no-results' : 'action-prompt'}
                 title={searchTerm ? 'Nincs találat' : 'Nincsenek szabályok'}
                 description={searchTerm ? 'Próbálj meg más keresési feltételt.' : 'Hozz létre egy új szabályt a kezdéshez.'}
-                actionLabel={!searchTerm ? 'Új Szabály' : undefined}
+                actionLabel={!searchTerm ? 'Új szabály' : undefined}
                 onAction={!searchTerm ? onCreateRule : undefined}
               />
             ) : (
@@ -375,7 +375,7 @@ const RuleManager: React.FC<RuleManagerProps> = ({
             type="action-prompt"
             title="Válassz egy szabályt a szerkesztéshez"
             description="Kattints egy szabályra a bal oldali listában a szerkesztés megkezdéséhez."
-            actionLabel="Új Szabály Létrehozása"
+            actionLabel="Új szabály létrehozása"
             onAction={onCreateRule}
           />
         )}

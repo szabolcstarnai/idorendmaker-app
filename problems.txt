@@ -1,0 +1,48 @@
+0:19 Új zsabály gomb név
++ Létrehozása jobb oldal
+
+2:36 Új időrend készítése baloldali gomb NÉV
+
+3:13 PDF PDF PDF itt azért léne egyértelműsíteni nem mindeg miféle PDF
+
+6:47 PDF pill minek, mi más lenne.
+
+3:56 Pdf kiszedése a tallózásból gomb kicsit sem egyértelmű
+
+PDF FELdolgozások mint cím, legyen kicsi f
+
+5:46 Ha 0 rekord 0 fájl akkor inkább üzi hogy nem volt mit törölni. Also, inkább sonner popup mint ez a custom cucc, máshol is ez le lett már cserélve.
+
+9:34 futam!
+
+------- done above
+
+feldolgozási hiba request failed 500 nem túl felhasználóbarát. talán inkább valami üzenet hogy nem felelt meg a formai követelményeknek győződjön meg hogy ilyen formátumban van-e, és egy mintát statikusan kiszolgálba biztosítani?
+
+
+
+
+
+
+8:25 beállítsok főként az interval change miatt ne számoljuk újra a versenyző adatokat, se a szabályokat
+
+
+
+10:05
+Icipici gombok, és a logika is rossz, törlő gombok lehetnek ott, de egynek muszáj maradni a consecutive days szabály miatt.de az egyik szakasz minden napból törölhető
+
+11:50 nem csekkolunk KÜLÖNBÖZŐ NAPOK között competitor tracket!! 
+
+12:40 attól hogy nézetet váltok (szakasz,nap) nem kéne hogy szabályok és comp track újraszámolódjon
+
+13:45 attól hogy új szakasz (nap) kerül hozzáadásra maradjon meg a név amit már beírtam!!
+
+14:40 mentés után feljön a mentetlen adatok popup, erre van már talán hiba de ja
+
+hiányzó pdf adatok hibajegy már van 16:36
+
+18:05 ez a sonner egy az egyben kéne a mentett időrendektől való exporthoz is
+
+19:55 kitöröltöm minden időrendet apdfhez. miért maradt kapcsolt?
+
+PDF details meg van nyitva, közben én a listából törlöm az ehhez tartozó pdf adatokat --> ehhez tartozó details nyitva marad ez hiba

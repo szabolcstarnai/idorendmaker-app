@@ -96,7 +96,7 @@ const PDFManager: React.FC<PDFManagerProps> = ({ onNavigateToSchedule }) => {
 
   return (
     <TwoPanelLayout>
-      <TwoPanelLayout.SidePanel title="PDF Feldolgozások">
+      <TwoPanelLayout.SidePanel title="PDF feldolgozások">
         <PDFExtractionList
           key={refreshKey} // Force re-render when refreshKey changes
           selectedExtraction={selectedExtraction}

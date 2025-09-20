@@ -38,7 +38,7 @@ const hungarianStrings = {
   combinedTitle: 'Beállítások és szakaszok',
   scheduleName: 'Időrend neve',
   save: 'Mentés',
-  races: 'verseny',
+  races: 'futam',
   currentSections: 'Jelenlegi szakaszok:',
   addNewDay: 'Új nap hozzáadása'
 };
