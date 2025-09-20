@@ -10,6 +10,7 @@ public class ScheduleRaceDto {
     private String id;
     private RaceWithAgeGroupsDto race;
     private LevelDto level;
+    private Integer day;
     private String startTime;
     private Integer order;
 

@@ -258,7 +258,9 @@ public class CompetitorServiceImpl implements CompetitorService {
 
 			for (int j = i + 1; j < competitorRaces.size(); j++) {
 				final ScheduleRaceDto candidateRace = competitorRaces.get(j);
-
+                if (!Objects.equals(currentRace.getDay(), candidateRace.getDay())) {
+                    continue; // different day, cannot be conflict
+                }
 				// Check if this is a meaningful pair (different race-leveltype)
 				if (isDifferentRaceLevelType(currentRace, candidateRace)) {
 					nextMeaningfulRace = candidateRace;

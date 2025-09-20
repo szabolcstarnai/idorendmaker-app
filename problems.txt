@@ -15,31 +15,25 @@ PDF FELdolgozások mint cím, legyen kicsi f
 
 9:34 futam!
 
+11:50 nem csekkolunk KÜLÖNBÖZŐ NAPOK között competitor tracket!! [#31]
 ------- done above
 
-feldolgozási hiba request failed 500 nem túl felhasználóbarát. talán inkább valami üzenet hogy nem felelt meg a formai követelményeknek győződjön meg hogy ilyen formátumban van-e, és egy mintát statikusan kiszolgálba biztosítani?
-
-
-
-
-
+feldolgozási hiba request failed 500 nem túl felhasználóbarát. talán inkább valami üzenet hogy nem felelt meg a formai követelményeknek győződjön meg hogy ilyen formátumban van-e, és egy mintát statikusan kiszolgálba biztosítani? [#24]
 
 8:25 beállítsok főként az interval change miatt ne számoljuk újra a versenyző adatokat, se a szabályokat
+12:40 attól hogy nézetet váltok (szakasz,nap) nem kéne hogy szabályok és comp track újraszámolódjon [#28]
+
+13:45 attól hogy új szakasz (nap) kerül hozzáadásra maradjon meg a név amit már beírtam!! [#29]
+
+14:40 mentés után feljön a mentetlen adatok popup, erre van már talán hiba de ja [#18]
+
+hiányzó pdf adatok hibajegy már van 16:36 [#16]
+
 
 
 
 10:05
 Icipici gombok, és a logika is rossz, törlő gombok lehetnek ott, de egynek muszáj maradni a consecutive days szabály miatt.de az egyik szakasz minden napból törölhető
-
-11:50 nem csekkolunk KÜLÖNBÖZŐ NAPOK között competitor tracket!! 
-
-12:40 attól hogy nézetet váltok (szakasz,nap) nem kéne hogy szabályok és comp track újraszámolódjon
-
-13:45 attól hogy új szakasz (nap) kerül hozzáadásra maradjon meg a név amit már beírtam!!
-
-14:40 mentés után feljön a mentetlen adatok popup, erre van már talán hiba de ja
-
-hiányzó pdf adatok hibajegy már van 16:36
 
 18:05 ez a sonner egy az egyben kéne a mentett időrendektől való exporthoz is
 

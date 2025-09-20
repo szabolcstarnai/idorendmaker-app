@@ -292,6 +292,7 @@ export interface SectionWorkingData {
     startTime: string
     defaultInterval: number
   }
+  day: number
 }
 
 // Individual race in a schedule with calculated times
@@ -299,6 +300,7 @@ export interface ScheduleRace {
   id: string
   race: RaceWithAgeGroups
   level: Level
+  day: number
   startTime: string
   order: number
 }

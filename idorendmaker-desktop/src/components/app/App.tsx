@@ -322,6 +322,7 @@ const App: React.FC = () => {
           id: `schedule-race-${item.id}`,
           race: item.race,
           level: item.level,
+          day: section.dayNumber,
           startTime: item.calculatedStartTime || '09:00',
           order: item.orderIndex || index
         }));
@@ -344,7 +345,8 @@ const App: React.FC = () => {
           settings: {
             startTime: section.startTime,
             defaultInterval: defaultInterval
-          }
+          },
+          day: section.dayNumber
         };
         
         loadedSectionDataMap.set(section.id, sectionWorkingData);

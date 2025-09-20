@@ -68,10 +68,13 @@ export const useScheduleSectionData = ({
   
   // Aggregate races from all sections for RaceList tab filtering
   const allScheduleRaces = useMemo(() => {
+    console.log('Recalculating allScheduleRaces from sectionDataMap');
+    console.log('Current sectionDataMap:', sectionDataMap);
     const allRaces: ScheduleRace[] = [];
     sectionDataMap.forEach(sectionData => {
       allRaces.push(...sectionData.races);
     });
+    console.log('All schedule races:', allRaces);
     return allRaces;
   }, [sectionDataMap]);
 
@@ -92,7 +95,8 @@ export const useScheduleSectionData = ({
         settings: {
           startTime: currentSection.startTime,
           defaultInterval: 15
-        }
+        },
+        day: currentSection.dayNumber
       };
       
       setSectionDataMap(prev => {
@@ -128,7 +132,8 @@ export const useScheduleSectionData = ({
           settings: {
             startTime: newStartTime,
             defaultInterval: 15
-          }
+          },
+          day: currentSection?.dayNumber || 1
         });
       }
       
@@ -165,7 +170,8 @@ export const useScheduleSectionData = ({
           settings: {
             startTime: currentSection?.startTime || '09:00',
             defaultInterval: newInterval
-          }
+          },
+          day: currentSection?.dayNumber || 1
         });
       }
       
@@ -192,7 +198,8 @@ export const useScheduleSectionData = ({
           settings: {
             startTime: section?.startTime || '09:00',
             defaultInterval: 15
-          }
+          },
+          day: section?.dayNumber || 1
         };
         newMap.set(currentSectionId, newSectionData);
       }
@@ -215,7 +222,8 @@ export const useScheduleSectionData = ({
         race,
         level,
         startTime: newStartTime,
-        order: newOrder
+        order: newOrder,
+        day: sectionData.day
       };
 
       // Update section data with new race and intervals
