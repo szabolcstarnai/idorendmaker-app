@@ -181,7 +181,7 @@ const CompetitorTracker: React.FC<CompetitorTrackerProps> = ({
         </CardHeader>
       )}
 
-      <CardContent className={`${competitorSchedules.length > 0 ? "pt-0" : ""} ${layout === 'sidebar' ? 'flex-1 flex flex-col min-h-0' : ''}`}>
+      <CardContent className={`${competitorSchedules.length > 0 ? "pt-0" : ""} ${layout === 'sidebar' ? 'flex-1 flex flex-col min-h-0 px-2 pb-2' : 'px-2 pb-2'}`}>
         {loading ? (
           <div className={`flex items-center justify-center text-sm text-muted-foreground ${layout === 'sidebar' ? 'flex-1' : 'h-32'}`}>
             Versenyző adatok elemzése...
@@ -196,10 +196,10 @@ const CompetitorTracker: React.FC<CompetitorTrackerProps> = ({
               {filteredCompetitors.map(competitor => (
                 <Card
                   key={competitor.competitorId}
-                  className="p-3 hover:shadow-sm cursor-pointer transition-shadow"
+                  className="p-2 hover:shadow-sm cursor-pointer transition-shadow"
                   onClick={() => highlightCompetitorRaces(competitor)}
                 >
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     {/* Competitor header */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -224,43 +224,53 @@ const CompetitorTracker: React.FC<CompetitorTrackerProps> = ({
                       </div>
                     )}
 
-                    {/* Race pair timeline */}
-                    <div className="space-y-1">
-                      {competitor.racePairs.map((racePair, index) => (
-                        <div key={`${racePair.race1Id}-${racePair.race1StartTime}-${racePair.race2Id || 'single'}`} className="text-xs">
-                          {/* First race in pair */}
-                          <div className="flex items-center gap-1 text-muted-foreground">
-                            <span className="text-xs">{racePair.race1StartTime}</span>
-                            <TruncatedText className={layout === 'sidebar' ? "max-w-50" : "max-w-32"}>
-                              {racePair.race1Name}
-                            </TruncatedText>
-                          </div>
-
-                          {/* Gap analysis to second race */}
-                          {racePair.race2Id && racePair.intervalToNext !== null && (
-                            <div className="flex items-center justify-between mt-0.5 ml-2">
+                    {/* Race pair timeline - Color-Coded Cards */}
+                    <div className="space-y-1.5">
+                      {competitor.racePairs.map((racePair, index) =>
+                        racePair.intervalToNext ? (
+                          <div key={`${racePair.race1Id}-${racePair.race1StartTime}-${racePair.race2Id || 'single'}`}
+                               className={`bg-gray-50 rounded p-1.5 border-l-3 ${
+                                 racePair.conflictLevel === 'critical' ? 'border-red-400 bg-red-50' :
+                                 racePair.conflictLevel === 'warning' ? 'border-yellow-400 bg-yellow-50' :
+                                 'border-green-400 bg-green-50'
+                               }`}>
+                            {/* First race in pair */}
+                            <div className="flex items-center justify-between mb-1">
                               <div className="flex items-center gap-1">
-                                <span className="text-xs">→</span>
-                                <span className="text-xs text-muted-foreground">{racePair.race2StartTime}</span>
-                                <TruncatedText className={layout === 'sidebar' ? "max-w-40" : "max-w-28"}>
+                                <span className="text-xs text-muted-foreground font-medium">{racePair.race1StartTime}</span>
+                                <TruncatedText className="text-xs font-medium">
+                                  {racePair.race1Name}
+                                </TruncatedText>
+                              </div>
+                            </div>
+
+                            {/* Arrow separator */}
+                            <div className="flex items-center justify-center py-0.5">
+                              <span className="text-xs text-muted-foreground">↓</span>
+                            </div>
+
+                            {/* Second race in pair with gap info */}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1">
+                                <span className="text-xs text-muted-foreground font-medium">{racePair.race2StartTime}</span>
+                                <TruncatedText className="text-xs font-medium">
                                   {racePair.race2Name}
                                 </TruncatedText>
                               </div>
                               <div className="flex items-center gap-1">
                                 {getConflictIcon(racePair.conflictLevel)}
-                                <Clock className="h-3 w-3 text-muted-foreground" />
-                                <span className={`text-xs ${
-                                  racePair.conflictLevel === 'critical' ? 'text-red-600 font-medium' :
+                                <span className={`text-xs font-medium ${
+                                  racePair.conflictLevel === 'critical' ? 'text-red-600' :
                                   racePair.conflictLevel === 'warning' ? 'text-yellow-600' :
-                                  'text-muted-foreground'
+                                  'text-green-600'
                                 }`}>
                                   {formatInterval(racePair.intervalToNext)}
                                 </span>
                               </div>
                             </div>
-                          )}
-                        </div>
-                      ))}
+                          </div>
+                        ) : null
+                      )}
                     </div>
 
                     {/* Summary stats */}

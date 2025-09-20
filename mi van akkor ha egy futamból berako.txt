@@ -1,1 +1,0 @@
-mi van akkor ha egy futamból berakok előfutamokat majd a végére közepet, de az előfutamok közé berakok egy olyan másik versenyszámot amiben van olyan ember aki az előfutamos versenyszámokban is szerepel. hogy lesz kiszámolva a worst-case? 

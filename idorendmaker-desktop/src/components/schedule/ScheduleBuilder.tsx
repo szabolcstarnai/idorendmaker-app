@@ -403,7 +403,7 @@ const ScheduleBuilder: React.FC<ScheduleBuilderProps> = React.memo(({
       <div className="flex-1 flex gap-2 min-h-0 overflow-hidden">
         {/* Left Panel - Competitor Tracking (Only in PDF mode) */}
         {pdfExtractionId && (
-          <div className="w-[400px] flex-shrink-0 lg:block hidden flex flex-col">
+          <div className="w-[440px] flex-shrink-0 lg:block hidden flex flex-col">
             <CompetitorTracker
               scheduleRaces={allScheduleRaces}
               pdfExtractionId={pdfExtractionId}
