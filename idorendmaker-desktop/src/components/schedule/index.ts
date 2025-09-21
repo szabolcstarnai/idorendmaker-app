@@ -5,7 +5,6 @@ export { default as ScheduleSelection } from './ScheduleSelection';
 export { default as ScheduleModeSelector } from './ScheduleModeSelector';
 export { default as ScheduleRaceCard } from './ScheduleRaceCard';
 export { default as ScheduleRaceList } from './ScheduleRaceList';
-export { default as DaySectionManager } from './DaySectionManager';
 export { default as SectionNavigator } from './SectionNavigator';
 export { default as IntervalSeparator } from './IntervalSeparator';
 export { default as CompactScheduleCard } from './CompactScheduleCard';

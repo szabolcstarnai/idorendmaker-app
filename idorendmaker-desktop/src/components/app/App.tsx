@@ -127,7 +127,7 @@ const App: React.FC = () => {
 
   const handleSectionAdd = async (sectionData: CreateScheduleSectionData) => {
     try {
-      console.log('=== SECTION ADD DEBUG ===');
+      console.log('=== SECTION ADD DEBUG: Changed to see that rebuild happened ===');
       console.log('Adding section with data:', sectionData);
       
       // Add section to schedule

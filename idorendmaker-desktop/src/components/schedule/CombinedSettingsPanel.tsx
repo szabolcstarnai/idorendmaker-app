@@ -135,10 +135,25 @@ const CombinedSettingsPanel: React.FC<CombinedSettingsPanelProps> = ({
   };
 
   const canRemoveSection = (section: ScheduleSection) => {
+    // Must have more than 1 section total
     if (sections.length <= 1) return false;
+
     const maxDay = Math.max(...sections.map(s => s.dayNumber));
-    if (section.dayNumber !== maxDay) return false;
-    return true;
+    const minDay = Math.min(...sections.map(s => s.dayNumber));
+    const sectionsInDay = sections.filter(s => s.dayNumber === section.dayNumber);
+
+    // LAST DAY: Can always remove sections (even the last one, which removes the day)
+    if (section.dayNumber === maxDay) {
+      return true;
+    }
+
+    // FIRST DAY: Can remove sections only if more than 1 exists in the day
+    if (section.dayNumber === minDay) {
+      return sectionsInDay.length > 1;
+    }
+
+    // IN-BETWEEN DAYS: Can remove sections only if more than 1 exists in the day
+    return sectionsInDay.length > 1;
   };
 
   return (
@@ -276,23 +291,21 @@ const CombinedSettingsPanel: React.FC<CombinedSettingsPanelProps> = ({
                                 {onSectionEmpty && (
                                   <Button
                                     variant="ghost"
-                                    size="sm"
                                     onClick={() => onSectionEmpty(morningSection.id)}
-                                    className="h-4 w-4 p-0 text-orange-600 hover:text-orange-700"
+                                    className="h-6 w-6 p-0 text-orange-600 hover:text-orange-700"
                                     title="Versenyszámok törlése"
                                   >
-                                    <RotateCcw className="w-2 h-2" />
+                                    <RotateCcw className="w-3 h-3" />
                                   </Button>
                                 )}
                                 {canRemoveSection(morningSection) && (
                                   <Button
                                     variant="ghost"
-                                    size="sm"
                                     onClick={() => onSectionRemove?.(morningSection.id)}
-                                    className="h-4 w-4 p-0 text-destructive hover:text-destructive"
+                                    className="h-6 w-6 p-0 text-destructive hover:text-destructive"
                                     title="Szakasz törlése"
                                   >
-                                    <Trash2 className="w-2 h-2" />
+                                    <Trash2 className="w-3 h-3" />
                                   </Button>
                                 )}
                               </div>
@@ -324,23 +337,21 @@ const CombinedSettingsPanel: React.FC<CombinedSettingsPanelProps> = ({
                                 {onSectionEmpty && (
                                   <Button
                                     variant="ghost"
-                                    size="sm"
                                     onClick={() => onSectionEmpty(afternoonSection.id)}
-                                    className="h-4 w-4 p-0 text-orange-600 hover:text-orange-700"
+                                    className="h-6 w-6 p-0 text-orange-600 hover:text-orange-700"
                                     title="Versenyszámok törlése"
                                   >
-                                    <RotateCcw className="w-2 h-2" />
+                                    <RotateCcw className="w-3 h-3" />
                                   </Button>
                                 )}
                                 {canRemoveSection(afternoonSection) && (
                                   <Button
                                     variant="ghost"
-                                    size="sm"
                                     onClick={() => onSectionRemove?.(afternoonSection.id)}
-                                    className="h-4 w-4 p-0 text-destructive hover:text-destructive"
+                                    className="h-6 w-6 p-0 text-destructive hover:text-destructive"
                                     title="Szakasz törlése"
                                   >
-                                    <Trash2 className="w-2 h-2" />
+                                    <Trash2 className="w-3 h-3" />
                                   </Button>
                                 )}
                               </div>
