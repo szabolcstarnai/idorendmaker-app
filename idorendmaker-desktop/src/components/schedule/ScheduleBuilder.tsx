@@ -60,7 +60,6 @@ const ScheduleBuilder: React.FC<ScheduleBuilderProps> = React.memo(({
   const [highlightedRaceIds, setHighlightedRaceIds] = useState<string[]>([]);
   const [dismissedViolationHashes, setDismissedViolationHashes] = useState<string[]>([]);
   const [dismissedCount, setDismissedCount] = useState<number>(0);
-  const [saveTimestamp, setSaveTimestamp] = useState<number>(0);
 
   // Rule validation status tracking
   const [ruleValidationStatus, setRuleValidationStatus] = useState<'unknown' | 'checking' | 'success' | 'no-rules' | 'error'>('unknown');
@@ -76,6 +75,9 @@ const ScheduleBuilder: React.FC<ScheduleBuilderProps> = React.memo(({
   const {
     sectionDataMap,
     allScheduleRaces,
+    generateCurrentStateHash,
+    savedStateHash,
+    markSaved,
     scheduleRaces,
     intervals,
     startTime,
@@ -97,9 +99,17 @@ const ScheduleBuilder: React.FC<ScheduleBuilderProps> = React.memo(({
     pdfExtractionId,
     onScheduleSave,
     onSaveSuccess: () => {
-      // Clear unsaved changes state immediately after successful save
-      setSaveTimestamp(Date.now());
+      // Mark as saved using hash-based tracking
+      markSaved(scheduleName);
     }
+  });
+
+  // Debug what we're passing to useSaveSchedule
+  console.log('ScheduleBuilder -> useSaveSchedule params:', {
+    schedule: !!schedule,
+    scheduleId: schedule?.id,
+    scheduleName,
+    onScheduleSave: !!onScheduleSave
   });
 
   // Initialize schedule name from schedule
@@ -108,6 +118,16 @@ const ScheduleBuilder: React.FC<ScheduleBuilderProps> = React.memo(({
       setScheduleName(schedule.name);
     }
   }, [schedule, schedule?.name]);
+
+  // Set initial saved hash ONCE when schedule first loads (not on every name change)
+  const initializedScheduleIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (schedule && scheduleName && schedule.id !== initializedScheduleIdRef.current) {
+      // Only set baseline hash when schedule first loads, not on name changes
+      initializedScheduleIdRef.current = schedule.id;
+      markSaved(scheduleName);
+    }
+  }, [schedule, scheduleName, markSaved]);
 
 
   // Notify parent component of aggregate schedule changes from all sections
@@ -154,36 +174,35 @@ const ScheduleBuilder: React.FC<ScheduleBuilderProps> = React.memo(({
     loadDismissedViolations();
   }, [schedule?.id]);
 
-  // Track unsaved changes - use memo to calculate changes and prevent infinite loops  
+  // Track unsaved changes using hash comparison
   const hasUnsavedChanges = useMemo(() => {
-    // If we just saved (timestamp changed), no unsaved changes for a moment
-    if (saveTimestamp > 0 && Date.now() - saveTimestamp < 1000) {
-      return false;
-    }
-    
-    // Determine if there are changes by checking:
-    // 1. If there are races in any section
-    // 2. If the schedule name has changed from the original
-    const hasRaces = sectionDataMap.size > 0 && Array.from(sectionDataMap.values()).some(data => data.races.length > 0);
-    const hasNameChange = schedule && scheduleName !== schedule.name;
-    return hasRaces || hasNameChange;
-  }, [sectionDataMap, scheduleName, schedule?.name, saveTimestamp]);
+    const currentHash = generateCurrentStateHash(scheduleName);
+    return currentHash !== savedStateHash;
+  }, [generateCurrentStateHash, scheduleName, savedStateHash]);
   
-  // Only notify when unsaved changes state actually changes
+  // Notify when unsaved changes OR canSave state changes
   const previousChangesRef = useRef<boolean>(false);
+  const previousCanSaveRef = useRef<boolean>(false);
   useEffect(() => {
     if (!onUnsavedChanges) return;
-    
-    if (hasUnsavedChanges !== previousChangesRef.current) {
+
+    // Update if either hasUnsavedChanges or canSave changed
+    if (hasUnsavedChanges !== previousChangesRef.current || canSave !== previousCanSaveRef.current) {
       previousChangesRef.current = hasUnsavedChanges;
-      
+      previousCanSaveRef.current = canSave;
+
       if (hasUnsavedChanges) {
+        console.log('ScheduleBuilder Debug - Setting unsaved changes:', {
+          hasUnsavedChanges,
+          canSave,
+          saveSchedule: !!saveSchedule
+        });
         onUnsavedChanges(true, 'schedule', saveSchedule, canSave);
       } else {
         onUnsavedChanges(false);
       }
     }
-  }, [hasUnsavedChanges]); // Only depend on the memoized boolean
+  }, [hasUnsavedChanges, onUnsavedChanges, saveSchedule, canSave]);
 
   // Rule violation checking with debouncing - enhanced for competitor awareness
   const checkRuleViolations = useCallback(async (racesToCheck: ScheduleRace[]) => {
@@ -259,7 +278,7 @@ const ScheduleBuilder: React.FC<ScheduleBuilderProps> = React.memo(({
     }
   }, [dismissedViolationHashes, pdfExtractionId]);
 
-  // Debounced rule checking when allScheduleRaces changes
+  // Debounced rule checking when schedule races change
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       checkRuleViolations(allScheduleRaces);

@@ -73,6 +73,8 @@ const UnsavedChangesDialog: React.FC<UnsavedChangesDialogProps> = ({
             </Button>
 
             {/* Save and exit - only show if save function is provided and saving is possible */}
+            {/* Debug: Let's see what we have */}
+            {console.log('UnsavedChangesDialog Debug:', { canSave, onSaveAndExit: !!onSaveAndExit })}
             {canSave && onSaveAndExit && (
               <AlertDialogAction asChild>
                 <Button

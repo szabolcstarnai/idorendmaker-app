@@ -2,6 +2,35 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import { RaceWithAgeGroups, ScheduleWithSections, SectionWorkingData, ScheduleRace, ScheduleSection, Level } from '../../../../shared/types/race';
 import { calculateRaceTime, recalculateRaceTimes } from '../utils/scheduleTimeCalculator';
 
+// Simple hash function for dirty detection
+const generateStateHash = (sectionDataMap: Map<number, SectionWorkingData>, scheduleName: string): string => {
+  // Create a serializable representation of the complete state
+  const stateObject = {
+    scheduleName,
+    sections: Array.from(sectionDataMap.entries()).map(([id, data]) => ({
+      id,
+      races: data.races.map(race => ({
+        raceId: race.race.id,
+        levelId: race.level.id,
+        order: race.order
+      })),
+      intervals: data.intervals,
+      settings: data.settings,
+      day: data.day
+    }))
+  };
+
+  // Generate simple hash from JSON string
+  const jsonString = JSON.stringify(stateObject);
+  let hash = 0;
+  for (let i = 0; i < jsonString.length; i++) {
+    const char = jsonString.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return hash.toString();
+};
+
 interface UseScheduleSectionDataProps {
   schedule?: ScheduleWithSections;
   currentSectionId?: number;
@@ -14,27 +43,34 @@ interface UseScheduleSectionDataReturn {
   currentSection: ScheduleSection | undefined;
   currentSectionData: SectionWorkingData | null;
   allScheduleRaces: ScheduleRace[];
-  
+
+  // Hash-based dirty detection
+  generateCurrentStateHash: (scheduleName: string) => string;
+  savedStateHash: string;
+
   // Current section derived values
   scheduleRaces: ScheduleRace[];
   intervals: number[];
   startTime: string;
   intervalMinutes: number;
-  
+
   // Section settings operations
   setStartTime: (newStartTime: string) => void;
   setIntervalMinutes: (newInterval: number) => void;
-  
+
   // Race operations
   addRaceToSchedule: (race: RaceWithAgeGroups, level: Level) => void;
   removeRaceFromSchedule: (id: string) => void;
   moveRace: (fromIndex: number, toIndex: number) => void;
   emptySectionRaces: (sectionId: number) => void;
-  
+
   // Interval operations
   updateInterval: (intervalIndex: number, newMinutes: number) => void;
   recalculateAllTimes: () => void;
-  
+
+  // Save state management for dirty tracking
+  markSaved: (scheduleName: string) => void;
+
   // Data population for loading saved schedules
   populateSectionDataMap: (loadedSectionDataMap: Map<number, SectionWorkingData>) => void;
 }
@@ -51,9 +87,12 @@ export const useScheduleSectionData = ({
   
   // Multi-section working data architecture
   const [sectionDataMap, setSectionDataMap] = useState<Map<number, SectionWorkingData>>(new Map());
-  
+
   // Simple counter for generating unique IDs (instead of timestamps)
   const [raceIdCounter, setRaceIdCounter] = useState(1);
+
+  // Hash-based dirty detection
+  const [savedStateHash, setSavedStateHash] = useState<string>('');
   
   // Current section info
   const currentSection = useMemo(() => {
@@ -77,6 +116,14 @@ export const useScheduleSectionData = ({
     console.log('All schedule races:', allRaces);
     return allRaces;
   }, [sectionDataMap]);
+
+  // Generate current state hash - will be compared with ScheduleBuilder's scheduleName
+  const generateCurrentStateHash = useCallback((scheduleName: string) => {
+    return generateStateHash(sectionDataMap, scheduleName);
+  }, [sectionDataMap]);
+
+  // For now, we'll calculate current hash in the return object since we need scheduleName from ScheduleBuilder
+  // The actual dirty detection will be done in ScheduleBuilder using this function
 
   // Derived values from current section data or defaults
   const scheduleRaces = currentSectionData?.races || [];
@@ -232,10 +279,10 @@ export const useScheduleSectionData = ({
         races: [...sectionData.races, newScheduleRace],
         intervals: updatedIntervals
       });
-      
+
       return newMap;
     });
-    
+
     // Increment counter for next race
     setRaceIdCounter(prev => prev + 1);
   }, [currentSectionId, schedule, raceIdCounter]);
@@ -266,15 +313,16 @@ export const useScheduleSectionData = ({
         newIntervals,
         sectionData.settings.startTime
       );
-      
+
       newMap.set(currentSectionId, {
         ...sectionData,
         races: updatedRaces,
         intervals: newIntervals
       });
-      
+
       return newMap;
     });
+
   }, [currentSectionId]);
 
   const emptySectionRaces = useCallback((sectionId: number) => {
@@ -290,9 +338,10 @@ export const useScheduleSectionData = ({
         races: [],
         intervals: []
       });
-      
+
       return newMap;
     });
+
   }, []);
 
   const moveRace = useCallback((fromIndex: number, toIndex: number) => {
@@ -321,15 +370,16 @@ export const useScheduleSectionData = ({
         newIntervals,
         sectionData.settings.startTime
       );
-      
+
       newMap.set(currentSectionId, {
         ...sectionData,
         races: updatedRaces,
         intervals: newIntervals
       });
-      
+
       return newMap;
     });
+
   }, [currentSectionId]);
 
   // Interval operations
@@ -357,9 +407,10 @@ export const useScheduleSectionData = ({
         races: updatedRaces,
         intervals: newIntervals
       });
-      
+
       return newMap;
     });
+
   }, [currentSectionId]);
 
   const recalculateAllTimes = useCallback(() => {
@@ -396,33 +447,46 @@ export const useScheduleSectionData = ({
     setSectionDataMap(loadedSectionDataMap);
   }, []);
 
+  // Mark as saved - store current state hash
+  const markSaved = useCallback((scheduleName: string) => {
+    const currentHash = generateStateHash(sectionDataMap, scheduleName);
+    setSavedStateHash(currentHash);
+  }, [sectionDataMap]);
+
   return {
     // State
     sectionDataMap,
     currentSection,
     currentSectionData,
     allScheduleRaces,
-    
+
+    // Hash-based dirty detection (Note: currentStateHash will be calculated in ScheduleBuilder with scheduleName)
+    generateCurrentStateHash,
+    savedStateHash,
+
     // Current section derived values
     scheduleRaces,
     intervals,
     startTime,
     intervalMinutes,
-    
+
     // Section settings operations
     setStartTime,
     setIntervalMinutes,
-    
+
     // Race operations
     addRaceToSchedule,
     removeRaceFromSchedule,
     moveRace,
     emptySectionRaces,
-    
+
     // Interval operations
     updateInterval,
     recalculateAllTimes,
-    
+
+    // Save state management for dirty tracking
+    markSaved,
+
     // Data population for loading saved schedules
     populateSectionDataMap
   };

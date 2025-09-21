@@ -35,8 +35,16 @@ export const useSaveSchedule = ({
   onSaveSuccess
 }: UseSaveScheduleProps): UseSaveScheduleReturn => {
   
-  // Determine if save is possible
-  const canSave = sectionDataMap.size > 0 && !!schedule;
+  // Determine if save is possible - allow saving even empty schedules (name changes, etc.)
+  const canSave = !!schedule;
+
+  // Debug logging
+  console.log('useSaveSchedule Debug:', {
+    schedule: !!schedule,
+    scheduleId: schedule?.id,
+    scheduleName: schedule?.name,
+    canSave
+  });
   
   // Save function for entire schedule with all sections
   const saveSchedule = useCallback(async () => {
