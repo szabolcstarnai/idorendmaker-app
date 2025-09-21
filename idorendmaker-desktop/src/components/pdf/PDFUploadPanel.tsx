@@ -3,6 +3,8 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { ScrollArea } from '../ui/scroll-area';
+import PDFErrorDisplay from './PDFErrorDisplay';
+import { PDFErrorCode } from '../../features/pdf/types/errors';
 import { 
   Upload, 
   FileText, 
@@ -443,9 +445,16 @@ const PDFUploadPanel: React.FC<PDFUploadPanelProps> = ({
                   )}
                 </div>
               ) : (
-                <div className="text-red-600">
-                  <p>{result.error}</p>
-                </div>
+                <PDFErrorDisplay
+                  error={result.error}
+                  errorCode={result.errorCode as PDFErrorCode}
+                  userMessage={result.userMessage}
+                  onRetry={() => {
+                    setResult(null);
+                    // User can select a new file or try again
+                  }}
+                  className="mt-4"
+                />
               )}
             </CardContent>
           </Card>

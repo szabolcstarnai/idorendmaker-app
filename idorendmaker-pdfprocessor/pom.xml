@@ -132,34 +132,34 @@
 					</compilerArgs>
 				</configuration>
 			</plugin>
-			<plugin>
-				<groupId>org.graalvm.buildtools</groupId>
-				<artifactId>native-maven-plugin</artifactId>
-				<version>0.10.1</version>
-				<extensions>true</extensions>
-				<configuration>
-					<buildArgs>
-						<buildArg>-H:+AddAllCharsets</buildArg>
-						<buildArg>-Djava.awt.headless=true</buildArg>
-						<buildArg>--trace-object-instantiation=java.awt.image.ColorConvertOp</buildArg>
-						<buildArg>--initialize-at-run-time=java.awt.image.ColorConvertOp</buildArg>
-						<buildArg>--initialize-at-run-time=org.apache.pdfbox.pdmodel.encryption.PublicKeySecurityHandler</buildArg>
-						<buildArg>--initialize-at-run-time=sun.java2d.pipe.ShapeSpanIterator</buildArg>
-						<buildArg>--initialize-at-run-time=sun.awt.image.ByteComponentRaster</buildArg>
-						<buildArg>--initialize-at-run-time=javax.imageio.plugins.jpeg.JPEGImageWriter</buildArg>
-						<buildArg>--allow-incomplete-classpath</buildArg>
-						<buildArg>--report-unsupported-elements-at-runtime</buildArg>
-					</buildArgs>
-				</configuration>
-				<executions>
-					<execution>
-						<id>build-native</id>
-						<goals>
-							<goal>compile-no-fork</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
+<!--			<plugin>-->
+<!--				<groupId>org.graalvm.buildtools</groupId>-->
+<!--				<artifactId>native-maven-plugin</artifactId>-->
+<!--				<version>0.10.1</version>-->
+<!--				<extensions>true</extensions>-->
+<!--				<configuration>-->
+<!--					<buildArgs>-->
+<!--						<buildArg>-H:+AddAllCharsets</buildArg>-->
+<!--						<buildArg>-Djava.awt.headless=true</buildArg>-->
+<!--						<buildArg>&#45;&#45;trace-object-instantiation=java.awt.image.ColorConvertOp</buildArg>-->
+<!--						<buildArg>&#45;&#45;initialize-at-run-time=java.awt.image.ColorConvertOp</buildArg>-->
+<!--						<buildArg>&#45;&#45;initialize-at-run-time=org.apache.pdfbox.pdmodel.encryption.PublicKeySecurityHandler</buildArg>-->
+<!--						<buildArg>&#45;&#45;initialize-at-run-time=sun.java2d.pipe.ShapeSpanIterator</buildArg>-->
+<!--						<buildArg>&#45;&#45;initialize-at-run-time=sun.awt.image.ByteComponentRaster</buildArg>-->
+<!--						<buildArg>&#45;&#45;initialize-at-run-time=javax.imageio.plugins.jpeg.JPEGImageWriter</buildArg>-->
+<!--						<buildArg>&#45;&#45;allow-incomplete-classpath</buildArg>-->
+<!--						<buildArg>&#45;&#45;report-unsupported-elements-at-runtime</buildArg>-->
+<!--					</buildArgs>-->
+<!--				</configuration>-->
+<!--				<executions>-->
+<!--					<execution>-->
+<!--						<id>build-native</id>-->
+<!--						<goals>-->
+<!--							<goal>compile-no-fork</goal>-->
+<!--						</goals>-->
+<!--					</execution>-->
+<!--				</executions>-->
+<!--			</plugin>-->
 
 		</plugins>
 	</build>

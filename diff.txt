@@ -1,0 +1,1278 @@
+PS C:\Users\Szabolcs\Documents\PROJECTS\idorendmaker-app> git diff HEAD
+diff --git a/idorendmaker-backend/src/main/java/hu/szabolcst/idorendmaker/controller/StaticResourceController.java b/idorendmaker-backend/src/main/java/hu/szabolcst/idorendmaker/controller/StaticResourceController.java
+new file mode 100644
+index 0000000..f6edee3
+--- /dev/null
++++ b/idorendmaker-backend/src/main/java/hu/szabolcst/idorendmaker/controller/StaticResourceController.java
+@@ -0,0 +1,113 @@
++package hu.szabolcst.idorendmaker.controller;
++
++import lombok.extern.slf4j.Slf4j;
++import org.springframework.core.io.ClassPathResource;
++import org.springframework.core.io.Resource;
++import org.springframework.http.HttpHeaders;
++import org.springframework.http.MediaType;
++import org.springframework.http.ResponseEntity;
++import org.springframework.web.bind.annotation.GetMapping;
++import org.springframework.web.bind.annotation.RequestMapping;
++import org.springframework.web.bind.annotation.RestController;
++
++import java.io.IOException;
++
++/**
++ * REST Controller for serving static resources
++ * Provides access to sample documents and other static assets
++ */
++@Slf4j
++@RestController
++@RequestMapping("/api/static")
++public class StaticResourceController {
++
++    private static final String SAMPLE_PDF_FILENAME = "sample-nevezetek-2025.pdf";
++    private static final String SAMPLE_PDF_PATH = "static/" + SAMPLE_PDF_FILENAME;
++
++    /**
++     * Download sample PDF document demonstrating correct MKKSZ format
++     * Used as reference for users experiencing PDF format errors
++     *
++     * @return ResponseEntity containing the sample PDF file
++     */
++    @GetMapping("/sample-pdf")
++    public ResponseEntity<Resource> downloadSamplePDF() {
++        try {
++            log.info("Sample PDF download requested");
++
++            // Load the sample PDF from classpath resources
++            final Resource resource = new ClassPathResource(SAMPLE_PDF_PATH);
++
++            if (!resource.exists()) {
++                log.error("Sample PDF not found at path: {}", SAMPLE_PDF_PATH);
++                return ResponseEntity.notFound().build();
++            }
++
++            log.info("Serving sample PDF: {} (size: {} bytes)",
++                SAMPLE_PDF_FILENAME, resource.contentLength());
++
++            // Set appropriate headers for PDF download
++            final HttpHeaders headers = new HttpHeaders();
++            headers.setContentType(MediaType.APPLICATION_PDF);
++            headers.setContentDispositionFormData("attachment", SAMPLE_PDF_FILENAME);
++            headers.setCacheControl("no-cache, no-store, must-revalidate");
++            headers.setPragma("no-cache");
++            headers.setExpires(0);
++
++            return ResponseEntity.ok()
++                .headers(headers)
++                .body(resource);
++
++        } catch (final IOException e) {
++            log.error("Error reading sample PDF file", e);
++            return ResponseEntity.internalServerError().build();
++        } catch (final Exception e) {
++            log.error("Unexpected error serving sample PDF", e);
++            return ResponseEntity.internalServerError().build();
++        }
++    }
++
++    /**
++     * Get information about the sample PDF without downloading it
++     * Useful for UI components to check availability
++     *
++     * @return ResponseEntity with sample PDF metadata
++     */
++    @GetMapping("/sample-pdf/info")
++    public ResponseEntity<?> getSamplePDFInfo() {
++        try {
++            final Resource resource = new ClassPathResource(SAMPLE_PDF_PATH);
++
++            if (!resource.exists()) {
++                log.warn("Sample PDF info requested but file not found");
++                return ResponseEntity.notFound().build();
++            }
++
++            final var info = new SamplePDFInfo(
++                SAMPLE_PDF_FILENAME,
++                resource.contentLength(),
++                "Minta MKKSZ NEVEZÉSEK - VERSENYSZÁMONKÉNT export",
++                "2025"
++            );
++
++            log.debug("Sample PDF info requested: {}", info);
++            return ResponseEntity.ok(info);
++
++        } catch (final IOException e) {
++            log.error("Error getting sample PDF info", e);
++            return ResponseEntity.internalServerError().build();
++        }
++    }
++
++    /**
++         * Data class for sample PDF information response
++         */
++        public record SamplePDFInfo(String filename, long sizeBytes, String description, String formatYear) {
++
++        @Override
++            public String toString() {
++                return String.format("SamplePDFInfo{filename='%s', sizeBytes=%d, description='%s', formatYear='%s'}",
++                    filename, sizeBytes, description, formatYear);
++            }
++        }
++}
+\ No newline at end of file
+diff --git a/idorendmaker-backend/src/main/resources/static/README-SAMPLE-PDF.md b/idorendmaker-backend/src/main/resources/static/README-SAMPLE-PDF.md
+new file mode 100644
+index 0000000..24b7b1b
+--- /dev/null
++++ b/idorendmaker-backend/src/main/resources/static/README-SAMPLE-PDF.md
+@@ -0,0 +1,47 @@
++# Sample PDF Document Setup
++
++## Required File: `sample-nevezetek-2025.pdf`
++
++This directory should contain a sample PDF document that demonstrates the correct MKKSZ Kajak-Kenu Ablak export format.
++
++### Requirements for the Sample PDF:
++
++1. **Source**: Must be exported from official MKKSZ Kajak-Kenu Ablak software
++2. **Export Type**: "NEVEZÉSEK - VERSENYSZÁMONKÉNT" format
++3. **Content Structure**: Should contain typical competitive race categories with realistic competitor entries
++4. **Headers**: Must include proper table headers: "Azonosító", "Név", "Tagszervezet", "Született"
++5. **Data**: Should have multiple race types with sufficient competitor data for demonstration
++6. **File Size**: Keep under 1MB for quick download performance
++7. **Anonymization**: Use anonymized or sample data to protect competitor privacy
++
++### Expected Structure:
++```
++Versenyszám: K1 1000m Férfi Serdülő
++Azonosító    Név                 Tagszervezet       Született
++A001         Példa János         Minta SE           2008.05.15
++A002         Teszt Péter         Példa KSE          2008.03.22
++...
++
++Versenyszám: C1 500m Női Junior
++Azonosító    Név                 Tagszervezet       Született
++B001         Minta Anna          Teszt KK           2006.07.10
++B002         Példa Éva           Minta VSE          2006.11.03
++...
++```
++
++### Validation:
++- The sample PDF must successfully process through the existing `VersenyszamNevezesekExtractor`
++- Should extract competitive races with competitor entries
++- Must demonstrate the correct document structure for user reference
++
++### Installation:
++1. Obtain a properly formatted MKKSZ export PDF
++2. Anonymize competitor data if needed
++3. Rename to `sample-nevezetek-2025.pdf`
++4. Place in this directory (`src/main/resources/static/`)
++5. Verify the StaticResourceController can serve it via `/api/static/sample-pdf`
++
++### Testing:
++- Test download functionality from error states in the UI
++- Verify the PDF processes correctly through the extraction pipeline
++- Confirm file size and download performance are acceptable
+\ No newline at end of file
+diff --git a/idorendmaker-desktop/src/components/pdf/PDFErrorDisplay.tsx b/idorendmaker-desktop/src/components/pdf/PDFErrorDisplay.tsx
+new file mode 100644
+index 0000000..fa01061
+--- /dev/null
++++ b/idorendmaker-desktop/src/components/pdf/PDFErrorDisplay.tsx
+@@ -0,0 +1,215 @@
++import React, { useState } from 'react';
++import { AlertTriangle, Download, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
++
++import { toast } from 'sonner';
++import { Collapsible, CollapsibleContent } from '@radix-ui/react-collapsible';
++import { Button } from '../ui/button';
++import { Card, CardContent } from '../ui/card';
++import { pdfProcessorService } from '../../features/pdf';
++import { ErrorHelpContent, GeneralHelpContent } from '../../features/pdf/constants/helpContent';
++import { PDFErrorCode } from '../../features/pdf/types/errors';
++
++interface PDFErrorDisplayProps {
++  error: string;
++  errorCode?: PDFErrorCode;
++  userMessage?: string;
++  onRetry?: () => void;
++  className?: string;
++}
++
++export const PDFErrorDisplay: React.FC<PDFErrorDisplayProps> = ({
++  error,
++  errorCode,
++  userMessage,
++  onRetry,
++  className
++}) => {
++  const [isHelpExpanded, setIsHelpExpanded] = useState(false);
++  const [isDownloading, setIsDownloading] = useState(false);
++
++  // Get help content for the specific error type
++  const helpContent = errorCode ? ErrorHelpContent[errorCode] : null;
++
++  // Determine error severity and styling
++  const isFileTypeError = errorCode === 'INVALID_FILE_TYPE';
++  const isServiceError = !errorCode || ['PROCESSING_ERROR', 'CORRUPTED_FILE_ERROR'].includes(errorCode as PDFErrorCode);
++
++  const cardClasses = isServiceError
++    ? "border-red-200 bg-red-50"
++    : "border-amber-200 bg-amber-50";
++
++  const iconClasses = isServiceError
++    ? "text-red-600"
++    : "text-amber-600";
++
++  const textClasses = isServiceError
++    ? "text-red-900"
++    : "text-amber-900";
++
++  const subtextClasses = isServiceError
++    ? "text-red-800"
++    : "text-amber-800";
++
++  // Handle sample PDF download
++  const handleDownloadSample = async () => {
++    setIsDownloading(true);
++    try {
++      const result = await pdfProcessorService.downloadSamplePDF();
++
++      if (result.success) {
++        toast.success(`Minta PDF letöltve: ${result.filePath}`);
++      } else {
++        toast.error(result.error || 'A letöltés sikertelen');
++      }
++    } catch (error) {
++      console.error('Sample PDF download error:', error);
++      toast.error('Hiba történt a letöltés során');
++    } finally {
++      setIsDownloading(false);
++    }
++  };
++
++  return (
++    <Card className={`${cardClasses} ${className}`}>
++      <CardContent className="pt-4">
++        <div className="flex items-start gap-3">
++          <AlertTriangle className={`h-5 w-5 ${iconClasses} mt-0.5 flex-shrink-0`} />
++          <div className="space-y-3 flex-1">
++            {/* Error message */}
++            <div>
++              <p className={`font-medium ${textClasses}`}>
++                {userMessage || error}
++              </p>
++              {helpContent && (
++                <p className={`text-sm ${subtextClasses} mt-1`}>
++                  {helpContent.description}
++                </p>
++              )}
++            </div>
++
++            {/* Action buttons */}
++            <div className="flex flex-wrap gap-2">
++              {/* Sample download button for format errors */}
++              {(errorCode === 'PDF_FORMAT_ERROR' || errorCode === 'INVALID_CONTENT_ERROR') && (
++                <Button
++                  variant="outline"
++                  size="sm"
++                  onClick={handleDownloadSample}
++                  disabled={isDownloading}
++                  className="gap-2"
++                >
++                  <Download className="h-4 w-4" />
++                  {isDownloading ? 'Letöltés...' : 'Minta dokumentum letöltése'}
++                </Button>
++              )}
++
++              {/* Retry button */}
++              {onRetry && (
++                <Button
++                  variant="outline"
++                  size="sm"
++                  onClick={onRetry}
++                  className="gap-2"
++                >
++                  Próbálkozás újra
++                </Button>
++              )}
++
++              {/* Help toggle button */}
++              {helpContent && (
++                <Button
++                  variant="ghost"
++                  size="sm"
++                  onClick={() => setIsHelpExpanded(!isHelpExpanded)}
++                  className="gap-2"
++                >
++                  <HelpCircle className="h-4 w-4" />
++                  {isHelpExpanded ? 'Segítség bezárása' : 'További segítség'}
++                  {isHelpExpanded ? (
++                    <ChevronUp className="h-4 w-4" />
++                  ) : (
++                    <ChevronDown className="h-4 w-4" />
++                  )}
++                </Button>
++              )}
++            </div>
++
++            {/* Expandable help section */}
++            {helpContent && (
++              <Collapsible open={isHelpExpanded} onOpenChange={setIsHelpExpanded}>
++                <CollapsibleContent className="space-y-4 mt-4 p-4 bg-white/50 rounded-lg border border-amber-100">
++                  {/* Requirements */}
++                  {helpContent.requirements && (
++                    <div>
++                      <h4 className="font-medium text-sm text-gray-900 mb-2">
++                        Követelmények:
++                      </h4>
++                      <ul className="text-sm text-gray-700 space-y-1">
++                        {helpContent.requirements.map((req, index) => (
++                          <li key={index} className="flex items-start gap-2">
++                            <span className="text-amber-500 mt-1">•</span>
++                            <span>{req}</span>
++                          </li>
++                        ))}
++                      </ul>
++                    </div>
++                  )}
++
++                  {/* Steps */}
++                  {helpContent.steps && (
++                    <div>
++                      <h4 className="font-medium text-sm text-gray-900 mb-2">
++                        Megoldási lépések:
++                      </h4>
++                      <ol className="text-sm text-gray-700 space-y-1">
++                        {helpContent.steps.map((step, index) => (
++                          <li key={index} className="flex items-start gap-2">
++                            <span className="text-amber-600 font-medium mt-0.5 min-w-[1.25rem]">
++                              {index + 1}.
++                            </span>
++                            <span>{step}</span>
++                          </li>
++                        ))}
++                      </ol>
++                    </div>
++                  )}
++
++                  {/* Additional info */}
++                  {helpContent.additionalInfo && (
++                    <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded border border-blue-100">
++                      <p>{helpContent.additionalInfo}</p>
++                    </div>
++                  )}
++
++                  {/* Sample PDF info for relevant errors */}
++                  {(errorCode === 'PDF_FORMAT_ERROR' || errorCode === 'INVALID_CONTENT_ERROR') && (
++                    <div className="pt-2 border-t border-amber-200">
++                      <h4 className="font-medium text-sm text-gray-900 mb-2">
++                        {GeneralHelpContent.samplePDFInfo.title}
++                      </h4>
++                      <p className="text-sm text-gray-700 mb-3">
++                        {GeneralHelpContent.samplePDFInfo.description}
++                      </p>
++                      <Button
++                        variant="outline"
++                        size="sm"
++                        onClick={handleDownloadSample}
++                        disabled={isDownloading}
++                        className="gap-2"
++                      >
++                        <Download className="h-4 w-4" />
++                        {GeneralHelpContent.samplePDFInfo.buttonText}
++                      </Button>
++                    </div>
++                  )}
++                </CollapsibleContent>
++              </Collapsible>
++            )}
++          </div>
++        </div>
++      </CardContent>
++    </Card>
++  );
++};
++
++export default PDFErrorDisplay;
+\ No newline at end of file
+diff --git a/idorendmaker-desktop/src/components/pdf/PDFUploadPanel.tsx b/idorendmaker-desktop/src/components/pdf/PDFUploadPanel.tsx
+index 558855f..90c2b39 100644
+--- a/idorendmaker-desktop/src/components/pdf/PDFUploadPanel.tsx
++++ b/idorendmaker-desktop/src/components/pdf/PDFUploadPanel.tsx
+@@ -3,6 +3,8 @@ import { Button } from '../ui/button';
+ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+ import { Badge } from '../ui/badge';
+ import { ScrollArea } from '../ui/scroll-area';
++import PDFErrorDisplay from './PDFErrorDisplay';
++import { PDFErrorCode } from '../../features/pdf/types/errors';
+ import {
+   Upload,
+   FileText,
+@@ -443,9 +445,16 @@ const PDFUploadPanel: React.FC<PDFUploadPanelProps> = ({
+                   )}
+                 </div>
+               ) : (
+-                <div className="text-red-600">
+-                  <p>{result.error}</p>
+-                </div>
++                <PDFErrorDisplay
++                  error={result.error}
++                  errorCode={result.errorCode as PDFErrorCode}
++                  userMessage={result.userMessage}
++                  onRetry={() => {
++                    setResult(null);
++                    // User can select a new file or try again
++                  }}
++                  className="mt-4"
++                />
+               )}
+             </CardContent>
+           </Card>
+diff --git a/idorendmaker-desktop/src/features/pdf/constants/helpContent.ts b/idorendmaker-desktop/src/features/pdf/constants/helpContent.ts
+new file mode 100644
+index 0000000..842b811
+--- /dev/null
++++ b/idorendmaker-desktop/src/features/pdf/constants/helpContent.ts
+@@ -0,0 +1,120 @@
++import { PDFErrorCode } from '../types/errors';
++
++export interface HelpContent {
++  title: string;
++  description: string;
++  requirements?: string[];
++  steps?: string[];
++  additionalInfo?: string;
++}
++
++export const ErrorHelpContent: Record<PDFErrorCode, HelpContent> = {
++  PDF_FORMAT_ERROR: {
++    title: 'PDF formátum követelmények',
++    description: 'A szolgáltatás csak a hivatalos MKKSZ Kajak-Kenu Ablak szoftverből exportált PDF dokumentumokat tudja feldolgozni.',
++    requirements: [
++      'MKKSZ Kajak-Kenu Ablak szoftverből exportált PDF',
++      '"NEVEZÉSEK - VERSENYSZÁMONKÉNT" export formátum',
++      'PDF fájl (.pdf kiterjesztés)',
++      'Utolsó tesztelt formátum: 2025'
++    ],
++    steps: [
++      'Nyissa meg a MKKSZ Kajak-Kenu Ablak szoftvert',
++      'Válassza ki a versenyt',
++      'Menü → Jelentések → NEVEZÉSEK - VERSENYSZÁMONKÉNT',
++      'Exportálja PDF formátumban'
++    ],
++    additionalInfo: 'A minta dokumentum letöltésével megtekintheti a helyes formátum szerkezetét.'
++  },
++
++  EMPTY_FILE_ERROR: {
++    title: 'Üres fájl',
++    description: 'A kiválasztott fájl nem tartalmaz adatokat vagy nem olvasható.',
++    requirements: [
++      'A fájl mérete nagyobb legyen mint 0 byte',
++      'A fájl ne legyen sérült',
++      'A fájl olvasható legyen'
++    ],
++    steps: [
++      'Ellenőrizze a fájl méretét',
++      'Próbáljon meg egy másik PDF fájlt',
++      'Győződjön meg róla, hogy a fájl teljesen letöltődött'
++    ]
++  },
++
++  CORRUPTED_FILE_ERROR: {
++    title: 'Sérült PDF fájl',
++    description: 'A PDF fájl sérült vagy nem olvasható formátumú.',
++    requirements: [
++      'Érvényes PDF fájl',
++      'Nem jelszóval védett dokumentum',
++      'Nem sérült fájl struktúra'
++    ],
++    steps: [
++      'Próbálja meg újra exportálni a PDF-et',
++      'Ellenőrizze, hogy a fájl teljesen átmásolódott',
++      'Nyissa meg a PDF-et más alkalmazásban ellenőrzésképpen',
++      'Ha más alkalmazásban sem nyílik meg, a fájl valóban sérült'
++    ]
++  },
++
++  PROCESSING_ERROR: {
++    title: 'Feldolgozási hiba',
++    description: 'Váratlan hiba történt a PDF feldolgozása során.',
++    requirements: [
++      'Helyes PDF formátum',
++      'Megfelelő fájl méret (< 10MB)',
++      'Stabil internetkapcsolat'
++    ],
++    steps: [
++      'Próbálja újra a feldolgozást',
++      'Ellenőrizze az internetkapcsolatot',
++      'Ha a probléma továbbra is fennáll, próbáljon meg egy másik PDF fájlt'
++    ]
++  },
++
++  INVALID_CONTENT_ERROR: {
++    title: 'Hibás dokumentum szerkezet',
++    description: 'A PDF nem tartalmazza a várt MKKSZ formátum szerkezetét.',
++    requirements: [
++      'MKKSZ Kajak-Kenu Ablak export',
++      'NEVEZÉSEK - VERSENYSZÁMONKÉNT formátum',
++      'Helyes táblázat fejlécek: "Azonosító", "Név", "Tagszervezet", "Született"',
++      'Versenyszám nevekkel strukturált tartalom'
++    ],
++    steps: [
++      'Ellenőrizze az export beállításokat a MKKSZ szoftverben',
++      'Győződjön meg róla, hogy a "NEVEZÉSEK - VERSENYSZÁMONKÉNT" funkciót használja',
++      'Hasonlítsa össze a dokumentumot a minta PDF-el',
++      'Exportálja újra a dokumentumot a helyes beállításokkal'
++    ],
++    additionalInfo: 'A minta PDF megmutatja a várt dokumentum szerkezetet és a szükséges adatokat.'
++  },
++
++  INVALID_FILE_TYPE: {
++    title: 'Hibás fájl típus',
++    description: 'Csak PDF fájlokat lehet feldolgozni.',
++    requirements: [
++      'PDF fájl (.pdf kiterjesztés)',
++      'Nem más dokumentum típus (Word, Excel, stb.)'
++    ],
++    steps: [
++      'Válasszon ki egy PDF fájlt',
++      'Ha a dokumentum más formátumban van, konvertálja PDF-be',
++      'Ellenőrizze a fájl kiterjesztését'
++    ]
++  }
++};
++
++export const GeneralHelpContent = {
++  samplePDFInfo: {
++    title: 'Minta dokumentum',
++    description: 'Letölthet egy minta PDF dokumentumot, amely bemutatja a helyes MKKSZ formátum szerkezetét.',
++    buttonText: 'Minta dokumentum letöltése'
++  },
++
++  supportInfo: {
++    title: 'További segítség',
++    description: 'Ha továbbra is problémákat tapasztal, ellenőrizze a dokumentáció további részét vagy vegye fel a kapcsolatot a támogatással.'
++  }
++};
+\ No newline at end of file
+diff --git a/idorendmaker-desktop/src/features/pdf/services/PDFProcessorService.ts b/idorendmaker-desktop/src/features/pdf/services/PDFProcessorService.ts
+index 5e867c7..b299e89 100644
+--- a/idorendmaker-desktop/src/features/pdf/services/PDFProcessorService.ts
++++ b/idorendmaker-desktop/src/features/pdf/services/PDFProcessorService.ts
+@@ -4,6 +4,12 @@ import axios from 'axios';
+ import { promises as fs, constants } from 'fs';
+ import { app } from 'electron';
+ import * as net from 'net';
++import {
++  PDFProcessingErrorResponse,
++  PDFErrorCode,
++  PDFProcessingResult,
++  DefaultErrorMessages
++} from '../types/errors';
+
+ interface ProcessedVersenyszam {
+   nev: string;
+@@ -19,6 +25,8 @@ interface PDFProcessorResult {
+   success: boolean;
+   data?: ProcessedVersenyszam[];
+   error?: string;
++  errorCode?: PDFErrorCode;
++  userMessage?: string;
+ }
+
+ export class PDFProcessorService {
+@@ -133,7 +141,8 @@ export class PDFProcessorService {
+
+     // Find available port
+     this.port = await this.findAvailablePort();
+-    this.baseUrl = `http://localhost:${this.port}`;
++    //this.baseUrl = `http://localhost:${this.port}`;
++    this.baseUrl = `http://localhost:8081`;
+
+     console.log(`Starting PDF processor on port ${this.port}...`);
+
+@@ -330,26 +339,64 @@ export class PDFProcessorService {
+       }
+     } catch (error) {
+       console.error('PDF processing error:', error);
+-
++
+       if (axios.isAxiosError(error)) {
++        // Handle connection errors
+         if (error.code === 'ECONNREFUSED') {
+           return {
+             success: false,
+             error: 'A PDF feldolgozó szolgáltatás nem elérhető'
+           };
+-        } else if (error.response?.status === 400) {
++        }
++
++        // Handle file system errors
++        if (error.code === 'ENOENT') {
+           return {
+             success: false,
+-            error: 'Hibás PDF fájl vagy formátum'
++            error: 'PDF fájl nem található'
+           };
+-        } else if (error.code === 'ENOENT') {
++        }
++
++        // Handle HTTP error responses with structured error data
++        if (error.response && error.response.data) {
++          const responseData = error.response.data;
++
++          // Check if this is a structured error response from our backend
++          if (this.isStructuredErrorResponse(responseData)) {
++            console.log('Received structured error response:', responseData);
++            return {
++              success: false,
++              error: responseData.userMessage,
++              errorCode: responseData.errorCode as PDFErrorCode,
++              userMessage: responseData.userMessage
++            };
++          }
++        }
++
++        // Handle HTTP status codes with fallback messages
++        const status = error.response?.status;
++        if (status === 400) {
+           return {
+             success: false,
+-            error: 'PDF fájl nem található'
++            error: DefaultErrorMessages.INVALID_FILE_TYPE,
++            errorCode: 'INVALID_FILE_TYPE'
++          };
++        } else if (status === 422) {
++          return {
++            success: false,
++            error: DefaultErrorMessages.INVALID_CONTENT_ERROR,
++            errorCode: 'INVALID_CONTENT_ERROR'
++          };
++        } else if (status === 500) {
++          return {
++            success: false,
++            error: DefaultErrorMessages.PROCESSING_ERROR,
++            errorCode: 'PROCESSING_ERROR'
+           };
+         }
+       }
+
++      // Handle other types of errors
+       return {
+         success: false,
+         error: error instanceof Error ? error.message : 'Ismeretlen hiba történt'
+@@ -357,6 +404,117 @@ export class PDFProcessorService {
+     }
+   }
+
++  /**
++   * Check if the response data is a structured error response from our backend
++   */
++  private isStructuredErrorResponse(data: any): data is PDFProcessingErrorResponse {
++    return (
++      data &&
++      typeof data === 'object' &&
++      'errorCode' in data &&
++      'message' in data &&
++      'userMessage' in data &&
++      typeof data.errorCode === 'string' &&
++      typeof data.message === 'string' &&
++      typeof data.userMessage === 'string'
++    );
++  }
++
++  /**
++   * Download sample PDF document for user reference
++   * Uses the main backend's static resource controller
++   *
++   * @returns Promise with download result including file path or error
++   */
++  async downloadSamplePDF(): Promise<{
++    success: boolean;
++    filePath?: string;
++    error?: string;
++  }> {
++    try {
++      // Use IPC to download file to user's Downloads folder
++      // This will be handled by the main process which has file system access
++      const result = await window.electronAPI.downloadSamplePDF();
++
++      if (result.success) {
++        console.log(`Sample PDF downloaded successfully to: ${result.filePath}`);
++        return {
++          success: true,
++          filePath: result.filePath
++        };
++      } else {
++        console.error('Sample PDF download failed:', result.error);
++        return {
++          success: false,
++          error: result.error || 'A minta PDF letöltése sikertelen'
++        };
++      }
++    } catch (error) {
++      console.error('Error downloading sample PDF:', error);
++      return {
++        success: false,
++        error: error instanceof Error ? error.message : 'Ismeretlen hiba történt a letöltés során'
++      };
++    }
++  }
++
++  /**
++   * Get information about the sample PDF without downloading it
++   * Useful for checking availability and showing file details
++   */
++  async getSamplePDFInfo(): Promise<{
++    success: boolean;
++    info?: {
++      filename: string;
++      sizeBytes: number;
++      description: string;
++      formatYear: string;
++    };
++    error?: string;
++  }> {
++    try {
++      // Get the main backend URL (assuming it runs on port 8080)
++      const backendUrl = 'http://localhost:8080';
++
++      const response = await axios.get(`${backendUrl}/api/static/sample-pdf/info`, {
++        timeout: 5000
++      });
++
++      if (response.status === 200) {
++        return {
++          success: true,
++          info: response.data
++        };
++      } else {
++        return {
++          success: false,
++          error: 'A minta PDF információk nem elérhetők'
++        };
++      }
++    } catch (error) {
++      console.error('Error getting sample PDF info:', error);
++
++      if (axios.isAxiosError(error)) {
++        if (error.code === 'ECONNREFUSED') {
++          return {
++            success: false,
++            error: 'A backend szolgáltatás nem elérhető'
++          };
++        } else if (error.response?.status === 404) {
++          return {
++            success: false,
++            error: 'A minta PDF nem található'
++          };
++        }
++      }
++
++      return {
++        success: false,
++        error: 'Hiba történt a minta PDF információk lekérdezése során'
++      };
++    }
++  }
++
+   /**
+    * Get the current status of the processor
+    */
+diff --git a/idorendmaker-desktop/src/features/pdf/types/errors.ts b/idorendmaker-desktop/src/features/pdf/types/errors.ts
+new file mode 100644
+index 0000000..e5609a3
+--- /dev/null
++++ b/idorendmaker-desktop/src/features/pdf/types/errors.ts
+@@ -0,0 +1,30 @@
++export interface PDFProcessingErrorResponse {
++  errorCode: string;
++  message: string;
++  userMessage: string;
++}
++
++export type PDFErrorCode =
++  | 'PDF_FORMAT_ERROR'
++  | 'EMPTY_FILE_ERROR'
++  | 'CORRUPTED_FILE_ERROR'
++  | 'PROCESSING_ERROR'
++  | 'INVALID_CONTENT_ERROR'
++  | 'INVALID_FILE_TYPE';
++
++export interface PDFProcessingResult {
++  success: boolean;
++  data?: any[];
++  error?: string;
++  errorCode?: PDFErrorCode;
++  userMessage?: string;
++}
++
++export const DefaultErrorMessages: Record<PDFErrorCode, string> = {
++  PDF_FORMAT_ERROR: 'A kiválasztott fájl formátuma nem megfelelő. A szolgáltatás a hivatalos MKKSZ Kajak-Kenu Ablakból exportált NEVEZÉSEK - VERSENYSZÁMONKÉNT PDF dokumentumból tud adatot kinyerni.',
++  EMPTY_FILE_ERROR: 'A kiválasztott fájl üres vagy nem tartalmaz feldolgozható adatokat.',
++  CORRUPTED_FILE_ERROR: 'A kiválasztott PDF fájl sérült vagy nem olvasható. Kérjük, próbáljon meg egy másik fájlt.',
++  PROCESSING_ERROR: 'Hiba történt a PDF feldolgozása során. Kérjük, ellenőrizze a fájl formátumát és próbálja újra.',
++  INVALID_CONTENT_ERROR: 'A PDF nem tartalmazza a várt MKKSZ formátum szerkezetét. Kérjük, exportálja a dokumentumot a NEVEZÉSEK - VERSENYSZÁMONKÉNT funkcióval.',
++  INVALID_FILE_TYPE: 'Csak PDF fájlokat lehet feldolgozni.'
++};
+\ No newline at end of file
+diff --git a/idorendmaker-desktop/src/main.ts b/idorendmaker-desktop/src/main.ts
+index 3787a7c..f1a9d64 100644
+--- a/idorendmaker-desktop/src/main.ts
++++ b/idorendmaker-desktop/src/main.ts
+@@ -565,6 +565,72 @@ const initializeApp = async () => {
+     }
+   });
+
++  // Sample PDF download functionality
++  ipcMain.handle('pdf:downloadSample', async () => {
++    try {
++      const axios = require('axios');
++      const fs = require('fs').promises;
++      const path = require('path');
++      const { app } = require('electron');
++
++      // Get user's Downloads directory
++      const downloadsPath = app.getPath('downloads');
++      const filename = 'sample-nevezetek-2025.pdf';
++      const filePath = path.join(downloadsPath, filename);
++
++      console.log('Downloading sample PDF to:', filePath);
++
++      // Download from the main backend (assuming it runs on port 8080)
++      const backendUrl = 'http://localhost:8080';
++      const response = await axios.get(`${backendUrl}/api/static/sample-pdf`, {
++        responseType: 'arraybuffer',
++        timeout: 30000
++      });
++
++      if (response.status === 200) {
++        // Write the file to Downloads folder
++        await fs.writeFile(filePath, response.data);
++
++        console.log(`Sample PDF downloaded successfully to: ${filePath}`);
++        return {
++          success: true,
++          filePath: filePath
++        };
++      } else {
++        console.error('Sample PDF download failed:', response.status);
++        return {
++          success: false,
++          error: `A letöltés sikertelen volt (HTTP ${response.status})`
++        };
++      }
++
++    } catch (error) {
++      console.error('Error downloading sample PDF:', error);
++
++      if (error.code === 'ECONNREFUSED') {
++        return {
++          success: false,
++          error: 'A backend szolgáltatás nem elérhető'
++        };
++      } else if (error.response?.status === 404) {
++        return {
++          success: false,
++          error: 'A minta PDF nem található a szerveren'
++        };
++      } else if (error.code === 'ENOENT' || error.code === 'EACCES') {
++        return {
++          success: false,
++          error: 'Nincs írási jogosultság a Letöltések mappához'
++        };
++      }
++
++      return {
++        success: false,
++        error: error instanceof Error ? error.message : 'Ismeretlen hiba történt a letöltés során'
++      };
++    }
++  });
++
+   // Competitor analysis operations
+   ipcMain.handle('competitor:analyzeSchedules', async (_, scheduleRaces: ScheduleRace[], pdfExtractionId?: number) => {
+     try {
+diff --git a/idorendmaker-desktop/src/preload.ts b/idorendmaker-desktop/src/preload.ts
+index 8824b4f..3134e36 100644
+--- a/idorendmaker-desktop/src/preload.ts
++++ b/idorendmaker-desktop/src/preload.ts
+@@ -112,7 +112,14 @@ export interface ElectronAPI {
+     fileName?: string;
+     error?: string;
+   }>;
+-
++
++  // Sample PDF download functionality
++  downloadSamplePDF: () => Promise<{
++    success: boolean;
++    filePath?: string;
++    error?: string;
++  }>;
++
+   // Enhanced PDF processing with race matching and competitor tracking
+   pdfProcessAndMatch: (filePath: string) => Promise<PDFProcessingResult>;
+   pdfGetFilteredRaces: (pdfExtractionId: number) => Promise<RaceWithCompetitorData[]>;
+@@ -251,7 +258,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
+   pdfStart: () => ipcRenderer.invoke('pdf:start'),
+   pdfStop: () => ipcRenderer.invoke('pdf:stop'),
+   pdfSelectFile: () => ipcRenderer.invoke('pdf:selectFile'),
+-
++
++  // Sample PDF download functionality
++  downloadSamplePDF: () => ipcRenderer.invoke('pdf:downloadSample'),
++
+   // Enhanced PDF processing with race matching and competitor tracking
+   pdfProcessAndMatch: (filePath: string) => ipcRenderer.invoke('pdf:processAndMatch', filePath),
+   pdfGetFilteredRaces: (pdfExtractionId: number) => ipcRenderer.invoke('pdf:getFilteredRaces', pdfExtractionId),
+diff --git a/idorendmaker-pdfprocessor/pom.xml b/idorendmaker-pdfprocessor/pom.xml
+index 60b187d..3127455 100644
+--- a/idorendmaker-pdfprocessor/pom.xml
++++ b/idorendmaker-pdfprocessor/pom.xml
+@@ -132,34 +132,34 @@
+                                        </compilerArgs>
+                                </configuration>
+                        </plugin>
+-                       <plugin>
+-                               <groupId>org.graalvm.buildtools</groupId>
+-                               <artifactId>native-maven-plugin</artifactId>
+-                               <version>0.10.1</version>
+-                               <extensions>true</extensions>
+-                               <configuration>
+-                                       <buildArgs>
+-                                               <buildArg>-H:+AddAllCharsets</buildArg>
+-                                               <buildArg>-Djava.awt.headless=true</buildArg>
+-                                               <buildArg>--trace-object-instantiation=java.awt.image.ColorConvertOp</buildArg>
+-                                               <buildArg>--initialize-at-run-time=java.awt.image.ColorConvertOp</buildArg>
+-                                               <buildArg>--initialize-at-run-time=org.apache.pdfbox.pdmodel.encryption.PublicKeySecurityHandler</buildArg>
+-                                               <buildArg>--initialize-at-run-time=sun.java2d.pipe.ShapeSpanIterator</buildArg>
+-                                               <buildArg>--initialize-at-run-time=sun.awt.image.ByteComponentRaster</buildArg>
+-                                               <buildArg>--initialize-at-run-time=javax.imageio.plugins.jpeg.JPEGImageWriter</buildArg>
+-                                               <buildArg>--allow-incomplete-classpath</buildArg>
+-                                               <buildArg>--report-unsupported-elements-at-runtime</buildArg>
+-                                       </buildArgs>
+-                               </configuration>
+-                               <executions>
+-                                       <execution>
+-                                               <id>build-native</id>
+-                                               <goals>
+-                                                       <goal>compile-no-fork</goal>
+-                                               </goals>
+-                                       </execution>
+-                               </executions>
+-                       </plugin>
++<!--                   <plugin>-->
++<!--                           <groupId>org.graalvm.buildtools</groupId>-->
++<!--                           <artifactId>native-maven-plugin</artifactId>-->
++<!--                           <version>0.10.1</version>-->
++<!--                           <extensions>true</extensions>-->
++<!--                           <configuration>-->
++<!--                                   <buildArgs>-->
++<!--                                           <buildArg>-H:+AddAllCharsets</buildArg>-->
++<!--                                           <buildArg>-Djava.awt.headless=true</buildArg>-->
++<!--                                           <buildArg>&#45;&#45;trace-object-instantiation=java.awt.image.ColorConvertOp</buildArg>-->
++<!--                                           <buildArg>&#45;&#45;initialize-at-run-time=java.awt.image.ColorConvertOp</buildArg>-->
++<!--                                           <buildArg>&#45;&#45;initialize-at-run-time=org.apache.pdfbox.pdmodel.encryption.PublicKeySecurityHandler</buildArg>-->
++<!--                                           <buildArg>&#45;&#45;initialize-at-run-time=sun.java2d.pipe.ShapeSpanIterator</buildArg>-->
++<!--                                           <buildArg>&#45;&#45;initialize-at-run-time=sun.awt.image.ByteComponentRaster</buildArg>-->
++<!--                                           <buildArg>&#45;&#45;initialize-at-run-time=javax.imageio.plugins.jpeg.JPEGImageWriter</buildArg>-->
++<!--                                           <buildArg>&#45;&#45;allow-incomplete-classpath</buildArg>-->
++<!--                                           <buildArg>&#45;&#45;report-unsupported-elements-at-runtime</buildArg>-->
++<!--                                   </buildArgs>-->
++<!--                           </configuration>-->
++<!--                           <executions>-->
++<!--                                   <execution>-->
++<!--                                           <id>build-native</id>-->
++<!--                                           <goals>-->
++<!--                                                   <goal>compile-no-fork</goal>-->
++<!--                                           </goals>-->
++<!--                                   </execution>-->
++<!--                           </executions>-->
++<!--                   </plugin>-->
+
+                </plugins>
+        </build>
+diff --git a/idorendmaker-pdfprocessor/src/main/java/hu/szabolcst/idorendmaker/controller/VersenyszamController.java b/idorendmaker-pdfprocessor/src/main/java/hu/szabolcst/idorendmaker/controller/VersenyszamController.java
+index c030bfa..e38116c 100644
+--- a/idorendmaker-pdfprocessor/src/main/java/hu/szabolcst/idorendmaker/controller/VersenyszamController.java
++++ b/idorendmaker-pdfprocessor/src/main/java/hu/szabolcst/idorendmaker/controller/VersenyszamController.java
+@@ -1,11 +1,13 @@
+ package hu.szabolcst.idorendmaker.controller;
+
++import hu.szabolcst.idorendmaker.model.PDFProcessingErrorResponse;
+ import hu.szabolcst.idorendmaker.model.Versenyszam;
+ import hu.szabolcst.idorendmaker.service.VersenyszamService;
+ import java.io.IOException;
+ import java.util.List;
+ import lombok.RequiredArgsConstructor;
+ import lombok.extern.slf4j.Slf4j;
++import org.springframework.http.HttpStatus;
+ import org.springframework.http.MediaType;
+ import org.springframework.http.ResponseEntity;
+ import org.springframework.web.bind.annotation.PostMapping;
+@@ -22,29 +24,57 @@ public class VersenyszamController {
+
+        private final VersenyszamService versenyszamService;
+
+-       //@RequestBody(content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE))
+        @PostMapping(value = "/extract", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+-       public ResponseEntity<List<Versenyszam>> extractFromPdf(@RequestParam("file") final MultipartFile file) {
++       public ResponseEntity<?> extractFromPdf(@RequestParam("file") final MultipartFile file) {
++               // Validate file is not empty
+                if (file.isEmpty()) {
+                        log.error("Received empty file");
+-
+-                       return ResponseEntity.badRequest().build();
++                       final PDFProcessingErrorResponse errorResponse = PDFProcessingErrorResponse.emptyFileError();
++                       return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+                }
+
++               // Validate file type is PDF
+                if (!"application/pdf".equals(file.getContentType())) {
+                        log.error("Received non-PDF file: {}", file.getContentType());
+-
+-                       return ResponseEntity.badRequest().build();
++                       final PDFProcessingErrorResponse errorResponse = new PDFProcessingErrorResponse(
++                               "INVALID_FILE_TYPE",
++                               "File type is not PDF",
++                               "Csak PDF fájlokat lehet feldolgozni. A kiválasztott fájl típusa: " + file.getContentType()
++                       );
++                       return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+                }
+
+                try {
+                        final List<Versenyszam> versenyszamok = versenyszamService.extractFromPdf(file);
+
++                       // Check if we extracted any data
++                       if (versenyszamok == null || versenyszamok.isEmpty()) {
++                               log.warn("No data extracted from PDF file: {}", file.getOriginalFilename());
++                               final PDFProcessingErrorResponse errorResponse = PDFProcessingErrorResponse.invalidContentError();
++                               return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(errorResponse);
++                       }
++
+                        return ResponseEntity.ok(versenyszamok);
+                } catch (final IOException e) {
+-                       log.error("Error processing PDF file", e);
++                       log.error("Error processing PDF file: {}", file.getOriginalFilename(), e);
++
++                       // Distinguish between different types of IO errors
++                       final String errorMessage = e.getMessage();
++                       PDFProcessingErrorResponse errorResponse;
++
++                       if (errorMessage != null && errorMessage.toLowerCase().contains("corrupt")) {
++                               errorResponse = PDFProcessingErrorResponse.corruptedFileError();
++                       } else if (errorMessage != null && errorMessage.toLowerCase().contains("format")) {
++                               errorResponse = PDFProcessingErrorResponse.formatError();
++                       } else {
++                               errorResponse = PDFProcessingErrorResponse.processingError();
++                       }
+
+-                       return ResponseEntity.internalServerError().build();
++                       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
++               } catch (final Exception e) {
++                       log.error("Unexpected error processing PDF file: {}", file.getOriginalFilename(), e);
++                       final PDFProcessingErrorResponse errorResponse = PDFProcessingErrorResponse.processingError();
++                       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+                }
+        }
+
+diff --git a/idorendmaker-pdfprocessor/src/main/java/hu/szabolcst/idorendmaker/model/PDFProcessingErrorResponse.java b/idorendmaker-pdfprocessor/src/main/java/hu/szabolcst/idorendmaker/model/PDFProcessingErrorResponse.java
+new file mode 100644
+index 0000000..1cec825
+--- /dev/null
++++ b/idorendmaker-pdfprocessor/src/main/java/hu/szabolcst/idorendmaker/model/PDFProcessingErrorResponse.java
+@@ -0,0 +1,56 @@
++package hu.szabolcst.idorendmaker.model;
++
++import lombok.AllArgsConstructor;
++import lombok.Data;
++import lombok.NoArgsConstructor;
++
++@Data
++@NoArgsConstructor
++@AllArgsConstructor
++public class PDFProcessingErrorResponse {
++
++       private String errorCode;
++       private String message;
++       private String userMessage;
++
++       public static PDFProcessingErrorResponse formatError() {
++               return new PDFProcessingErrorResponse(
++                       "PDF_FORMAT_ERROR",
++                       "PDF format is not supported",
++                       "A kiválasztott fájl formátuma nem megfelelő. A szolgáltatás a hivatalos MKKSZ Kajak-Kenu Ablakból exportált NEVEZÉSEK - VERSENYSZÁMONKÉNT PDF dokumentumból tud adatot kinyerni. Utolsó tesztelt, működő dokumentum formátum éve: 2025"
++               );
++       }
++
++       public static PDFProcessingErrorResponse emptyFileError() {
++               return new PDFProcessingErrorResponse(
++                       "EMPTY_FILE_ERROR",
++                       "PDF file is empty",
++                       "A kiválasztott fájl üres vagy nem tartalmaz feldolgozható adatokat."
++               );
++       }
++
++       public static PDFProcessingErrorResponse corruptedFileError() {
++               return new PDFProcessingErrorResponse(
++                       "CORRUPTED_FILE_ERROR",
++                       "PDF file is corrupted or unreadable",
++                       "A kiválasztott PDF fájl sérült vagy nem olvasható. Kérjük, próbáljon meg egy másik fájlt."
++               );
++       }
++
++       public static PDFProcessingErrorResponse processingError() {
++               return new PDFProcessingErrorResponse(
++                       "PROCESSING_ERROR",
++                       "Error occurred during PDF processing",
++                       "Hiba történt a PDF feldolgozása során. Kérjük, ellenőrizze a fájl formátumát és próbálja újra."
++               );
++       }
++
++       public static PDFProcessingErrorResponse invalidContentError() {
++               return new PDFProcessingErrorResponse(
++                       "INVALID_CONTENT_ERROR",
++                       "PDF does not contain expected MKKSZ format structure",
++                       "A PDF nem tartalmazza a várt MKKSZ formátum szerkezetét. Kérjük, exportálja a dokumentumot a NEVEZÉSEK - VERSENYSZÁMONKÉNT funkcióval."
++               );
++       }
++
++}
+\ No newline at end of file
+diff --git a/idorendmaker-pdfprocessor/src/main/java/hu/szabolcst/idorendmaker/service/impl/VersenyszamServiceImpl.java b/idorendmaker-pdfprocessor/src/main/java/hu/szabolcst/idorendmaker/service/impl/VersenyszamServiceImpl.java
+index 5c9d921..1134e2d 100644
+--- a/idorendmaker-pdfprocessor/src/main/java/hu/szabolcst/idorendmaker/service/impl/VersenyszamServiceImpl.java
++++ b/idorendmaker-pdfprocessor/src/main/java/hu/szabolcst/idorendmaker/service/impl/VersenyszamServiceImpl.java
+@@ -3,6 +3,7 @@ package hu.szabolcst.idorendmaker.service.impl;
+ import hu.szabolcst.idorendmaker.extractor.VersenyszamNevezesekExtractor;
+ import hu.szabolcst.idorendmaker.model.Versenyszam;
+ import hu.szabolcst.idorendmaker.service.VersenyszamService;
++import lombok.extern.slf4j.Slf4j;
+ import org.springframework.stereotype.Service;
+ import org.springframework.web.multipart.MultipartFile;
+
+@@ -13,26 +14,78 @@ import java.nio.file.Files;
+ import java.nio.file.Path;
+ import java.util.List;
+
++@Slf4j
+ @Service
+ public class VersenyszamServiceImpl implements VersenyszamService {
+
+        @Override
+        public List<Versenyszam> extractFromPdf(final MultipartFile pdfFile) throws IOException {
+                final String originalFilename = pdfFile.getOriginalFilename();
++               log.info("Starting PDF extraction for file: {}", originalFilename);
++
+                final String fileExtension = originalFilename != null
+                                ? originalFilename.substring(originalFilename.lastIndexOf("."))
+                                : ".pdf";
+
+-               final Path tempFilePath = Files.createTempFile("upload-", fileExtension);
+-               final File tempFile = tempFilePath.toFile();
+-               try (final FileOutputStream fos = new FileOutputStream(tempFile)) {
+-                       fos.write(pdfFile.getBytes());
+-               }
++               Path tempFilePath = null;
++               try {
++                       // Create temporary file for processing
++                       tempFilePath = Files.createTempFile("pdf-upload-", fileExtension);
++                       final File tempFile = tempFilePath.toFile();
++
++                       log.debug("Created temporary file: {}", tempFilePath);
++
++                       // Write uploaded file content to temporary file
++                       try (final FileOutputStream fos = new FileOutputStream(tempFile)) {
++                               fos.write(pdfFile.getBytes());
++                               log.debug("Written {} bytes to temporary file", pdfFile.getSize());
++                       } catch (final IOException e) {
++                               log.error("Failed to write PDF content to temporary file: {}", originalFilename, e);
++                               throw new IOException("Failed to process uploaded file: " + e.getMessage(), e);
++                       }
+
+-               final List<Versenyszam> result = VersenyszamNevezesekExtractor.extractFromPdf(tempFile.getAbsolutePath());
+-               Files.deleteIfExists(tempFilePath);
++                       // Extract data from PDF using the extractor
++                       final List<Versenyszam> result;
++                       try {
++                               result = VersenyszamNevezesekExtractor.extractFromPdf(tempFile.getAbsolutePath());
++                               log.info("Successfully extracted {} versenyszám(ok) from PDF: {}",
++                                       result != null ? result.size() : 0, originalFilename);
++                       } catch (final IOException e) {
++                               log.error("PDF extraction failed for file: {}", originalFilename, e);
+
+-               return result;
++                               // Provide more context based on the exception message
++                               final String errorMessage = e.getMessage();
++                               if (errorMessage != null) {
++                                       if (errorMessage.contains("COSDocument has been closed") ||
++                                               errorMessage.contains("document is closed")) {
++                                               throw new IOException("PDF document is corrupted or invalid format", e);
++                                       } else if (errorMessage.contains("Invalid object stream") ||
++                                                       errorMessage.contains("Illegal character") ||
++                                                       errorMessage.contains("Parsing Error")) {
++                                               throw new IOException("PDF format is corrupted or unsupported", e);
++                                       } else if (errorMessage.contains("stream") ||
++                                                       errorMessage.contains("encoding")) {
++                                               throw new IOException("PDF encoding format is not supported", e);
++                                       }
++                               }
++
++                               // Re-throw with format context for generic errors
++                               throw new IOException("PDF format is incompatible with MKKSZ document structure", e);
++                       }
++
++                       return result;
++
++               } finally {
++                       // Always clean up temporary file
++                       if (tempFilePath != null) {
++                               try {
++                                       Files.deleteIfExists(tempFilePath);
++                                       log.debug("Cleaned up temporary file: {}", tempFilePath);
++                               } catch (final IOException e) {
++                                       log.warn("Failed to delete temporary file: {}", tempFilePath, e);
++                               }
++                       }
++               }
+        }
+
+ }
+diff --git a/idorendmaker-pdfprocessor/src/main/resources/application.properties b/idorendmaker-pdfprocessor/src/main/resources/application.properties
+index 09164c8..bc148d4 100644
+--- a/idorendmaker-pdfprocessor/src/main/resources/application.properties
++++ b/idorendmaker-pdfprocessor/src/main/resources/application.properties
+@@ -4,3 +4,4 @@ spring.servlet.multipart.max-request-size=10MB
+ spring.aot.enabled=true
+ spring.aot.repositories.enabled=true
+ spring.banner.location=classpath:banner.txt
++server.port=8081
+(END)
++                               throw new IOException("PDF format is incompatible with MKKSZ document structure", e);
++                       }
++
++                       return result;
++
++               } finally {
++                       // Always clean up temporary file
++                       if (tempFilePath != null) {
++                               try {
++                                       Files.deleteIfExists(tempFilePath);
++                                       log.debug("Cleaned up temporary file: {}", tempFilePath);
++                               } catch (final IOException e) {
++                                       log.warn("Failed to delete temporary file: {}", tempFilePath, e);
++                               }
++                       }
++               }
+        }
+
+ }
+diff --git a/idorendmaker-pdfprocessor/src/main/resources/application.properties b/idorendmaker-pdfprocessor/src/main/resources/application.properties
+index 09164c8..bc148d4 100644
+--- a/idorendmaker-pdfprocessor/src/main/resources/application.properties
++++ b/idorendmaker-pdfprocessor/src/main/resources/application.properties
+@@ -4,3 +4,4 @@ spring.servlet.multipart.max-request-size=10MB
+ spring.aot.enabled=true
+ spring.aot.repositories.enabled=true
+ spring.banner.location=classpath:banner.txt
++server.port=8081

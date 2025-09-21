@@ -112,7 +112,36 @@ export interface ElectronAPI {
     fileName?: string;
     error?: string;
   }>;
-  
+  pdfIsReady: () => Promise<boolean>;
+  pdfProcess: (filePath: string) => Promise<{
+    success: boolean;
+    data?: any[];
+    error?: string;
+    errorCode?: string;
+    userMessage?: string;
+  }>;
+  pdfGetStatus: () => Promise<{
+    isRunning: boolean;
+    isReady: boolean;
+    port: number;
+    pid?: number;
+  }>;
+
+  // App info for renderer process
+  getAppInfo: () => Promise<{
+    isPackaged: boolean;
+    resourcesPath: string;
+    appPath: string;
+    platform: string;
+  }>;
+
+  // Sample PDF download functionality
+  downloadSamplePDF: () => Promise<{
+    success: boolean;
+    filePath?: string;
+    error?: string;
+  }>;
+
   // Enhanced PDF processing with race matching and competitor tracking
   pdfProcessAndMatch: (filePath: string) => Promise<PDFProcessingResult>;
   pdfGetFilteredRaces: (pdfExtractionId: number) => Promise<RaceWithCompetitorData[]>;
@@ -251,7 +280,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   pdfStart: () => ipcRenderer.invoke('pdf:start'),
   pdfStop: () => ipcRenderer.invoke('pdf:stop'),
   pdfSelectFile: () => ipcRenderer.invoke('pdf:selectFile'),
-  
+  pdfIsReady: () => ipcRenderer.invoke('pdf:isReady'),
+
+  // App info for renderer process
+  getAppInfo: () => ipcRenderer.invoke('app:getInfo'),
+
+  // Sample PDF download functionality
+  downloadSamplePDF: () => ipcRenderer.invoke('pdf:downloadSample'),
+
   // Enhanced PDF processing with race matching and competitor tracking
   pdfProcessAndMatch: (filePath: string) => ipcRenderer.invoke('pdf:processAndMatch', filePath),
   pdfGetFilteredRaces: (pdfExtractionId: number) => ipcRenderer.invoke('pdf:getFilteredRaces', pdfExtractionId),

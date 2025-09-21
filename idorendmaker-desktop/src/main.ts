@@ -11,7 +11,10 @@ import { ConflictDetector } from './features/rules/utils/ruleEngine';
 // import { closePrismaClient } from './data/services/prisma'; // REMOVED FOR PRISMA ELIMINATION - Backend handles database cleanup
 import { CreateRuleData, ScheduleRace } from '../shared/types/race';
 import { ExportService } from './features/common/services/ExportService';
-import { pdfProcessorService } from './features/pdf/services/PDFProcessorService';
+// PDF processor imports moved to main process
+import { spawn, ChildProcess } from 'child_process';
+import * as net from 'net';
+import axios from 'axios';
 import { backendService } from './features/common/services/BackendService';
 // import { RaceMatchingService } from './features/pdf/services/RaceMatchingService'; // TEMPORARILY COMMENTED OUT FOR PRISMA MIGRATION
 // import { CompetitorService } from '../archive/CompetitorService.ts.old';
@@ -21,6 +24,349 @@ import { DatabaseInitializer } from './features/common/services/DatabaseInitiali
 if (started) {
   app.quit();
 }
+
+// PDF Processor State Management (moved from renderer service)
+let pdfProcessorProcess: ChildProcess | null = null;
+let pdfProcessorPort: number = 0;
+let pdfProcessorReady: boolean = false;
+let pdfProcessorBaseUrl: string = '';
+
+// PDF Processor Utility Functions
+const getExecutableName = (): string => {
+  switch (process.platform) {
+    case 'win32':
+      return 'idorendmaker-pdfprocessor.exe';
+    case 'darwin':
+      return 'idorendmaker-pdfprocessor-mac';
+    case 'linux':
+      return 'idorendmaker-pdfprocessor-linux';
+    default:
+      throw new Error(`Unsupported platform: ${process.platform}`);
+  }
+};
+
+const resolveExecutablePath = (isPackaged: boolean, resourcesPath: string): string => {
+  const executableName = getExecutableName();
+
+  if (isPackaged) {
+    // Production: executable bundled in app resources
+    return path.join(resourcesPath, executableName);
+  } else {
+    // Development: relative path to source tree
+    return path.join(process.cwd(), '../idorendmaker-pdfprocessor/target', executableName);
+  }
+};
+
+const validateExecutable = async (executablePath: string): Promise<void> => {
+  try {
+    // Check if file exists
+    await fs.access(executablePath);
+    console.log('✅ Executable found:', executablePath);
+
+    // On Unix systems, ensure executable permissions
+    if (process.platform !== 'win32') {
+      try {
+        await fs.access(executablePath, fs.constants.X_OK);
+        console.log('✅ Executable permissions verified');
+      } catch (error) {
+        console.log('🔧 Setting executable permissions...');
+        await fs.chmod(executablePath, 0o755);
+        console.log('✅ Executable permissions set');
+      }
+    }
+  } catch (error) {
+    const errorMessage = `PDF processor executable not found or not accessible: ${executablePath}`;
+    console.error('❌', errorMessage);
+    throw new Error(errorMessage);
+  }
+};
+
+const findAvailablePort = (): Promise<number> => {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.listen(0, () => {
+      const port = (server.address() as net.AddressInfo)?.port;
+      server.close(() => {
+        if (port) {
+          resolve(port);
+        } else {
+          reject(new Error('Could not find available port'));
+        }
+      });
+    });
+    server.on('error', reject);
+  });
+};
+
+const startPDFProcessor = async (): Promise<void> => {
+  if (pdfProcessorProcess && !pdfProcessorProcess.killed) {
+    console.log('PDF processor already running');
+    return;
+  }
+
+  // Get executable path
+  const executablePath = resolveExecutablePath(app.isPackaged, process.resourcesPath || '');
+
+  // Validate executable before attempting to start
+  await validateExecutable(executablePath);
+
+  // Find available port
+  pdfProcessorPort = await findAvailablePort();
+  pdfProcessorBaseUrl = `http://localhost:8081`; // Use fixed port for now
+
+  console.log(`Starting PDF processor on port ${pdfProcessorPort}...`);
+
+  return new Promise((resolve, reject) => {
+    // Spawn the GraalVM executable with port configuration
+    pdfProcessorProcess = spawn(executablePath, [
+      `--server.port=${pdfProcessorPort}`,
+      '--logging.level.org.springframework.web=INFO',
+      '--logging.level.root=INFO'
+    ], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      detached: false,
+      windowsHide: true
+    });
+
+    let startupTimeout: NodeJS.Timeout;
+
+    // Handle process events
+    pdfProcessorProcess.on('error', (error) => {
+      console.error('PDF processor error:', error);
+      clearTimeout(startupTimeout);
+      reject(new Error(`Failed to start PDF processor: ${error.message}`));
+    });
+
+    pdfProcessorProcess.on('exit', (code, signal) => {
+      console.log(`PDF processor exited with code ${code}, signal ${signal}`);
+      pdfProcessorReady = false;
+      pdfProcessorProcess = null;
+    });
+
+    // Capture output to detect when Spring Boot is ready
+    let outputBuffer = '';
+
+    if (pdfProcessorProcess.stdout) {
+      pdfProcessorProcess.stdout.on('data', (data) => {
+        const output = data.toString();
+        outputBuffer += output;
+        console.log('PDF processor stdout:', output.trim());
+
+        // Check if Spring Boot has started successfully
+        if (output.includes('Started IdorendHelperApplication') ||
+            output.includes('Tomcat started on port')) {
+          pdfProcessorReady = true;
+          clearTimeout(startupTimeout);
+          console.log('PDF processor ready');
+          resolve();
+        }
+      });
+    }
+
+    if (pdfProcessorProcess.stderr) {
+      pdfProcessorProcess.stderr.on('data', (data) => {
+        const errorOutput = data.toString();
+        console.log('PDF processor stderr:', errorOutput.trim());
+
+        // Also check stderr for startup messages (some Spring Boot logs go to stderr)
+        if (errorOutput.includes('Started IdorendHelperApplication') ||
+            errorOutput.includes('Tomcat started on port')) {
+          pdfProcessorReady = true;
+          clearTimeout(startupTimeout);
+          console.log('PDF processor ready (from stderr)');
+          resolve();
+        }
+      });
+    }
+
+    // Set startup timeout (GraalVM should be very fast)
+    startupTimeout = setTimeout(() => {
+      if (!pdfProcessorReady) {
+        console.log('PDF processor startup timeout - captured output:', outputBuffer);
+        stopPDFProcessor();
+        reject(new Error('PDF processor startup timeout (20 seconds)'));
+      }
+    }, 20000);
+  });
+};
+
+const stopPDFProcessor = async (): Promise<void> => {
+  if (!pdfProcessorProcess || pdfProcessorProcess.killed) {
+    return;
+  }
+
+  console.log('Stopping PDF processor...');
+
+  return new Promise((resolve) => {
+    if (!pdfProcessorProcess) {
+      resolve();
+      return;
+    }
+
+    // Give the process time to shutdown gracefully
+    const shutdownTimeout = setTimeout(() => {
+      if (pdfProcessorProcess && !pdfProcessorProcess.killed) {
+        console.log('Force killing PDF processor...');
+        pdfProcessorProcess.kill('SIGKILL');
+      }
+    }, 5000);
+
+    pdfProcessorProcess.on('exit', () => {
+      clearTimeout(shutdownTimeout);
+      pdfProcessorProcess = null;
+      pdfProcessorReady = false;
+      console.log('PDF processor stopped');
+      resolve();
+    });
+
+    // Send termination signal
+    pdfProcessorProcess.kill('SIGTERM');
+  });
+};
+
+const isPDFProcessorReady = async (): Promise<boolean> => {
+  if (!pdfProcessorReady || !pdfProcessorProcess || pdfProcessorProcess.killed) {
+    return false;
+  }
+
+  try {
+    // Try to ping the Spring Boot actuator endpoint or base endpoint
+    const response = await axios.get(`${pdfProcessorBaseUrl}/actuator/health`, {
+      timeout: 2000
+    });
+    return response.status === 200;
+  } catch (error) {
+    // If health endpoint doesn't exist, try base endpoint
+    try {
+      await axios.get(`${pdfProcessorBaseUrl}`, {
+        timeout: 2000
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+};
+
+const processPDFFile = async (pdfFilePath: string): Promise<any> => {
+  try {
+    // Ensure the processor is running
+    if (!await isPDFProcessorReady()) {
+      await startPDFProcessor();
+
+      // Wait a bit more for the service to be fully ready
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    // Check if file exists
+    await fs.access(pdfFilePath);
+
+    // Read PDF file
+    const pdfBuffer = await fs.readFile(pdfFilePath);
+
+    // Create FormData for multipart upload
+    const FormData = (await import('form-data')).default;
+    const form = new FormData();
+    form.append('file', pdfBuffer, {
+      filename: path.basename(pdfFilePath),
+      contentType: 'application/pdf'
+    });
+
+    console.log(`Processing PDF: ${path.basename(pdfFilePath)}`);
+
+    // Send request to Spring Boot endpoint
+    const response = await axios.post(
+      `${pdfProcessorBaseUrl}/versenyszam/extract`,
+      form,
+      {
+        headers: {
+          ...form.getHeaders(),
+        },
+        timeout: 30000, // 30 second timeout for PDF processing
+      }
+    );
+
+    if (response.status === 200) {
+      console.log(`Successfully processed PDF, extracted ${response.data.length} competition entries`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } else {
+      return {
+        success: false,
+        error: `Unexpected response status: ${response.status}`
+      };
+    }
+  } catch (error) {
+    console.error('PDF processing error:', error);
+
+    if (axios.isAxiosError(error)) {
+      // Handle connection errors
+      if (error.code === 'ECONNREFUSED') {
+        return {
+          success: false,
+          error: 'A PDF feldolgozó szolgáltatás nem elérhető'
+        };
+      }
+
+      // Handle file system errors
+      if (error.code === 'ENOENT') {
+        return {
+          success: false,
+          error: 'PDF fájl nem található'
+        };
+      }
+
+      // Handle HTTP error responses with structured error data
+      if (error.response && error.response.data) {
+        const responseData = error.response.data;
+
+        // Check if this is a structured error response from our backend
+        if (responseData &&
+            typeof responseData === 'object' &&
+            'errorCode' in responseData &&
+            'userMessage' in responseData) {
+          console.log('Received structured error response:', responseData);
+          return {
+            success: false,
+            error: responseData.userMessage,
+            errorCode: responseData.errorCode,
+            userMessage: responseData.userMessage
+          };
+        }
+      }
+
+      // Handle HTTP status codes with fallback messages
+      const status = error.response?.status;
+      if (status === 400) {
+        return {
+          success: false,
+          error: 'Csak PDF fájlokat lehet feldolgozni.',
+          errorCode: 'INVALID_FILE_TYPE'
+        };
+      } else if (status === 422) {
+        return {
+          success: false,
+          error: 'A PDF nem tartalmazza a várt MKKSZ formátum szerkezetét.',
+          errorCode: 'INVALID_CONTENT_ERROR'
+        };
+      } else if (status === 500) {
+        return {
+          success: false,
+          error: 'Hiba történt a PDF feldolgozása során.',
+          errorCode: 'PROCESSING_ERROR'
+        };
+      }
+    }
+
+    // Handle other types of errors
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Ismeretlen hiba történt'
+    };
+  }
+};
 
 const createWindow = () => {
   // Create the browser window.
@@ -380,47 +726,72 @@ const initializeApp = async () => {
     }
   });
 
-  // PDF processing operations
-  ipcMain.handle('pdf:process', async (_, filePath: string) => {
-    try {
-      const result = await pdfProcessorService.processPDF(filePath);
-      return result;
-    } catch (error) {
-      console.error('PDF processing error in main process:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Ismeretlen hiba történt' 
-      };
-    }
-  });
 
-  ipcMain.handle('pdf:getStatus', async () => {
-    return pdfProcessorService.getStatus();
-  });
 
+  // PDF Processor IPC handlers (using main process functions)
   ipcMain.handle('pdf:start', async () => {
     try {
-      await pdfProcessorService.start();
+      await startPDFProcessor();
       return { success: true };
     } catch (error) {
       console.error('PDF processor start error:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Ismeretlen hiba történt' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Ismeretlen hiba történt'
       };
     }
   });
 
   ipcMain.handle('pdf:stop', async () => {
     try {
-      await pdfProcessorService.stop();
+      await stopPDFProcessor();
       return { success: true };
     } catch (error) {
       console.error('PDF processor stop error:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Ismeretlen hiba történt' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Ismeretlen hiba történt'
       };
+    }
+  });
+
+  ipcMain.handle('pdf:process', async (_, filePath: string) => {
+    try {
+      return await processPDFFile(filePath);
+    } catch (error) {
+      console.error('PDF process error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Ismeretlen hiba történt'
+      };
+    }
+  });
+
+  ipcMain.handle('pdf:getStatus', async () => {
+    try {
+      return {
+        isRunning: pdfProcessorProcess !== null && !pdfProcessorProcess.killed,
+        isReady: pdfProcessorReady,
+        port: pdfProcessorPort,
+        pid: pdfProcessorProcess?.pid
+      };
+    } catch (error) {
+      console.error('PDF status error:', error);
+      return {
+        isRunning: false,
+        isReady: false,
+        port: 0,
+        pid: undefined
+      };
+    }
+  });
+
+  ipcMain.handle('pdf:isReady', async () => {
+    try {
+      return await isPDFProcessorReady();
+    } catch (error) {
+      console.error('PDF ready check error:', error);
+      return false;
     }
   });
 
@@ -457,8 +828,8 @@ const initializeApp = async () => {
   // Enhanced PDF processing with race matching and competitor tracking
   ipcMain.handle('pdf:processAndMatch', async (event, filePath: string) => {
     try {
-      // First process the PDF with existing service
-      const pdfResult = await pdfProcessorService.processPDF(filePath);
+      // First process the PDF with main process function
+      const pdfResult = await processPDFFile(filePath);
       
       if (!pdfResult.success || !pdfResult.data) {
         return pdfResult;
@@ -565,6 +936,82 @@ const initializeApp = async () => {
     }
   });
 
+  // Get app info for renderer process
+  ipcMain.handle('app:getInfo', async () => {
+    return {
+      isPackaged: app.isPackaged,
+      resourcesPath: process.resourcesPath || '',
+      appPath: app.getAppPath(),
+      platform: process.platform
+    };
+  });
+
+  // Sample PDF download functionality
+  ipcMain.handle('pdf:downloadSample', async () => {
+    try {
+      const axios = require('axios');
+      const fs = require('fs').promises;
+      const path = require('path');
+      const { app } = require('electron');
+
+      // Get user's Downloads directory
+      const downloadsPath = app.getPath('downloads');
+      const filename = 'sample-nevezetek-2025.pdf';
+      const filePath = path.join(downloadsPath, filename);
+
+      console.log('Downloading sample PDF to:', filePath);
+
+      // Download from the main backend (assuming it runs on port 8080)
+      const backendUrl = 'http://localhost:8080';
+      const response = await axios.get(`${backendUrl}/api/static/sample-pdf`, {
+        responseType: 'arraybuffer',
+        timeout: 30000
+      });
+
+      if (response.status === 200) {
+        // Write the file to Downloads folder
+        await fs.writeFile(filePath, response.data);
+
+        console.log(`Sample PDF downloaded successfully to: ${filePath}`);
+        return {
+          success: true,
+          filePath: filePath
+        };
+      } else {
+        console.error('Sample PDF download failed:', response.status);
+        return {
+          success: false,
+          error: `A letöltés sikertelen volt (HTTP ${response.status})`
+        };
+      }
+
+    } catch (error) {
+      console.error('Error downloading sample PDF:', error);
+
+      if (error.code === 'ECONNREFUSED') {
+        return {
+          success: false,
+          error: 'A backend szolgáltatás nem elérhető'
+        };
+      } else if (error.response?.status === 404) {
+        return {
+          success: false,
+          error: 'A minta PDF nem található a szerveren'
+        };
+      } else if (error.code === 'ENOENT' || error.code === 'EACCES') {
+        return {
+          success: false,
+          error: 'Nincs írási jogosultság a Letöltések mappához'
+        };
+      }
+
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Ismeretlen hiba történt a letöltés során'
+      };
+    }
+  });
+
   // Competitor analysis operations
   ipcMain.handle('competitor:analyzeSchedules', async (_, scheduleRaces: ScheduleRace[], pdfExtractionId?: number) => {
     try {
@@ -653,7 +1100,7 @@ app.on('window-all-closed', async () => {
   await backendService.stop();
   
   // Stop PDF processor if running
-  await pdfProcessorService.stop();
+  await stopPDFProcessor();
   
   if (process.platform !== 'darwin') {
     app.quit();
