@@ -163,29 +163,62 @@ const initializeApp = async () => {
 
   // Rule engine operations
   ipcMain.handle('db:checkScheduleViolations', async (_, scheduleRaces: ScheduleRace[], ruleIds?: number[]) => {
-    const rules = ruleIds 
-      ? await Promise.all(ruleIds.map(id => BackendAPIService.getRuleById(id)).filter(Boolean))
-      : await BackendAPIService.getActiveRules();
-    return await ConflictDetector.detectConflicts(scheduleRaces, rules);
+    try {
+      console.log(`🔍 Rule validation started for ${scheduleRaces.length} races${ruleIds ? ` with specific rule IDs: ${ruleIds.join(', ')}` : ' with all active rules'}`);
+
+      const rules = ruleIds
+        ? await Promise.all(ruleIds.map(id => BackendAPIService.getRuleById(id)).filter(Boolean))
+        : await BackendAPIService.getActiveRules();
+
+      console.log(`📋 Retrieved ${rules.length} rules for validation`);
+
+      if (rules.length === 0) {
+        console.warn('⚠️ No rules available for validation - either no active rules exist or backend API failed');
+        return [];
+      }
+
+      const violations = await ConflictDetector.detectConflicts(scheduleRaces, rules);
+      console.log(`✅ Rule validation completed: ${violations.length} violations found`);
+
+      return violations;
+    } catch (error) {
+      console.error('❌ Error during rule validation:', error);
+      console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack available');
+
+      // Return empty array to prevent UI crashes, but log the failure
+      console.warn('🔄 Returning empty violations array due to validation failure');
+      return [];
+    }
   });
 
   // Enhanced rule checking with competitor awareness
   ipcMain.handle('db:checkScheduleViolationsWithCompetitors', async (_, scheduleRaces: ScheduleRace[], pdfExtractionId?: number, ruleIds?: number[]) => {
     try {
-      const rules = ruleIds 
+      console.log(`🔍🧠 Competitor-aware rule validation started for ${scheduleRaces.length} races${pdfExtractionId ? ` with PDF extraction ID: ${pdfExtractionId}` : ' without PDF data'}`);
+
+      const rules = ruleIds
         ? await Promise.all(ruleIds.map(id => BackendAPIService.getRuleById(id)).filter(Boolean))
         : await BackendAPIService.getActiveRules();
-      
+
+      console.log(`📋 Retrieved ${rules.length} rules for competitor-aware validation`);
+
+      if (rules.length === 0) {
+        console.warn('⚠️ No rules available for competitor-aware validation - either no active rules exist or backend API failed');
+        return [];
+      }
+
       if (!pdfExtractionId) {
+        console.log('📝 No PDF extraction ID provided, falling back to standard rule checking');
         return await ConflictDetector.detectConflicts(scheduleRaces, rules);
       }
 
       // Get traditional rule violations first
       const baseViolations = await ConflictDetector.detectConflicts(scheduleRaces, rules);
-      
+      console.log(`📊 Found ${baseViolations.length} base rule violations, enhancing with competitor data...`);
+
       // Enhance each violation with competitor information
       const enhancedViolations = await Promise.all(
-        baseViolations.map(async (violation) => {
+        baseViolations.map(async (violation, index) => {
           try {
             // Check for competitor conflicts between the two races
             const competitorConflict = await BackendAPIService.checkCompetitorConflicts(
@@ -193,6 +226,8 @@ const initializeApp = async () => {
               violation.race2.id,
               pdfExtractionId
             );
+
+            console.log(`🔍 Violation ${index + 1}/${baseViolations.length}: ${violation.race1.name} ↔ ${violation.race2.name} - ${competitorConflict.hasConflicts ? `🚨 ${competitorConflict.competitorCount} competitor conflicts` : '✅ no competitor conflicts'}`);
 
             // Create enhanced violation with competitor context
             const enhancedViolation = {
@@ -219,33 +254,53 @@ const initializeApp = async () => {
 
             return enhancedViolation;
           } catch (error) {
-            console.error('Error checking competitor conflicts for violation:', error);
+            console.error(`❌ Error checking competitor conflicts for violation ${index + 1}: ${violation.race1.name} ↔ ${violation.race2.name}:`, error);
+            console.warn(`🔄 Falling back to basic violation for this race pair`);
             return violation; // Return original if competitor check fails
           }
         })
       );
 
       // Sort by priority: competitor conflicts first
-      return enhancedViolations.sort((a, b) => {
+      const sortedViolations = enhancedViolations.sort((a, b) => {
         const aPriority = (a as any).competitorOverlap && a.severity === 'error' ? 100 :
           a.severity === 'error' ? 50 :
           (a as any).competitorOverlap ? 30 :
           a.severity === 'info' ? 10 : 0;
-        
+
         const bPriority = (b as any).competitorOverlap && b.severity === 'error' ? 100 :
           b.severity === 'error' ? 50 :
           (b as any).competitorOverlap ? 30 :
           b.severity === 'info' ? 10 : 0;
-        
+
         return bPriority - aPriority; // Higher priority first
       });
+
+      const criticalViolations = sortedViolations.filter((v: any) => v.competitorOverlap && v.severity === 'error').length;
+      const theoreticalViolations = sortedViolations.filter((v: any) => !v.competitorOverlap || v.severity === 'info').length;
+
+      console.log(`✅ Competitor-aware rule validation completed: ${sortedViolations.length} total violations (${criticalViolations} critical with competitor conflicts, ${theoreticalViolations} theoretical)`);
+
+      return sortedViolations;
     } catch (error) {
-      console.error('Error in competitor-aware rule checking:', error);
-      // Fall back to normal rule checking
-      const rules = ruleIds 
-        ? await Promise.all(ruleIds.map(id => BackendAPIService.getRuleById(id)).filter(Boolean))
-        : await BackendAPIService.getActiveRules();
-      return await ConflictDetector.detectConflicts(scheduleRaces, rules);
+      console.error('❌ Error in competitor-aware rule checking:', error);
+      console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack available');
+      console.warn('🔄 Falling back to standard rule checking without competitor awareness');
+
+      try {
+        // Fall back to normal rule checking
+        const rules = ruleIds
+          ? await Promise.all(ruleIds.map(id => BackendAPIService.getRuleById(id)).filter(Boolean))
+          : await BackendAPIService.getActiveRules();
+
+        const fallbackViolations = await ConflictDetector.detectConflicts(scheduleRaces, rules);
+        console.log(`✅ Fallback rule validation completed: ${fallbackViolations.length} violations found`);
+        return fallbackViolations;
+      } catch (fallbackError) {
+        console.error('❌ Even fallback rule checking failed:', fallbackError);
+        console.warn('🔄 Returning empty violations array to prevent UI crashes');
+        return [];
+      }
     }
   });
 
@@ -500,22 +555,113 @@ const initializeApp = async () => {
 
   ipcMain.handle('pdf:getFilteredRaces', async (_, pdfExtractionId: number) => {
     try {
-      // return await RaceMatchingService.getFilteredRaces(pdfExtractionId); // OLD PRISMA VERSION
-      return await BackendAPIService.getFilteredRaces(pdfExtractionId); // NEW BACKEND VERSION
+      console.log(`🏁 Retrieving filtered races for PDF extraction ID: ${pdfExtractionId}`);
+
+      if (!pdfExtractionId || pdfExtractionId <= 0) {
+        console.warn('⚠️ Invalid PDF extraction ID provided for filtered races retrieval');
+        return [];
+      }
+
+      const filteredRaces = await BackendAPIService.getFilteredRaces(pdfExtractionId);
+
+      if (!filteredRaces) {
+        console.warn(`⚠️ BackendAPIService.getFilteredRaces returned null/undefined for PDF extraction ID: ${pdfExtractionId}`);
+        return [];
+      }
+
+      if (!Array.isArray(filteredRaces)) {
+        console.error(`❌ Invalid response format from getFilteredRaces - expected array, got: ${typeof filteredRaces}`);
+        return [];
+      }
+
+      console.log(`✅ Successfully retrieved ${filteredRaces.length} filtered races for PDF extraction ID: ${pdfExtractionId}`);
+
+      if (filteredRaces.length === 0) {
+        console.warn(`⚠️ No filtered races found for PDF extraction ID: ${pdfExtractionId} - this may indicate:
+  - PDF extraction failed or contains no race data
+  - Race matching process failed
+  - PDF data was cleaned up or expired
+  - Backend database query issue`);
+      }
+
+      return filteredRaces;
     } catch (error) {
-      console.error('Error getting filtered races:', error);
+      console.error(`❌ Error getting filtered races for PDF extraction ID: ${pdfExtractionId}:`, error);
+      console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack available');
+
+      // Provide more specific error context
+      if (error instanceof Error) {
+        if (error.message.includes('404') || error.message.includes('Not Found')) {
+          console.error(`🔍 PDF extraction ID ${pdfExtractionId} not found in backend - may have been cleaned up or never existed`);
+        } else if (error.message.includes('500') || error.message.includes('Internal Server Error')) {
+          console.error(`🔧 Backend server error while retrieving filtered races - check backend logs`);
+        } else if (error.message.includes('timeout') || error.message.includes('ETIMEDOUT')) {
+          console.error(`⏱️ Timeout while retrieving filtered races - backend may be overloaded`);
+        }
+      }
+
+      console.warn('🔄 Returning empty races array to prevent UI crashes');
       return [];
     }
   });
 
   ipcMain.handle('pdf:getCompetitorData', async (_, pdfExtractionId: number) => {
     try {
-      // const competitorMap = await RaceMatchingService.getCompetitorData(pdfExtractionId); // OLD PRISMA VERSION
-      const competitorMap = await BackendAPIService.getCompetitorData(pdfExtractionId); // NEW BACKEND VERSION
+      console.log(`🏃 Retrieving competitor data for PDF extraction ID: ${pdfExtractionId}`);
+
+      if (!pdfExtractionId || pdfExtractionId <= 0) {
+        console.warn('⚠️ Invalid PDF extraction ID provided for competitor data retrieval');
+        return {};
+      }
+
+      const competitorMap = await BackendAPIService.getCompetitorData(pdfExtractionId);
+
+      if (!competitorMap) {
+        console.warn(`⚠️ BackendAPIService.getCompetitorData returned null/undefined for PDF extraction ID: ${pdfExtractionId}`);
+        return {};
+      }
+
+      if (!(competitorMap instanceof Map)) {
+        console.error(`❌ Invalid response format from getCompetitorData - expected Map, got: ${typeof competitorMap}`);
+        return {};
+      }
+
       // Convert Map to plain object for IPC transfer
-      return Object.fromEntries(competitorMap);
+      const competitorObject = Object.fromEntries(competitorMap);
+      const competitorCount = Object.keys(competitorObject).length;
+
+      console.log(`✅ Successfully retrieved competitor data for PDF extraction ID: ${pdfExtractionId} - ${competitorCount} competitors`);
+
+      if (competitorCount === 0) {
+        console.warn(`⚠️ No competitor data found for PDF extraction ID: ${pdfExtractionId} - this may indicate:
+  - PDF extraction failed to parse competitor information
+  - PDF contains no participant data
+  - Competitor matching process failed
+  - PDF data was cleaned up or expired
+  - Backend database query issue`);
+      } else {
+        // Log a sample of competitor names for debugging (first 3)
+        const sampleCompetitors = Object.keys(competitorObject).slice(0, 3);
+        console.log(`🔍 Sample competitors: ${sampleCompetitors.join(', ')}${competitorCount > 3 ? ` +${competitorCount - 3} more` : ''}`);
+      }
+
+      return competitorObject;
     } catch (error) {
-      console.error('Error getting competitor data:', error);
+      console.error(`❌ Error getting competitor data for PDF extraction ID: ${pdfExtractionId}:`, error);
+      console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack available');
+
+      // Provide more specific error context
+      if (error instanceof Error) {
+        if (error.message.includes('404') || error.message.includes('Not Found')) {
+          console.error(`🔍 PDF extraction ID ${pdfExtractionId} not found in backend - may have been cleaned up or never existed`);
+        } else if (error.message.includes('500') || error.message.includes('Internal Server Error')) {
+          console.error(`🔧 Backend server error while retrieving competitor data - check backend logs`);
+        } else if (error.message.includes('timeout') || error.message.includes('ETIMEDOUT')) {
+          console.error(`⏱️ Timeout while retrieving competitor data - backend may be overloaded`);
+        }
+      }
+
+      console.warn('🔄 Returning empty competitor data object to prevent UI crashes');
       return {};
     }
   });

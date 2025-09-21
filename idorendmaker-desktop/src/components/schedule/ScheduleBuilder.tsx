@@ -62,6 +62,10 @@ const ScheduleBuilder: React.FC<ScheduleBuilderProps> = React.memo(({
   const [dismissedCount, setDismissedCount] = useState<number>(0);
   const [saveTimestamp, setSaveTimestamp] = useState<number>(0);
 
+  // Rule validation status tracking
+  const [ruleValidationStatus, setRuleValidationStatus] = useState<'unknown' | 'checking' | 'success' | 'no-rules' | 'error'>('unknown');
+  const [ruleValidationError, setRuleValidationError] = useState<string | null>(null);
+
   // Use custom hooks for complex logic
   const sectionDataHook = useScheduleSectionData({
     schedule,
@@ -185,22 +189,46 @@ const ScheduleBuilder: React.FC<ScheduleBuilderProps> = React.memo(({
   const checkRuleViolations = useCallback(async (racesToCheck: ScheduleRace[]) => {
     if (racesToCheck.length < 2) {
       setViolations([]);
+      setRuleValidationStatus('success');
+      setRuleValidationError(null);
       return;
     }
 
     setCheckingRules(true);
+    setRuleValidationStatus('checking');
+    setRuleValidationError(null);
+
     try {
+      // First check if any active rules are available
+      const activeRules = await window.electronAPI.getActiveRules();
+
+      if (!Array.isArray(activeRules) || activeRules.length === 0) {
+        console.log('No active rules available for validation');
+        setViolations([]);
+        setRuleValidationStatus('no-rules');
+        setRuleValidationError(null);
+        return;
+      }
+
+      console.log(`Found ${activeRules.length} active rules, proceeding with validation`);
+
       // Use competitor-aware rule checking if we have PDF extraction data
-      const allViolations = pdfExtractionId 
+      const allViolations = pdfExtractionId
         ? await window.electronAPI.checkScheduleViolationsWithCompetitors(racesToCheck, pdfExtractionId)
         : await window.electronAPI.checkScheduleViolations(racesToCheck);
-        
+
+      // Check if we received a valid response
+      if (!Array.isArray(allViolations)) {
+        throw new Error('Invalid response from rule validation service - expected array of violations');
+      }
+
       // Filter out dismissed violations
-      const visibleViolations = allViolations.filter(violation => 
+      const visibleViolations = allViolations.filter(violation =>
         !dismissedViolationHashes.includes(violation.violationHash)
       );
       setViolations(visibleViolations);
-      
+      setRuleValidationStatus('success');
+
       // Log competitor-aware information if available
       if (pdfExtractionId && allViolations.length > 0) {
         const competitorViolations = allViolations.filter((v: any) => v.competitorOverlap);
@@ -210,6 +238,22 @@ const ScheduleBuilder: React.FC<ScheduleBuilderProps> = React.memo(({
     } catch (error) {
       console.error('Error checking rule violations:', error);
       setViolations([]);
+      setRuleValidationStatus('error');
+
+      // Provide user-friendly error messages based on error type
+      if (error instanceof Error) {
+        if (error.message.includes('timeout') || error.message.includes('ETIMEDOUT')) {
+          setRuleValidationError('Szabály-ellenőrzés időtúllépés miatt megszakadt. Próbálja újra.');
+        } else if (error.message.includes('network') || error.message.includes('fetch')) {
+          setRuleValidationError('Nem sikerült kapcsolatot létesíteni a háttérszolgáltatással.');
+        } else if (error.message.includes('Invalid response')) {
+          setRuleValidationError('Érvénytelen válasz a szabály-ellenőrző szolgáltatástól.');
+        } else {
+          setRuleValidationError('Szabály-ellenőrzés sikertelen. Ellenőrizze a naplókat.');
+        }
+      } else {
+        setRuleValidationError('Ismeretlen hiba a szabály-ellenőrzés során.');
+      }
     } finally {
       setCheckingRules(false);
     }
@@ -321,10 +365,38 @@ const ScheduleBuilder: React.FC<ScheduleBuilderProps> = React.memo(({
           <div className="mb-2">
             <div className="flex items-center justify-between py-2 px-3 bg-muted/30 rounded-lg">
               <div className="flex items-center gap-2">
-                {checkingRules ? (
+                {checkingRules || ruleValidationStatus === 'checking' ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">Szabályok ellenőrzése...</span>
+                  </>
+                ) : ruleValidationStatus === 'error' ? (
+                  <>
+                    <AlertTriangle className="h-4 w-4 text-red-500" />
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="destructive">
+                          Szabály-ellenőrzés sikertelen
+                        </Badge>
+                      </div>
+                      {ruleValidationError && (
+                        <span className="text-xs text-red-600">
+                          {ruleValidationError}
+                        </span>
+                      )}
+                    </div>
+                  </>
+                ) : ruleValidationStatus === 'no-rules' ? (
+                  <>
+                    <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary">
+                        Nincsenek aktív szabályok
+                      </Badge>
+                      <span className="text-sm text-muted-foreground">
+                        Hozzon létre szabályokat a konfliktusok ellenőrzéséhez
+                      </span>
+                    </div>
                   </>
                 ) : violations.length === 0 && dismissedCount === 0 ? (
                   <>

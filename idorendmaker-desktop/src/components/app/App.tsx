@@ -13,6 +13,7 @@ import { TwoPanelLayout } from '../layout/TwoPanelLayout';
 import { RaceWithAgeGroups, ScheduleWithSections, ScheduleSection, CreateScheduleSectionData, ScheduleRace, SectionWorkingData, Schedule, RuleWithConditions, CreateRuleData, Level, ScheduleMode } from '../../../shared/types/race';
 import { useUnsavedChanges } from '../../features/common/hooks/useUnsavedChanges';
 import { Toaster } from '../ui/sonner';
+import { toast } from 'sonner';
 
 type AppView = 'main-menu' | 'select-mode' | 'create-schedule' | 'load-schedule' | 'rule-management' | 'rule-editor' | 'pdf-processor' | 'pdf-to-schedule';
 
@@ -363,29 +364,69 @@ const App: React.FC = () => {
       // If schedule has PDF data, restore the competitor-aware context
       if (hasPDFData && pdfExtractionId) {
         console.log(`Restoring PDF context for schedule ${schedule.id} (PDF extraction: ${pdfExtractionId})`);
-        
-        // Load filtered races and competitor data
-        const [filteredRaces, competitorData] = await Promise.all([
-          window.electronAPI.pdfGetFilteredRaces(pdfExtractionId),
-          window.electronAPI.pdfGetCompetitorData(pdfExtractionId)
-        ]);
-        
-        // Set PDF context for competitor-aware features
-        setPdfExtractionId(pdfExtractionId);
-        setFilteredRaces(filteredRaces);
-        setCompetitorData(competitorData);
-        
-        // Set schedule mode based on data
-        setScheduleMode('full');
-        
-        console.log(`PDF context restored: ${filteredRaces.length} filtered races, competitor data available`);
+
+        try {
+          // Load filtered races and competitor data
+          const [filteredRaces, competitorData] = await Promise.all([
+            window.electronAPI.pdfGetFilteredRaces(pdfExtractionId),
+            window.electronAPI.pdfGetCompetitorData(pdfExtractionId)
+          ]);
+
+          // Validate that we actually received meaningful PDF data
+          const hasValidRaceData = Array.isArray(filteredRaces) && filteredRaces.length > 0;
+          const hasValidCompetitorData = competitorData && typeof competitorData === 'object' && Object.keys(competitorData).length > 0;
+
+          if (hasValidRaceData && hasValidCompetitorData) {
+            // Success: Set PDF context for competitor-aware features
+            setPdfExtractionId(pdfExtractionId);
+            setFilteredRaces(filteredRaces);
+            setCompetitorData(competitorData);
+            setScheduleMode('full');
+
+            console.log(`✅ PDF context restored: ${filteredRaces.length} filtered races, ${Object.keys(competitorData).length} competitors`);
+            toast.success(`PDF adatok visszaállítva: ${filteredRaces.length} versenyszám, versenyző-tudatos üzemmód aktív`, {
+              duration: 4000
+            });
+          } else {
+            // Partial failure: Got empty data
+            console.warn(`⚠️ PDF context restoration failed - empty data received:`, {
+              racesCount: filteredRaces?.length || 0,
+              competitorCount: competitorData ? Object.keys(competitorData).length : 0
+            });
+
+            // Fall back to standard mode
+            setPdfExtractionId(undefined);
+            setFilteredRaces(undefined);
+            setCompetitorData(undefined);
+            setScheduleMode('full');
+
+            toast.warning('PDF adatok nem állíthatók vissza - üres adatok. Standard üzemmód aktív.', {
+              description: 'Az időrend betöltődött, de a PDF adatok elvesztek. Továbbra is szerkeszthető.',
+              duration: 6000
+            });
+          }
+        } catch (error) {
+          // Complete failure: API calls failed
+          console.error('❌ PDF context restoration failed:', error);
+
+          // Fall back to standard mode
+          setPdfExtractionId(undefined);
+          setFilteredRaces(undefined);
+          setCompetitorData(undefined);
+          setScheduleMode('full');
+
+          toast.error('PDF adatok visszaállítása sikertelen', {
+            description: 'Az időrend betöltődött, de a PDF funkciók nem érhetők el. Próbálja újra feldolgozni a PDF-et.',
+            duration: 8000
+          });
+        }
       } else {
         // Clear PDF context for standard scheduling mode
         setPdfExtractionId(undefined);
         setFilteredRaces(undefined);
         setCompetitorData(undefined);
         setScheduleMode('full');
-        
+
         console.log('Standard scheduling mode - no PDF data linked');
       }
       
@@ -593,14 +634,18 @@ const App: React.FC = () => {
             <div className="flex-1 min-h-0">
               <TwoPanelLayout>
                 <TwoPanelLayout.SidePanel>
-                  <RaceList 
+                  <RaceList
                     onRaceAdd={handleRaceAdd}
                     scheduleRaces={scheduleRaces}
                     scheduleMode={scheduleMode}
+                    // Include PDF-related props if we have PDF data
+                    filteredRaces={pdfExtractionId ? filteredRaces : undefined}
+                    raceSource={pdfExtractionId ? "pdf-filtered" : undefined}
+                    pdfExtractionId={pdfExtractionId}
                   />
                 </TwoPanelLayout.SidePanel>
                 <TwoPanelLayout.MainPanel>
-                  <ScheduleBuilder 
+                  <ScheduleBuilder
                     onScheduleRacesChange={handleScheduleRacesChange}
                     onRaceAddRefUpdate={(fn) => { addRaceToScheduleRef.current = fn; }}
                     onPopulateSectionDataRefUpdate={handlePopulateSectionDataRef}
@@ -612,6 +657,9 @@ const App: React.FC = () => {
                     onSectionStartTimeChange={handleSectionStartTimeChange}
                     onScheduleSave={handleScheduleSave}
                     scheduleMode={scheduleMode}
+                    // Include PDF-related props if we have PDF data
+                    pdfExtractionId={pdfExtractionId}
+                    competitorData={competitorData}
                     onUnsavedChanges={setUnsavedChanges}
                   />
                 </TwoPanelLayout.MainPanel>
