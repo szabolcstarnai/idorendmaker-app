@@ -17,4 +17,6 @@ public interface ScheduleRepository {
     Schedule save(Schedule entity);
 
     long count();
+
+    long countByPdfExtractionId(Integer pdfExtractionId);
 }

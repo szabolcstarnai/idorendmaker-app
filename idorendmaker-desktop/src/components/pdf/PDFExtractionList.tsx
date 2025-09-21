@@ -220,11 +220,6 @@ const PDFExtractionList: React.FC<PDFExtractionListProps> = ({
       await onDelete(extractionToDelete);
       await loadExtractions(); // Reload to get updated data
       setExtractionToDelete(null);
-
-      // Clear selection if deleted extraction was selected
-      if (selectedExtraction?.id === extractionToDelete.id) {
-        // The parent component should handle clearing the selection
-      }
     } catch (error) {
       console.error('Error deleting extraction:', error);
     } finally {

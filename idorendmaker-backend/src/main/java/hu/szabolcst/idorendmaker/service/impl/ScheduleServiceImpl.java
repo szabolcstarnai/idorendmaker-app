@@ -368,16 +368,36 @@ public class ScheduleServiceImpl implements ScheduleService {
     @Transactional
     public void deleteSchedule(final Integer scheduleId) {
         log.debug("Deleting schedule: {}", scheduleId);
-        
+
+        // Get schedule to check if it has PDF extraction before deletion
+        final Optional<Schedule> scheduleOpt = scheduleRepository.findById(scheduleId);
+        final Integer pdfExtractionId = scheduleOpt.map(Schedule::getPdfExtractionId).orElse(null);
+
         // Delete schedule items (explicit deletion, though cascade would handle this)
         scheduleItemRepository.deleteAllByScheduleId(scheduleId);
-        
+
         // Delete schedule sections (explicit deletion, though cascade would handle this)
         scheduleSectionRepository.deleteAllByScheduleId(scheduleId);
-        
+
         // Delete the schedule itself
         scheduleRepository.deleteById(scheduleId);
-        
+
+        // Update PDF extraction status if this was the last schedule using it
+        if (pdfExtractionId != null) {
+            final long remainingSchedulesCount = scheduleRepository.countByPdfExtractionId(pdfExtractionId);
+            if (remainingSchedulesCount == 0) {
+                final Optional<PDFExtraction> pdfOpt = pdfExtractionRepository.findById(pdfExtractionId);
+                if (pdfOpt.isPresent()) {
+                    final PDFExtraction pdf = pdfOpt.get();
+                    pdf.setStatus("session");
+                    pdf.setLinkedAt(null);
+                    pdf.setExpiresAt(LocalDateTime.now().plusHours(24)); // Restore 24h expiry
+                    pdfExtractionRepository.save(pdf);
+                    log.info("PDF extraction {} reverted to session status (no schedules remaining)", pdfExtractionId);
+                }
+            }
+        }
+
         log.info("Schedule {} and all associated data deleted successfully", scheduleId);
     }
 

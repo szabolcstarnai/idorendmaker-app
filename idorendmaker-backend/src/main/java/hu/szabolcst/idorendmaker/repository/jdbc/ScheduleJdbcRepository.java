@@ -109,6 +109,12 @@ public class ScheduleJdbcRepository
         super.deleteById(id);
     }
 
+    @Override
+    public long countByPdfExtractionId(final Integer pdfExtractionId) {
+        final String sql = "SELECT COUNT(*) FROM schedules WHERE pdf_extraction_id = ?";
+        return jdbcTemplate.queryForObject(sql, Long.class, pdfExtractionId);
+    }
+
 
     private static int getIntOrDefault(final ResultSet rs, final String columnName, final int defaultValue) throws SQLException {
         final Integer value = JdbcUtils.getIntegerOrNull(rs, columnName);

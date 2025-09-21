@@ -40,14 +40,19 @@ const PDFManager: React.FC<PDFManagerProps> = ({ onNavigateToSchedule }) => {
   // Handle extraction deletion
   const handleExtractionDelete = useCallback(async (extraction: PDFExtraction) => {
     try {
-      const result = await window.electronAPI.pdfDeleteExtraction(extraction.id);
-      if (!result.success) {
-        throw new Error(result.error || 'Deletion failed');
+      // Clear selection BEFORE deletion if it's the selected one
+      const wasSelected = selectedExtraction?.id === extraction.id;
+      if (wasSelected) {
+        setSelectedExtraction(undefined);
       }
 
-      // Clear selection if the deleted extraction was selected
-      if (selectedExtraction?.id === extraction.id) {
-        setSelectedExtraction(undefined);
+      const result = await window.electronAPI.pdfDeleteExtraction(extraction.id);
+      if (!result.success) {
+        // Restore selection if deletion failed
+        if (wasSelected) {
+          setSelectedExtraction(extraction);
+        }
+        throw new Error(result.error || 'Deletion failed');
       }
 
       console.log(`Successfully deleted PDF extraction: ${extraction.filename}`);
@@ -91,7 +96,7 @@ const PDFManager: React.FC<PDFManagerProps> = ({ onNavigateToSchedule }) => {
 
   // Handle new PDF processing request
   const handleNewPDF = useCallback(() => {
-    setSelectedExtraction(null);
+    setSelectedExtraction(undefined);
   }, []);
 
   return (
