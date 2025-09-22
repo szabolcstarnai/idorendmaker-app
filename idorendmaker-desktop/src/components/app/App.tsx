@@ -240,20 +240,21 @@ const App: React.FC = () => {
     setCurrentView('pdf-processor');
   };
 
-  const handlePDFToSchedule = (pdfExtractionId: number, filteredRaces: any[], competitorData: any) => {
+  const handlePDFToSchedule = async (pdfExtractionId: number, filteredRaces: any[], competitorData: any) => {
     console.log('Navigating to PDF-to-schedule with:', { pdfExtractionId, filteredRaces: filteredRaces.length, competitorData });
-    
-    // Store PDF data
+
+    // Store PDF data - set all state first
     setPdfExtractionId(pdfExtractionId);
     setFilteredRaces(filteredRaces);
     setCompetitorData(competitorData);
-    
-    // Set schedule mode and initialize schedule
     setScheduleMode('full');
+
+    // Initialize schedule for PDF workflow and wait for it to complete
+    await initializeSchedule();
+
+    // Only change view after schedule is initialized and all state is set
+    // This ensures ScheduleBuilder mounts with all required props
     setCurrentView('pdf-to-schedule');
-    
-    // Initialize schedule for PDF workflow
-    initializeSchedule();
   };
 
   const handleCreateRule = () => {

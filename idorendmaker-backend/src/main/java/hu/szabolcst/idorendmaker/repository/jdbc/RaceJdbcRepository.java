@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.stereotype.Repository;
@@ -104,6 +105,27 @@ public class RaceJdbcRepository
             (ResultSetExtractor) new RaceWithAgeGroupsAndBoatClassExtractor());
     }
 
+    @Override
+    public Optional<Race> findByIdWithAgeGroupsAndBoatClassData(final Integer integer) {
+        final String sql = "SELECT DISTINCT r.id as r_id, r.name as r_name, r.discipline as r_discipline, "
+            + "r.boat_class as r_boat_class, r.boat_class_id as r_boat_class_id, r.gender as r_gender, "
+            + "r.distance as r_distance, r.occurrence as r_occurrence, r.hidden as r_hidden, r.created_at as r_created_at, "
+            + "r.updated_at as r_updated_at, bc.id as bc_id, bc.name as bc_name, bc.boat_type as bc_boat_type, "
+            + "bc.seat_count as bc_seat_count, bc.seat_count_text as bc_seat_count_text, bc.created_at as bc_created_at, "
+            + "rag.race_id as rag_race_id, rag.age_group_id as rag_age_group_id, ag.id as ag_id, ag.name as ag_name, "
+            + "ag.created_at as ag_created_at "
+            + "FROM races r "
+            + "LEFT JOIN boat_classes bc ON r.boat_class_id = bc.id "
+            + "LEFT JOIN race_age_groups rag ON r.id = rag.race_id "
+            + "LEFT JOIN age_groups ag ON rag.age_group_id = ag.id "
+            + "WHERE r.id = ?"
+            + "ORDER BY r.occurrence DESC, r.name ASC";
+
+        final List<Race> query = (List<Race>) this.jdbcTemplate.query(sql,
+            (ResultSetExtractor) new RaceWithAgeGroupsAndBoatClassExtractor(), new Object[]{integer});
+
+        return query.stream().findFirst();
+    }
 
     public List<Race> findBySearchTermWithAgeGroups(final String searchTerm) {
         final String sql = "SELECT DISTINCT r.id as r_id, r.name as r_name, r.discipline as r_discipline, r.boat_class as r_boat_class, r.boat_class_id as r_boat_class_id, r.gender as r_gender, r.distance as r_distance, r.occurrence as r_occurrence, r.hidden as r_hidden, r.created_at as r_created_at, r.updated_at as r_updated_at, bc.id as bc_id, bc.name as bc_name, bc.boat_type as bc_boat_type, bc.seat_count as bc_seat_count, bc.seat_count_text as bc_seat_count_text, bc.created_at as bc_created_at, rag.race_id as rag_race_id, rag.age_group_id as rag_age_group_id, ag.id as ag_id, ag.name as ag_name, ag.created_at as ag_created_at FROM races r LEFT JOIN boat_classes bc ON r.boat_class_id = bc.id LEFT JOIN race_age_groups rag ON r.id = rag.race_id LEFT JOIN age_groups ag ON rag.age_group_id = ag.id WHERE r.name LIKE ? OR r.discipline LIKE ? OR r.boat_class LIKE ? OR r.gender LIKE ? OR r.distance LIKE ? OR ag.name LIKE ? OR bc.name LIKE ? OR bc.boat_type LIKE ? ORDER BY r.occurrence DESC, r.name ASC";

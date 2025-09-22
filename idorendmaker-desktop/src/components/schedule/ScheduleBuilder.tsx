@@ -268,6 +268,16 @@ const ScheduleBuilder: React.FC<ScheduleBuilderProps> = React.memo(({
     return () => clearTimeout(timeoutId);
   }, [allScheduleRaces, checkRuleViolations]);
 
+  // Force rule re-validation when PDF extraction context changes
+  // This ensures competitor-aware checking is used when PDF data becomes available
+  useEffect(() => {
+    if (pdfExtractionId && allScheduleRaces.length > 0) {
+      console.log('PDF extraction context changed, re-validating rules with competitor data:', pdfExtractionId);
+      // Trigger immediate re-validation with the new PDF context
+      checkRuleViolations(allScheduleRaces);
+    }
+  }, [pdfExtractionId, allScheduleRaces, checkRuleViolations]); // Re-check when PDF context or races change
+
   // Handle drag end
   const handleDragEnd = (result: any) => {
     if (!result.destination) return;

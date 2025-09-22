@@ -599,6 +599,26 @@
       ]
     },
     {
+      "type": "hu.szabolcst.idorendmaker.controller.BoatClassController",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "hu.szabolcst.idorendmaker.service.BoatClassService"
+          ]
+        },
+        {
+          "name": "getDistinctBoatTypes",
+          "parameterTypes": []
+        },
+        {
+          "name": "getDistinctSeatCounts",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "hu.szabolcst.idorendmaker.controller.CompetitorController",
       "allDeclaredFields": true,
       "methods": [
@@ -612,6 +632,14 @@
           "name": "analyzeCompetitorSchedules",
           "parameterTypes": [
             "hu.szabolcst.idorendmaker.controller.CompetitorController$AnalyzeScheduleRequest"
+          ]
+        },
+        {
+          "name": "checkCompetitorConflicts",
+          "parameterTypes": [
+            "java.lang.Integer",
+            "java.lang.Integer",
+            "java.lang.Integer"
           ]
         }
       ]
@@ -665,15 +693,12 @@
           ]
         },
         {
-          "name": "getAllRaces",
+          "name": "getAllAgeGroups",
           "parameterTypes": []
         },
         {
-          "name": "updateRaceHidden",
-          "parameterTypes": [
-            "java.lang.Integer",
-            "boolean"
-          ]
+          "name": "getAllRaces",
+          "parameterTypes": []
         }
       ]
     },
@@ -709,12 +734,6 @@
         },
         {
           "name": "getFilteredRaces",
-          "parameterTypes": [
-            "java.lang.Integer"
-          ]
-        },
-        {
-          "name": "getPDFExtractionStats",
           "parameterTypes": [
             "java.lang.Integer"
           ]
@@ -873,13 +892,6 @@
             "java.lang.Integer",
             "hu.szabolcst.idorendmaker.controller.ScheduleController$UpdateScheduleNameRequest"
           ]
-        },
-        {
-          "name": "updateScheduleWithSections",
-          "parameterTypes": [
-            "java.lang.Integer",
-            "hu.szabolcst.idorendmaker.controller.ScheduleController$UpdateScheduleWithSectionsRequest"
-          ]
         }
       ]
     },
@@ -928,30 +940,15 @@
       ]
     },
     {
-      "type": "hu.szabolcst.idorendmaker.controller.ScheduleController$UpdateScheduleWithSectionsRequest",
+      "type": "hu.szabolcst.idorendmaker.mapper.BoatClassMapper"
+    },
+    {
+      "type": "hu.szabolcst.idorendmaker.mapper.BoatClassMapperImpl",
       "allDeclaredFields": true,
       "methods": [
         {
           "name": "<init>",
           "parameterTypes": []
-        },
-        {
-          "name": "setName",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setPdfExtractionId",
-          "parameterTypes": [
-            "java.lang.Integer"
-          ]
-        },
-        {
-          "name": "setSectionsData",
-          "parameterTypes": [
-            "java.util.List"
-          ]
         }
       ]
     },
@@ -1029,6 +1026,54 @@
       "methods": [
         {
           "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "hu.szabolcst.idorendmaker.model.dto.boatclass.BoatClassDto",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "getBoatType",
+          "parameterTypes": []
+        },
+        {
+          "name": "getCreatedAt",
+          "parameterTypes": []
+        },
+        {
+          "name": "getId",
+          "parameterTypes": []
+        },
+        {
+          "name": "getName",
+          "parameterTypes": []
+        },
+        {
+          "name": "getSeatCount",
+          "parameterTypes": []
+        },
+        {
+          "name": "getSeatCountText",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "hu.szabolcst.idorendmaker.model.dto.competitor.CompetitorConflictResultDto",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "getCompetitorCount",
+          "parameterTypes": []
+        },
+        {
+          "name": "getConflictingCompetitors",
+          "parameterTypes": []
+        },
+        {
+          "name": "getHasConflicts",
           "parameterTypes": []
         }
       ]
@@ -1164,6 +1209,12 @@
           "parameterTypes": []
         },
         {
+          "name": "setDay",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
           "name": "setId",
           "parameterTypes": [
             "java.lang.String"
@@ -1184,7 +1235,7 @@
         {
           "name": "setRace",
           "parameterTypes": [
-            "hu.szabolcst.idorendmaker.model.dto.race.RaceWithAgeGroupsDto"
+            "hu.szabolcst.idorendmaker.model.dto.race.RaceWithAgeGroupsAndBoatClassDto"
           ]
         },
         {
@@ -1442,36 +1493,6 @@
       ]
     },
     {
-      "type": "hu.szabolcst.idorendmaker.model.dto.matching.PDFExtractionStatsDto",
-      "allDeclaredFields": true,
-      "methods": [
-        {
-          "name": "getCreatedAt",
-          "parameterTypes": []
-        },
-        {
-          "name": "getFilename",
-          "parameterTypes": []
-        },
-        {
-          "name": "getMatchedRaces",
-          "parameterTypes": []
-        },
-        {
-          "name": "getTotalCompetitors",
-          "parameterTypes": []
-        },
-        {
-          "name": "getTotalEntries",
-          "parameterTypes": []
-        },
-        {
-          "name": "getTotalRaces",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
       "type": "hu.szabolcst.idorendmaker.model.dto.matching.PDFProcessingResultDto",
       "allDeclaredFields": true,
       "methods": [
@@ -1588,6 +1609,10 @@
       "allDeclaredFields": true,
       "methods": [
         {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
           "name": "getCreatedAt",
           "parameterTypes": []
         },
@@ -1598,11 +1623,29 @@
         {
           "name": "getName",
           "parameterTypes": []
+        },
+        {
+          "name": "setCreatedAt",
+          "parameterTypes": [
+            "java.time.LocalDateTime"
+          ]
+        },
+        {
+          "name": "setId",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
+          "name": "setName",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
         }
       ]
     },
     {
-      "type": "hu.szabolcst.idorendmaker.model.dto.race.RaceWithAgeGroupsDto",
+      "type": "hu.szabolcst.idorendmaker.model.dto.race.RaceWithAgeGroupsAndBoatClassDto",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -1615,6 +1658,10 @@
         },
         {
           "name": "getBoatClass",
+          "parameterTypes": []
+        },
+        {
+          "name": "getBoatClassData",
           "parameterTypes": []
         },
         {
@@ -1663,6 +1710,12 @@
           "name": "setBoatClass",
           "parameterTypes": [
             "java.lang.String"
+          ]
+        },
+        {
+          "name": "setBoatClassData",
+          "parameterTypes": [
+            "hu.szabolcst.idorendmaker.model.dto.boatclass.BoatClassDto"
           ]
         },
         {
@@ -1733,6 +1786,12 @@
           "name": "setConditions",
           "parameterTypes": [
             "java.util.List"
+          ]
+        },
+        {
+          "name": "setDescription",
+          "parameterTypes": [
+            "java.lang.String"
           ]
         },
         {
@@ -2267,6 +2326,34 @@
     },
     {
       "type": "hu.szabolcst.idorendmaker.model.entity.AgeGroup",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "setCreatedAt",
+          "parameterTypes": [
+            "java.time.LocalDateTime"
+          ]
+        },
+        {
+          "name": "setId",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
+          "name": "setName",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "hu.szabolcst.idorendmaker.model.entity.BoatClass",
       "fields": [
         {
           "name": "hashCode"
@@ -2473,6 +2560,12 @@
           "name": "setBoatClass",
           "parameterTypes": [
             "java.lang.String"
+          ]
+        },
+        {
+          "name": "setBoatClassId",
+          "parameterTypes": [
+            "java.lang.Integer"
           ]
         },
         {
@@ -2728,6 +2821,9 @@
       "type": "hu.szabolcst.idorendmaker.repository.AgeGroupRepository"
     },
     {
+      "type": "hu.szabolcst.idorendmaker.repository.BoatClassRepository"
+    },
+    {
       "type": "hu.szabolcst.idorendmaker.repository.CompetitorEntryRepository"
     },
     {
@@ -2769,6 +2865,10 @@
       "methods": [
         {
           "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "findAllByOrderByNameAsc",
           "parameterTypes": []
         }
       ]
@@ -2825,6 +2925,35 @@
           "parameterTypes": [
             "java.lang.Iterable"
           ]
+        }
+      ]
+    },
+    {
+      "type": "hu.szabolcst.idorendmaker.repository.jdbc.BoatClassJdbcRepository",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "findDistinctBoatTypes",
+          "parameterTypes": []
+        },
+        {
+          "name": "findDistinctSeatCountTexts",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "hu.szabolcst.idorendmaker.repository.jdbc.BoatClassJdbcRepository$$SpringCGLIB$$0",
+      "fields": [
+        {
+          "name": "CGLIB$CALLBACK_FILTER"
+        },
+        {
+          "name": "CGLIB$FACTORY_DATA"
         }
       ]
     },
@@ -3016,8 +3145,10 @@
           ]
         },
         {
-          "name": "findDistinctRaceIdsByPdfExtractionId",
+          "name": "findConflictingCompetitorsBetweenRaces",
           "parameterTypes": [
+            "java.lang.Integer",
+            "java.lang.Integer",
             "java.lang.Integer"
           ]
         }
@@ -3212,6 +3343,12 @@
           "parameterTypes": []
         },
         {
+          "name": "countByPdfExtractionId",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
           "name": "deleteById",
           "parameterTypes": [
             "java.lang.Integer"
@@ -3274,6 +3411,9 @@
       ]
     },
     {
+      "type": "hu.szabolcst.idorendmaker.service.BoatClassService"
+    },
+    {
       "type": "hu.szabolcst.idorendmaker.service.CompetitorService"
     },
     {
@@ -3302,6 +3442,38 @@
       "type": "hu.szabolcst.idorendmaker.service.ScheduleService"
     },
     {
+      "type": "hu.szabolcst.idorendmaker.service.impl.BoatClassServiceImpl",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "hu.szabolcst.idorendmaker.repository.BoatClassRepository",
+            "hu.szabolcst.idorendmaker.mapper.BoatClassMapper"
+          ]
+        },
+        {
+          "name": "getDistinctBoatTypes",
+          "parameterTypes": []
+        },
+        {
+          "name": "getDistinctSeatCountTexts",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "hu.szabolcst.idorendmaker.service.impl.BoatClassServiceImpl$$SpringCGLIB$$0",
+      "fields": [
+        {
+          "name": "CGLIB$CALLBACK_FILTER"
+        },
+        {
+          "name": "CGLIB$FACTORY_DATA"
+        }
+      ]
+    },
+    {
       "type": "hu.szabolcst.idorendmaker.service.impl.CompetitorServiceImpl",
       "allDeclaredFields": true,
       "methods": [
@@ -3317,6 +3489,14 @@
           "name": "analyzeCompetitorSchedules",
           "parameterTypes": [
             "java.util.List",
+            "java.lang.Integer"
+          ]
+        },
+        {
+          "name": "checkCompetitorConflicts",
+          "parameterTypes": [
+            "java.lang.Integer",
+            "java.lang.Integer",
             "java.lang.Integer"
           ]
         }
@@ -3402,12 +3582,6 @@
           ]
         },
         {
-          "name": "getPDFExtractionStats",
-          "parameterTypes": [
-            "java.lang.Integer"
-          ]
-        },
-        {
           "name": "processPDFAndMatch",
           "parameterTypes": [
             "java.lang.String",
@@ -3442,15 +3616,12 @@
           ]
         },
         {
-          "name": "getAllRaces",
+          "name": "getAllAgeGroups",
           "parameterTypes": []
         },
         {
-          "name": "updateRaceHidden",
-          "parameterTypes": [
-            "java.lang.Integer",
-            "boolean"
-          ]
+          "name": "getAllRaces",
+          "parameterTypes": []
         }
       ]
     },
@@ -3603,15 +3774,6 @@
           "parameterTypes": [
             "java.lang.Integer",
             "java.lang.String"
-          ]
-        },
-        {
-          "name": "updateScheduleWithSections",
-          "parameterTypes": [
-            "java.lang.Integer",
-            "java.lang.String",
-            "java.util.List",
-            "java.lang.Integer"
           ]
         }
       ]
@@ -7353,9 +7515,6 @@
       "allDeclaredFields": true
     },
     {
-      "type": "org.springframework.web.method.annotation.ExceptionHandlerMethodResolver"
-    },
-    {
       "type": "org.springframework.web.method.support.CompositeUriComponentsContributor",
       "allDeclaredFields": true
     },
@@ -7977,6 +8136,9 @@
       "glob": "hu/szabolcst/idorendmaker/config/WebConfig.class"
     },
     {
+      "glob": "hu/szabolcst/idorendmaker/controller/BoatClassController.class"
+    },
+    {
       "glob": "hu/szabolcst/idorendmaker/controller/CompetitorController$AnalyzeScheduleRequest.class"
     },
     {
@@ -8022,6 +8184,12 @@
       "glob": "hu/szabolcst/idorendmaker/controller/ScheduleController.class"
     },
     {
+      "glob": "hu/szabolcst/idorendmaker/mapper/BoatClassMapper.class"
+    },
+    {
+      "glob": "hu/szabolcst/idorendmaker/mapper/BoatClassMapperImpl.class"
+    },
+    {
       "glob": "hu/szabolcst/idorendmaker/mapper/CompetitorMapper.class"
     },
     {
@@ -8059,6 +8227,9 @@
     },
     {
       "glob": "hu/szabolcst/idorendmaker/repository/AgeGroupRepository.class"
+    },
+    {
+      "glob": "hu/szabolcst/idorendmaker/repository/BoatClassRepository.class"
     },
     {
       "glob": "hu/szabolcst/idorendmaker/repository/CompetitorEntryRepository.class"
@@ -8103,6 +8274,9 @@
       "glob": "hu/szabolcst/idorendmaker/repository/jdbc/BaseJdbcRepository.class"
     },
     {
+      "glob": "hu/szabolcst/idorendmaker/repository/jdbc/BoatClassJdbcRepository.class"
+    },
+    {
       "glob": "hu/szabolcst/idorendmaker/repository/jdbc/CompetitorEntryJdbcRepository.class"
     },
     {
@@ -8121,7 +8295,7 @@
       "glob": "hu/szabolcst/idorendmaker/repository/jdbc/RaceCompetitorAssociationJdbcRepository.class"
     },
     {
-      "glob": "hu/szabolcst/idorendmaker/repository/jdbc/RaceJdbcRepository$RaceWithAgeGroupsExtractor.class"
+      "glob": "hu/szabolcst/idorendmaker/repository/jdbc/RaceJdbcRepository$RaceWithAgeGroupsAndBoatClassExtractor.class"
     },
     {
       "glob": "hu/szabolcst/idorendmaker/repository/jdbc/RaceJdbcRepository.class"
@@ -8163,6 +8337,9 @@
       "glob": "hu/szabolcst/idorendmaker/repository/jdbc/ScheduleSectionJdbcRepository.class"
     },
     {
+      "glob": "hu/szabolcst/idorendmaker/service/BoatClassService.class"
+    },
+    {
       "glob": "hu/szabolcst/idorendmaker/service/CompetitorService.class"
     },
     {
@@ -8182,6 +8359,9 @@
     },
     {
       "glob": "hu/szabolcst/idorendmaker/service/ScheduleService.class"
+    },
+    {
+      "glob": "hu/szabolcst/idorendmaker/service/impl/BoatClassServiceImpl.class"
     },
     {
       "glob": "hu/szabolcst/idorendmaker/service/impl/CompetitorServiceImpl.class"

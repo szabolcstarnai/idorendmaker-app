@@ -8,6 +8,8 @@ public interface RaceRepository {
 
     List<Race> findAllWithAgeGroupsOrdered();
 
+    Optional<Race> findByIdWithAgeGroupsAndBoatClassData(Integer integer);
+
     List<Race> findBySearchTermWithAgeGroups(String paramString);
 
     List<Race> findAll();

@@ -146,7 +146,7 @@ public class RaceMatchingServiceImpl implements RaceMatchingService {
                 final List<RaceCompetitorAssociation> associations = entry.getValue();
                 
                 // Get the race entity
-                final Optional<Race> raceOpt = raceRepository.findById(raceId);
+                final Optional<Race> raceOpt = raceRepository.findByIdWithAgeGroupsAndBoatClassData(raceId);
                 if (raceOpt.isEmpty()) continue;
                 
                 final Race race = raceOpt.get();
