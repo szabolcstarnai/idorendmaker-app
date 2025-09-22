@@ -1,0 +1,57 @@
+// forge.config.cjs
+// Electron Forge config (CommonJS) — using @felixrieseberg/electron-forge-maker-nsis by package-name
+// Drop into your project root and run `npm run make`.
+
+const { default: VitePlugin } = require('@electron-forge/plugin-vite');
+const { default: AutoUnpackNativesPlugin } = require('@electron-forge/plugin-auto-unpack-natives');
+const { default: FusesPlugin } = require('@electron-forge/plugin-fuses');
+const { FuseV1Options, FuseVersion } = require('@electron/fuses');
+
+module.exports = {
+  packagerConfig: {
+    asar: true,
+    extraResource: [
+      // ensure these files exist in ./resources
+      'resources/idorendmaker-pdfprocessor.exe',
+      'resources/idorendmaker-backend.exe',
+      'resources/idorendmaker-production.db',
+    ],
+  },
+
+  rebuildConfig: {},
+
+  // Use the "name" form for makers that expect to be loaded by electron-forge.
+  // We use the felixrieseberg NSIS package you installed by name.
+  makers: [
+    { name: '@felixrieseberg/electron-forge-maker-nsis', config: {} },
+    { name: '@electron-forge/maker-zip', platforms: ['darwin', 'linux'] },
+    // uncomment/add more makers if you need them:
+    // { name: '@electron-forge/maker-deb', config: {} },
+    // { name: '@electron-forge/maker-rpm', config: {} },
+  ],
+
+  plugins: [
+    // keep AutoUnpackNatives and VitePlugin as class instances like in your TS config
+    new AutoUnpackNativesPlugin({}),
+
+    new VitePlugin({
+      build: [
+        { entry: 'src/main.ts', config: 'vite.main.config.ts', target: 'main' },
+        { entry: 'src/preload.ts', config: 'vite.preload.config.ts', target: 'preload' },
+      ],
+      renderer: [
+        { name: 'main_window', config: 'vite.renderer.config.ts' },
+      ],
+    }),
+
+    new FusesPlugin({
+      version: FuseVersion.V1,
+      [FuseV1Options.RunAsNode]: false,
+      [FuseV1Options.EnableCookieEncryption]: true,
+      [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
+      [FuseV1Options.EnableNodeCliInspectArguments]: false,
+      [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
+      [FuseV1Options.OnlyLoadAppFromAsar]: true,
+    }),
+  ],
+};

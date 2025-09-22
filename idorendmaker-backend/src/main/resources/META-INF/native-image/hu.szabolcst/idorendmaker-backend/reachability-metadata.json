@@ -699,6 +699,13 @@
         {
           "name": "getAllRaces",
           "parameterTypes": []
+        },
+        {
+          "name": "updateRaceHidden",
+          "parameterTypes": [
+            "java.lang.Integer",
+            "boolean"
+          ]
         }
       ]
     },
@@ -715,12 +722,6 @@
         {
           "name": "cleanupExpiredSessions",
           "parameterTypes": []
-        },
-        {
-          "name": "deletePDFExtraction",
-          "parameterTypes": [
-            "java.lang.Integer"
-          ]
         },
         {
           "name": "getAllPDFExtractions",
@@ -892,6 +893,13 @@
             "java.lang.Integer",
             "hu.szabolcst.idorendmaker.controller.ScheduleController$UpdateScheduleNameRequest"
           ]
+        },
+        {
+          "name": "updateScheduleWithSections",
+          "parameterTypes": [
+            "java.lang.Integer",
+            "hu.szabolcst.idorendmaker.controller.ScheduleController$UpdateScheduleWithSectionsRequest"
+          ]
         }
       ]
     },
@@ -935,6 +943,34 @@
           "name": "setName",
           "parameterTypes": [
             "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "hu.szabolcst.idorendmaker.controller.ScheduleController$UpdateScheduleWithSectionsRequest",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "setName",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "setPdfExtractionId",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
+          "name": "setSectionsData",
+          "parameterTypes": [
+            "java.util.List"
           ]
         }
       ]
@@ -1404,20 +1440,6 @@
         },
         {
           "name": "getDeletedRecords",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "hu.szabolcst.idorendmaker.model.dto.matching.PDFDeletionResultDto",
-      "allDeclaredFields": true,
-      "methods": [
-        {
-          "name": "getError",
-          "parameterTypes": []
-        },
-        {
-          "name": "getSuccess",
           "parameterTypes": []
         }
       ]
@@ -2365,53 +2387,12 @@
     },
     {
       "type": "hu.szabolcst.idorendmaker.model.entity.CompetitorEntry",
-      "allDeclaredFields": true,
-      "methods": [
+      "fields": [
         {
-          "name": "<init>",
-          "parameterTypes": []
+          "name": "hashCode"
         },
         {
-          "name": "setBirthYear",
-          "parameterTypes": [
-            "java.lang.Integer"
-          ]
-        },
-        {
-          "name": "setCompetitorId",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setCompetitorName",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setCreatedAt",
-          "parameterTypes": [
-            "java.time.LocalDateTime"
-          ]
-        },
-        {
-          "name": "setId",
-          "parameterTypes": [
-            "java.lang.Integer"
-          ]
-        },
-        {
-          "name": "setOrganization",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setPdfExtractionId",
-          "parameterTypes": [
-            "java.lang.Integer"
-          ]
+          "name": "toString"
         }
       ]
     },
@@ -2893,18 +2874,6 @@
           "parameterTypes": []
         },
         {
-          "name": "delete",
-          "parameterTypes": [
-            "java.lang.Object"
-          ]
-        },
-        {
-          "name": "deleteAll",
-          "parameterTypes": [
-            "java.lang.Iterable"
-          ]
-        },
-        {
           "name": "findAll",
           "parameterTypes": []
         },
@@ -2967,12 +2936,6 @@
         },
         {
           "name": "countByPdfExtractionId",
-          "parameterTypes": [
-            "java.lang.Integer"
-          ]
-        },
-        {
-          "name": "findAllByPdfExtractionId",
           "parameterTypes": [
             "java.lang.Integer"
           ]
@@ -3079,12 +3042,6 @@
           ]
         },
         {
-          "name": "findByIdWithSchedules",
-          "parameterTypes": [
-            "java.lang.Integer"
-          ]
-        },
-        {
           "name": "findExpiredSessionExtractions",
           "parameterTypes": [
             "java.time.LocalDateTime"
@@ -3176,6 +3133,12 @@
         {
           "name": "findAllWithAgeGroupsOrdered",
           "parameterTypes": []
+        },
+        {
+          "name": "findByIdWithAgeGroupsAndBoatClassData",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
         }
       ]
     },
@@ -3341,12 +3304,6 @@
         {
           "name": "<init>",
           "parameterTypes": []
-        },
-        {
-          "name": "countByPdfExtractionId",
-          "parameterTypes": [
-            "java.lang.Integer"
-          ]
         },
         {
           "name": "deleteById",
@@ -3560,12 +3517,6 @@
           "parameterTypes": []
         },
         {
-          "name": "deletePDFExtraction",
-          "parameterTypes": [
-            "java.lang.Integer"
-          ]
-        },
-        {
           "name": "getAllPDFExtractions",
           "parameterTypes": []
         },
@@ -3622,6 +3573,13 @@
         {
           "name": "getAllRaces",
           "parameterTypes": []
+        },
+        {
+          "name": "updateRaceHidden",
+          "parameterTypes": [
+            "java.lang.Integer",
+            "boolean"
+          ]
         }
       ]
     },
@@ -3774,6 +3732,15 @@
           "parameterTypes": [
             "java.lang.Integer",
             "java.lang.String"
+          ]
+        },
+        {
+          "name": "updateScheduleWithSections",
+          "parameterTypes": [
+            "java.lang.Integer",
+            "java.lang.String",
+            "java.util.List",
+            "java.lang.Integer"
           ]
         }
       ]
@@ -7513,6 +7480,9 @@
     {
       "type": "org.springframework.web.filter.OncePerRequestFilter",
       "allDeclaredFields": true
+    },
+    {
+      "type": "org.springframework.web.method.annotation.ExceptionHandlerMethodResolver"
     },
     {
       "type": "org.springframework.web.method.support.CompositeUriComponentsContributor",
