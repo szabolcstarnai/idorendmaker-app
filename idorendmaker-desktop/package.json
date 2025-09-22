@@ -60,6 +60,9 @@
       "perMachine": true,
       "allowElevation": true,
       "include": "build/installer/installer.nsh"
+    },
+    "win": {
+      "icon": "build/icon.ico"
     }
   },
   "devDependencies": {
