@@ -1,8 +1,8 @@
 {
   "name": "idorendmaker-desktop",
-  "productName": "idorendmaker-desktop",
+  "productName": "Időrend Készítő",
   "version": "1.0.0",
-  "description": "My Electron application description",
+  "description": "Kajak-kenu verseny időrend készítő alkalmazás",
   "main": ".vite/build/main.js",
   "scripts": {
     "postinstall": "electron-rebuild",
@@ -13,7 +13,13 @@
     "lint": "eslint --ext .ts,.tsx .",
     "build:backend": "cd ../idorendmaker-backend && mvn -Pnative native:compile-no-fork",
     "build:backend:dev": "cd ../idorendmaker-backend && mvn -Pnative native:compile-no-fork -Dquarkus.native.debug.enabled=true",
+    "build:pdfprocessor": "cd ../idorendmaker-pdfprocessor && mvn -Pnative native:compile-no-fork",
+    "build:all": "npm run build:backend && npm run build:pdfprocessor",
     "check:backend": "test -f ../idorendmaker-backend/target/idorendmaker-backend.exe && echo 'Backend executable found' || echo 'Backend executable missing - run npm run build:backend'",
+    "check:pdfprocessor": "test -f ../idorendmaker-pdfprocessor/target/idorendmaker-pdfprocessor.exe && echo 'PDF processor executable found' || echo 'PDF processor executable missing - run npm run build:pdfprocessor'",
+    "check:resources": "npm run check:backend && npm run check:pdfprocessor && test -f resources/idorendmaker-production.db && echo 'All resources ready for installer' || echo 'Some resources missing - check above'",
+    "copy:resources": "cp ../idorendmaker-backend/target/idorendmaker-backend.exe resources/ && cp ../idorendmaker-pdfprocessor/target/idorendmaker-pdfprocessor.exe resources/ && echo 'Resources copied to installer directory'",
+    "make:installer": "npm run check:resources && npm run make",
     "populate-db": "tsx scripts/populate-db.ts",
     "migrate-locking": "tsx scripts/migrate-schedule-locking.ts"
   },
