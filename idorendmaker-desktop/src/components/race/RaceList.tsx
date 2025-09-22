@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Search, Eye, EyeOff, ChevronLeft, ChevronRight, Loader2, Plus } from 'lucide-react';
-import { RaceWithAgeGroups, RaceWithCompetitorData, ScheduleRace, Level, ScheduleMode } from '../../../shared/types/race';
+import { RaceWithAgeGroupsAndBoatClass, RaceWithCompetitorData, ScheduleRace, Level, ScheduleMode } from '../../../shared/types/race';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
@@ -15,7 +15,7 @@ import { TabbedPanelLoading } from '../ui/loading';
 import { toast } from 'sonner';
 
 interface RaceListProps {
-  onRaceAdd?: (race: RaceWithAgeGroups, level: Level) => void;
+  onRaceAdd?: (race: RaceWithAgeGroupsAndBoatClass, level: Level) => void;
   scheduleRaces?: ScheduleRace[];
   scheduleMode?: ScheduleMode;
   // New props for filtered race support
@@ -26,9 +26,9 @@ interface RaceListProps {
 
 // Memoized race card component for better performance
 const RaceCard = React.memo(({ race, onRaceClick, onToggleHidden, showAddButton = true, availableLevelsCount = 0, addedLevelsCount = 0, activeTab = 'all', scheduleMode = 'full', entryCount, topCompetitors }: {
-  race: RaceWithAgeGroups;
-  onRaceClick?: (race: RaceWithAgeGroups) => void;
-  onToggleHidden: (race: RaceWithAgeGroups, event: React.MouseEvent) => void;
+  race: RaceWithAgeGroupsAndBoatClass;
+  onRaceClick?: (race: RaceWithAgeGroupsAndBoatClass) => void;
+  onToggleHidden: (race: RaceWithAgeGroupsAndBoatClass, event: React.MouseEvent) => void;
   showAddButton?: boolean;
   availableLevelsCount?: number;
   addedLevelsCount?: number;
@@ -160,7 +160,7 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
   raceSource = 'database',
   pdfExtractionId
 }) => {
-  const [races, setRaces] = useState<RaceWithAgeGroups[]>([]);
+  const [races, setRaces] = useState<RaceWithAgeGroupsAndBoatClass[]>([]);
   const [allLevels, setAllLevels] = useState<Level[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
@@ -172,7 +172,7 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
   const [pageSize] = useState(50); // Show 50 races per page
 
   // Level selector modal state
-  const [selectedRaceForLevel, setSelectedRaceForLevel] = useState<RaceWithAgeGroups | null>(null);
+  const [selectedRaceForLevel, setSelectedRaceForLevel] = useState<RaceWithAgeGroupsAndBoatClass | null>(null);
   const [isLevelSelectorOpen, setIsLevelSelectorOpen] = useState(false);
 
   // Discipline filter state - default to Kajak and Kenu only
@@ -325,7 +325,7 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
       if (raceSource === 'pdf-filtered' && filteredRaces) {
         // Use filtered races from PDF
         // Convert RaceWithCompetitorData to RaceWithAgeGroups format
-        const convertedRaces: RaceWithAgeGroups[] = filteredRaces.map(race => ({
+        const convertedRaces: RaceWithAgeGroupsAndBoatClass[] = filteredRaces.map(race => ({
           id: race.id,
           name: race.name,
           discipline: race.discipline,
@@ -381,7 +381,7 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
   }, [totalPages]);
 
   // Smart race click handler for level selection
-  const handleRaceClick = useCallback((race: RaceWithAgeGroups) => {
+  const handleRaceClick = useCallback((race: RaceWithAgeGroupsAndBoatClass) => {
     const availableLevels = getAvailableLevelsForMode(race, scheduleRaces, allLevels, scheduleMode);
 
     if (availableLevels.length === 0) {
@@ -400,7 +400,7 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
   }, [scheduleRaces, allLevels, scheduleMode, onRaceAdd]);
 
   // Handle level selection from modal
-  const handleLevelSelect = useCallback((race: RaceWithAgeGroups, level: Level) => {
+  const handleLevelSelect = useCallback((race: RaceWithAgeGroupsAndBoatClass, level: Level) => {
     if (onRaceAdd) {
       onRaceAdd(race, level);
     }
@@ -412,7 +412,7 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
     setSelectedRaceForLevel(null);
   }, []);
 
-  const handleToggleRaceHidden = useCallback(async (race: RaceWithAgeGroups, event: React.MouseEvent) => {
+  const handleToggleRaceHidden = useCallback(async (race: RaceWithAgeGroupsAndBoatClass, event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
 

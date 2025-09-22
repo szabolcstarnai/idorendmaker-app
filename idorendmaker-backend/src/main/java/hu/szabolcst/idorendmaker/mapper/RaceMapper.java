@@ -1,7 +1,7 @@
 package hu.szabolcst.idorendmaker.mapper;
 
 import hu.szabolcst.idorendmaker.model.dto.race.AgeGroupDto;
-import hu.szabolcst.idorendmaker.model.dto.race.RaceWithAgeGroupsDto;
+import hu.szabolcst.idorendmaker.model.dto.race.RaceWithAgeGroupsAndBoatClassDto;
 import hu.szabolcst.idorendmaker.model.entity.AgeGroup;
 import hu.szabolcst.idorendmaker.model.entity.Race;
 import hu.szabolcst.idorendmaker.model.entity.RaceAgeGroup;
@@ -33,7 +33,7 @@ public interface RaceMapper {
     }
 
     @Mapping(target = "ageGroups", source = "ageGroups", qualifiedByName = {"mapRaceAgeGroups"})
-    RaceWithAgeGroupsDto toRaceWithAgeGroupsDto(Race paramRace);
+    RaceWithAgeGroupsAndBoatClassDto toRaceWithAgeGroupsDto(Race paramRace);
 
     AgeGroupDto toAgeGroupDto(AgeGroup paramAgeGroup);
 

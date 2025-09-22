@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { RaceWithAgeGroups, ScheduleWithSections, SectionWorkingData, ScheduleRace, RuleViolation, Level, ScheduleMode } from '../../../shared/types/race';
+import { RaceWithAgeGroupsAndBoatClass, ScheduleWithSections, SectionWorkingData, ScheduleRace, RuleViolation, Level, ScheduleMode } from '../../../shared/types/race';
 import SectionNavigator from './SectionNavigator';
 import CombinedSettingsPanel from './CombinedSettingsPanel';
 import ScheduleRaceList from './ScheduleRaceList';
@@ -14,7 +14,7 @@ import { AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
 
 interface ScheduleBuilderProps {
   onScheduleRacesChange?: (races: ScheduleRace[]) => void;
-  onRaceAddRefUpdate?: (fn: (race: RaceWithAgeGroups, level: Level) => void) => void;
+  onRaceAddRefUpdate?: (fn: (race: RaceWithAgeGroupsAndBoatClass, level: Level) => void) => void;
   onPopulateSectionDataRefUpdate?: (fn: (loadedSectionDataMap: Map<number, SectionWorkingData>) => void) => void;
   schedule?: ScheduleWithSections;
   currentSectionId?: number;

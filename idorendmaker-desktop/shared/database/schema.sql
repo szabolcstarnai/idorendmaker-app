@@ -6,19 +6,31 @@ CREATE TABLE IF NOT EXISTS races (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     discipline TEXT NOT NULL CHECK (discipline IN ('Kajak', 'Kenu', 'SUP', 'Kajakpóló', 'Parakenu', 'Sárkányhajó', 'Szlalom', 'Tengeri kajak')),
-    boat_class TEXT NOT NULL,
+    boat_class TEXT NOT NULL, -- Legacy string field - kept for backward compatibility
+    boat_class_id INTEGER, -- Reference to boat_classes table for enhanced rule system
     gender TEXT NOT NULL CHECK (gender IN ('Férfi', 'Női', 'Vegyes')),
     distance TEXT NOT NULL,
     occurrence INTEGER NOT NULL DEFAULT 0, -- Track historical frequency for relevance sorting
     hidden BOOLEAN NOT NULL DEFAULT 0, -- User can hide races they don't organize
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (boat_class_id) REFERENCES boat_classes(id) ON DELETE SET NULL
 );
 
 -- Age groups lookup table
 CREATE TABLE IF NOT EXISTS age_groups (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL, -- e.g., "Serdülő - U15", "Serdülő - U16"
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Boat classes metadata table - for enhanced rule system
+CREATE TABLE IF NOT EXISTS boat_classes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE NOT NULL, -- e.g., "Kajak egyes", "Kajak páros"
+    boat_type TEXT NOT NULL, -- e.g., "Kajak", "Minikajak", "Kenu"
+    seat_count INTEGER, -- e.g., 1, 2, 4, 20, NULL for "csapat"
+    seat_count_text TEXT NOT NULL, -- e.g., "1", "2", "4", "20", "csapat"
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -96,7 +108,7 @@ CREATE TABLE IF NOT EXISTS rule_conditions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     rule_id INTEGER NOT NULL,
     condition_set TEXT NOT NULL CHECK (condition_set IN ('A', 'B')),
-    field TEXT NOT NULL, -- discipline, boatClass, gender, distance, ageGroups
+    field TEXT NOT NULL, -- discipline, boatClass, gender, distance, ageGroups, level, levelType, boatType, seatCount
     operator TEXT NOT NULL, -- equals, contains, not_equals, in
     value TEXT NOT NULL,
     FOREIGN KEY (rule_id) REFERENCES rules(id) ON DELETE CASCADE
@@ -166,6 +178,7 @@ CREATE TABLE IF NOT EXISTS race_competitor_associations (
 -- Race table indexes
 CREATE INDEX IF NOT EXISTS idx_races_discipline ON races(discipline);
 CREATE INDEX IF NOT EXISTS idx_races_boat_class ON races(boat_class);
+CREATE INDEX IF NOT EXISTS idx_races_boat_class_id ON races(boat_class_id);
 CREATE INDEX IF NOT EXISTS idx_races_gender ON races(gender);
 CREATE INDEX IF NOT EXISTS idx_races_distance ON races(distance);
 CREATE INDEX IF NOT EXISTS idx_races_occurrence ON races(occurrence);
@@ -173,6 +186,12 @@ CREATE INDEX IF NOT EXISTS idx_races_hidden ON races(hidden);
 
 -- Age groups indexes
 CREATE INDEX IF NOT EXISTS idx_age_groups_name ON age_groups(name);
+
+-- Boat classes indexes
+CREATE INDEX IF NOT EXISTS idx_boat_classes_name ON boat_classes(name);
+CREATE INDEX IF NOT EXISTS idx_boat_classes_boat_type ON boat_classes(boat_type);
+CREATE INDEX IF NOT EXISTS idx_boat_classes_seat_count ON boat_classes(seat_count);
+CREATE INDEX IF NOT EXISTS idx_boat_classes_seat_count_text ON boat_classes(seat_count_text);
 
 -- Race age groups indexes
 CREATE INDEX IF NOT EXISTS idx_race_age_groups_race_id ON race_age_groups(race_id);

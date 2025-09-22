@@ -114,6 +114,14 @@ const initializeApp = async () => {
     // return await ScheduleService.getScheduleItems(scheduleId); // OLD PRISMA VERSION
     return await BackendAPIService.getScheduleItems(scheduleId); // NEW BACKEND VERSION
   });
+
+  ipcMain.handle('db:getAllSeatCounts', async () => {
+    return await BackendAPIService.getAllSeatCounts();
+  });
+
+  ipcMain.handle('db:getAllBoatTypes', async () => {
+    return await BackendAPIService.getAllBoatTypes();
+  });
   
   // Rule operations
   ipcMain.handle('db:getAllRules', async () => {

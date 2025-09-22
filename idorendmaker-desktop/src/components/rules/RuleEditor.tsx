@@ -22,12 +22,14 @@ interface RuleEditorProps {
 // Available matching fields
 const MATCHING_FIELDS = [
   { value: 'discipline', label: 'Szakág', description: 'Ugyanaz a szakág (Kajak, Kenu, stb.)' },
-  { value: 'boatClass', label: 'Hajóosztály', description: 'Ugyanaz a hajóosztály (egyes, páros, stb.)' },
+  { value: 'boatClass', label: 'Hajóosztály', description: 'Ugyanaz a hajóosztály (K1, C2, stb.)' },
   { value: 'gender', label: 'Nem', description: 'Ugyanaz a nem (Férfi, Női, Vegyes)' },
   { value: 'distance', label: 'Távolság', description: 'Ugyanaz a távolság (500m, 1000m, stb.)' },
   { value: 'ageGroups', label: 'Korosztály', description: 'Van átfedés a korosztályokban' },
   { value: 'level', label: 'Futamszint', description: 'Ugyanaz a futamszint (Döntő I., A Döntő, stb.)' },
   { value: 'levelType', label: 'Futamszint típus', description: 'Ugyanaz a futamszint típus (döntő, előfutam, középfutam)' },
+  { value: 'seatCount', label: 'Ülésszám', description: 'Ugyanaz az ülésszám (egyes, páros, stb.)' },
+  { value: 'boatType', label: 'Hajótípus', description: 'Ugyanaz a hajótípus (pl. Minikajak, Túrakenu, stb.)' },
   { value: 'baseRaceId', label: 'Ugyanaz a versenyszám', description: 'Ugyanaz a versenyszám alapja (különböző szinteken)' }
 ];
 

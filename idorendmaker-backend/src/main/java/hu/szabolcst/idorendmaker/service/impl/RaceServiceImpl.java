@@ -3,7 +3,7 @@ package hu.szabolcst.idorendmaker.service.impl;
 import hu.szabolcst.idorendmaker.mapper.RaceMapper;
 import hu.szabolcst.idorendmaker.model.dto.DatabaseStatsDto;
 import hu.szabolcst.idorendmaker.model.dto.race.AgeGroupDto;
-import hu.szabolcst.idorendmaker.model.dto.race.RaceWithAgeGroupsDto;
+import hu.szabolcst.idorendmaker.model.dto.race.RaceWithAgeGroupsAndBoatClassDto;
 import hu.szabolcst.idorendmaker.model.entity.Race;
 import hu.szabolcst.idorendmaker.repository.AgeGroupRepository;
 import hu.szabolcst.idorendmaker.repository.RaceRepository;
@@ -26,7 +26,7 @@ public class RaceServiceImpl implements RaceService {
 
     @Override
     @Transactional
-    public List<RaceWithAgeGroupsDto> getAllRaces() {
+    public List<RaceWithAgeGroupsAndBoatClassDto> getAllRaces() {
         return raceRepository.findAllWithAgeGroupsOrdered().stream()
                 .map(raceMapper::toRaceWithAgeGroupsDto)
                 .toList();
@@ -34,7 +34,7 @@ public class RaceServiceImpl implements RaceService {
 
     @Override
     @Transactional
-    public List<RaceWithAgeGroupsDto> searchRaces(final String searchTerm) {
+    public List<RaceWithAgeGroupsAndBoatClassDto> searchRaces(final String searchTerm) {
         return raceRepository.findBySearchTermWithAgeGroups(searchTerm).stream()
                 .map(raceMapper::toRaceWithAgeGroupsDto)
                 .toList();

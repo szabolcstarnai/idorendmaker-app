@@ -1,3 +1,4 @@
+import { c } from 'vite/dist/node/types.d-aGj9QkWt'
 import { RuleWithConditions, RuleCondition, RuleViolation, ScheduleRace } from '../../../../shared/types/race'
 
 /**
@@ -8,6 +9,8 @@ export class ConditionEvaluator {
    * Check if a schedule race matches a set of conditions (all conditions must match)
    */
   static matchesConditionSet(scheduleRace: ScheduleRace, conditions: RuleCondition[]): boolean {
+    console.log('Evaluating conditions for schedule race:', scheduleRace.id)
+    console.log('Conditions:', conditions)
     return conditions.every(condition => this.matchesCondition(scheduleRace, condition))
   }
 
@@ -15,8 +18,11 @@ export class ConditionEvaluator {
    * Check if a schedule race matches a single condition
    */
   static matchesCondition(scheduleRace: ScheduleRace, condition: RuleCondition): boolean {
+    console.log('Evaluating condition for schedule race:', scheduleRace)
+    console.log('Condition:', condition)
     const fieldValue = this.getFieldValue(scheduleRace, condition.field)
-    
+    console.log(`Field value for "${condition.field}":`, fieldValue)
+
     if (fieldValue === null || fieldValue === undefined) {
       return false
     }
@@ -74,7 +80,15 @@ export class ConditionEvaluator {
       
       case 'levelType':
         return scheduleRace.level.levelType
-      
+
+      case 'boatType':
+        // Get boat type from boat class metadata for enhanced rule system
+        return race.boatClassData?.boatType || null
+
+      case 'seatCount':
+        // Get seat count text from boat class metadata for enhanced rule system
+        return race.boatClassData?.seatCountText || null
+
       default:
         console.warn(`Unknown field: ${field}`)
         return null
@@ -145,11 +159,19 @@ export class MatchingEvaluator {
       
       case 'levelType':
         return scheduleRace.level.levelType
-      
+
+      case 'boatType':
+        // Get boat type from boat class metadata for enhanced rule system
+        return race.boatClassData?.boatType || null
+
+      case 'seatCount':
+        // Get seat count text from boat class metadata for enhanced rule system
+        return race.boatClassData?.seatCountText || null
+
       case 'baseRaceId':
         // Return null here - baseRaceId is handled specially above
         return null
-      
+
       default:
         console.warn(`Unknown field for matching: ${field}`)
         return null

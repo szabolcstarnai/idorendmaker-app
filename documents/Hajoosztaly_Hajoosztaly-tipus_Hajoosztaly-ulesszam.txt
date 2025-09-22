@@ -1,0 +1,30 @@
+Kajak egyes	Kajak	1
+Minikajak egyes	Minikajak	1
+Kajak páros	Kajak	2
+Sárkányhajó 20	Sárkányhajó	20
+Kajak négyes	Kajak	4
+Minikajak páros	Minikajak	2
+Kenu páros	Kenu	2
+Kenu egyes	Kenu	1
+Sárkányhajó 10	Sárkányhajó	10
+Minikajak négyes	Minikajak	4
+Kenu négyes	Kenu	4
+Túrakenu négyes	Túrakenu	4
+Portyakenu négyes	Portyakenu	4
+Minikenu egyes	Minikenu	1
+Portyakenu páros	Portyakenu	2
+Parakajak KL3 (LTA)	Parakajak	3
+SUP felfújható egyes	SUP felfújható	1
+SUP merev egyes	SUP merev	1
+Parakajak KL1 (A)	Parakajak	1
+Parakenu VL3 (LTA)	Parakenu	3
+Kajakpóló csapat	Kajakpóló	csapat
+Parakenu VL2 (TA)	Parakenu	2
+Parakajak KL2 (TA)	Parakajak	2
+Eszkimó kajak egyes	Eszkimó	1
+Szlalom Kajak egyes	Szlalom	1
+Parakenu VL1 (A)	Parakenu	1
+Mini SUP felfújható egyes	Mini SUP felfújható	1
+Szörfkajak	Szörfkajak	1
+Kenu váltó	Kenu	1
+Kajak váltó	Kajak	1

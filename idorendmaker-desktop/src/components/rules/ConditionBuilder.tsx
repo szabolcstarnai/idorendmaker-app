@@ -38,6 +38,16 @@ interface AgeGroupOption extends DropdownValue {
   id: number;
 }
 
+// Seat counts will be loaded from database
+interface SeatCountOption extends DropdownValue {
+  id: number;
+}
+
+// Boat types will be loaded from database
+interface BoatTypeOption extends DropdownValue {
+  id: number;
+}
+
 // Levels will be loaded from database
 interface LevelOption extends DropdownValue {
   id: number;
@@ -46,6 +56,8 @@ interface LevelOption extends DropdownValue {
 
 let ageGroups: AgeGroupOption[] = [];
 let levels: LevelOption[] = [];
+let seatCounts: SeatCountOption[] = [];
+let boatTypes: BoatTypeOption[] = [];
 
 // Load age groups from database
 const loadAgeGroups = async () => {
@@ -80,6 +92,38 @@ const loadLevels = async () => {
   }
 };
 
+// Load seat counts from database
+const loadSeatCounts = async () => {
+  if (seatCounts.length === 0 && window.electronAPI) {
+    try {
+      const dbSeatCounts = await window.electronAPI.getAllSeatCounts();
+      seatCounts = dbSeatCounts.map((seatCount, index) => ({
+        id: index,
+        value: seatCount,
+        label: seatCount
+      }));
+    } catch (error) {
+      console.error('Error loading seat counts:', error);
+    }
+  }
+};
+
+// Load boat types from database
+const loadBoatTypes = async () => {
+  if (boatTypes.length === 0 && window.electronAPI) {
+    try {
+      const dbBoatTypes = await window.electronAPI.getAllBoatTypes();
+      boatTypes = dbBoatTypes.map((boatType, index) => ({
+        id: index,
+        value: boatType,
+        label: boatType
+      }));
+    } catch (error) {
+      console.error('Error loading boat types:', error);
+    }
+  }
+};
+
 // Smart value input component that handles dropdowns and multi-select
 const ValueInput: React.FC<{
   field: string;
@@ -108,6 +152,12 @@ const ValueInput: React.FC<{
       } else if (field === 'level') {
         await loadLevels();
         options = levels;
+      } else if (field === 'seatCount') {
+        await loadSeatCounts();
+        options = seatCounts;
+      } else if (field === 'boatType') {
+        await loadBoatTypes();
+        options = boatTypes;
       }
       
       setDropdownOptions(options);

@@ -3,7 +3,8 @@ export interface Race {
   id: number
   name: string
   discipline: string // 'Kajak', 'Kenu', 'SUP', 'Kajakpóló', 'Parakenu', 'Sárkányhajó', 'Szlalom', 'Tengeri kajak'
-  boatClass: string
+  boatClass: string // Legacy string field - kept for backward compatibility
+  boatClassId: number | null // Reference to boat_classes table for enhanced rule system
   gender: string // 'Férfi', 'Női', 'Vegyes'
   distance: string
   occurrence: number // Track historical frequency for relevance sorting
@@ -15,6 +16,15 @@ export interface Race {
 export interface AgeGroup {
   id: number
   name: string // e.g., "Serdülő - U15", "Serdülő - U16"
+  createdAt: string // ISO date string from backend
+}
+
+export interface BoatClass {
+  id: number
+  name: string // e.g., "Kajak egyes", "Kajak páros"
+  boatType: string // e.g., "Kajak", "Minikajak", "Kenu"
+  seatCount: number | null // e.g., 1, 2, 4, 20, null for "csapat"
+  seatCountText: string // e.g., "1", "2", "4", "20", "csapat"
   createdAt: string // ISO date string from backend
 }
 
@@ -129,9 +139,18 @@ export interface RaceCompetitorAssociation {
 
 // Enhanced types with relationships (using the native interfaces above)
 
-export type RaceWithAgeGroups = Race & {
+export type RaceWithAgeGroupsAndBoatClass = Race & {
   ageGroups: AgeGroup[]
+  boatClassData?: BoatClass // Joined boat class data for enhanced rule system
 }
+
+// export type RaceWithBoatClass = Race & {
+//   boatClassData?: BoatClass // Joined boat class data for enhanced rule system
+// }
+
+// export type RaceWithAgeGroupsAndBoatClass = RaceWithAgeGroups & {
+//   boatClassData?: BoatClass // Joined boat class data for enhanced rule system
+// }
 
 // Enhanced types for PDF processing and competitor data
 export type PDFExtractionWithDetails = PDFExtraction & {
@@ -139,7 +158,7 @@ export type PDFExtractionWithDetails = PDFExtraction & {
   raceCompetitorAssociations: RaceCompetitorAssociation[]
 }
 
-export type RaceWithCompetitorData = RaceWithAgeGroups & {
+export type RaceWithCompetitorData = RaceWithAgeGroupsAndBoatClass & {
   entryCount: number
   competitorIds: string[]
   topCompetitors: string[] // Sample of competitor names (first 3)
@@ -229,7 +248,7 @@ export interface PDFToScheduleData {
 }
 
 export type ScheduleItemWithRace = ScheduleItem & {
-  race: RaceWithAgeGroups
+  race: RaceWithAgeGroupsAndBoatClass
   level: Level
   calculatedStartTime?: string // Computed at runtime
 }
@@ -298,7 +317,7 @@ export interface SectionWorkingData {
 // Individual race in a schedule with calculated times
 export interface ScheduleRace {
   id: string
-  race: RaceWithAgeGroups
+  race: RaceWithAgeGroupsAndBoatClass
   level: Level
   day: number
   startTime: string
@@ -330,8 +349,8 @@ export interface CreateRuleData {
 // For rule evaluation and conflict detection
 export interface RuleViolation {
   rule: RuleWithConditions
-  race1: RaceWithAgeGroups
-  race2: RaceWithAgeGroups
+  race1: RaceWithAgeGroupsAndBoatClass
+  race2: RaceWithAgeGroupsAndBoatClass
   actualIntervalMinutes: number
   requiredIntervalMinutes: number
   message: string

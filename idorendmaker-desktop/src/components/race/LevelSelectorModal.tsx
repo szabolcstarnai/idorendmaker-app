@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { RaceWithAgeGroups, Level } from '../../../shared/types/race';
+import { RaceWithAgeGroupsAndBoatClass, Level } from '../../../shared/types/race';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -16,11 +16,11 @@ import { ChevronDown } from 'lucide-react';
 import TruncatedText from '../common/TruncatedText';
 
 interface LevelSelectorModalProps {
-  race: RaceWithAgeGroups | null;
+  race: RaceWithAgeGroupsAndBoatClass | null;
   availableLevels: Level[];
   isOpen: boolean;
   onClose: () => void;
-  onLevelSelect: (race: RaceWithAgeGroups, level: Level) => void;
+  onLevelSelect: (race: RaceWithAgeGroupsAndBoatClass, level: Level) => void;
 }
 
 /**

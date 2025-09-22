@@ -2,7 +2,7 @@ package hu.szabolcst.idorendmaker.controller;
 
 import hu.szabolcst.idorendmaker.model.dto.DatabaseStatsDto;
 import hu.szabolcst.idorendmaker.model.dto.race.AgeGroupDto;
-import hu.szabolcst.idorendmaker.model.dto.race.RaceWithAgeGroupsDto;
+import hu.szabolcst.idorendmaker.model.dto.race.RaceWithAgeGroupsAndBoatClassDto;
 import hu.szabolcst.idorendmaker.service.RaceService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -33,10 +33,10 @@ public class RaceController {
      * TypeScript: getAllRaces(): Promise<RaceWithAgeGroups[]>
      */
     @GetMapping
-    public ResponseEntity<List<RaceWithAgeGroupsDto>> getAllRaces() {
+    public ResponseEntity<List<RaceWithAgeGroupsAndBoatClassDto>> getAllRaces() {
         log.debug("GET /api/races - Getting all races");
         
-        final List<RaceWithAgeGroupsDto> races = raceService.getAllRaces();
+        final List<RaceWithAgeGroupsAndBoatClassDto> races = raceService.getAllRaces();
         
         log.debug("Found {} races", races.size());
         return ResponseEntity.ok(races);
@@ -48,10 +48,10 @@ public class RaceController {
      * TypeScript: searchRaces(searchTerm: string): Promise<RaceWithAgeGroups[]>
      */
     @GetMapping("/search")
-    public ResponseEntity<List<RaceWithAgeGroupsDto>> searchRaces(@RequestParam("term") final String searchTerm) {
+    public ResponseEntity<List<RaceWithAgeGroupsAndBoatClassDto>> searchRaces(@RequestParam("term") final String searchTerm) {
         log.debug("GET /api/races/search?term={} - Searching races", searchTerm);
         
-        final List<RaceWithAgeGroupsDto> races = raceService.searchRaces(searchTerm);
+        final List<RaceWithAgeGroupsAndBoatClassDto> races = raceService.searchRaces(searchTerm);
         
         log.debug("Found {} races matching search term: {}", races.size(), searchTerm);
         return ResponseEntity.ok(races);

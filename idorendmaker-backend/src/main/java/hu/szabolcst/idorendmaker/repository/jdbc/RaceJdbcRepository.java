@@ -1,6 +1,7 @@
 package hu.szabolcst.idorendmaker.repository.jdbc;
 
 import hu.szabolcst.idorendmaker.model.entity.AgeGroup;
+import hu.szabolcst.idorendmaker.model.entity.BoatClass;
 import hu.szabolcst.idorendmaker.model.entity.Race;
 import hu.szabolcst.idorendmaker.model.entity.RaceAgeGroup;
 import hu.szabolcst.idorendmaker.repository.RaceRepository;
@@ -41,12 +42,12 @@ public class RaceJdbcRepository
 
 
     protected String getInsertSql() {
-        return "INSERT INTO races (name, discipline, boat_class, gender, distance, occurrence, hidden, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        return "INSERT INTO races (name, discipline, boat_class, boat_class_id, gender, distance, occurrence, hidden, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     }
 
 
     protected String getUpdateSql() {
-        return "UPDATE races SET name = ?, discipline = ?, boat_class = ?, gender = ?, distance = ?, occurrence = ?, hidden = ?, updated_at = ? WHERE id = ?";
+        return "UPDATE races SET name = ?, discipline = ?, boat_class = ?, boat_class_id = ?, gender = ?, distance = ?, occurrence = ?, hidden = ?, updated_at = ? WHERE id = ?";
     }
 
 
@@ -54,12 +55,17 @@ public class RaceJdbcRepository
         ps.setString(1, race.getName());
         ps.setString(2, race.getDiscipline());
         ps.setString(3, race.getBoatClass());
-        ps.setString(4, race.getGender());
-        ps.setString(5, race.getDistance());
-        ps.setInt(6, race.getOccurrence());
-        ps.setBoolean(7, race.getHidden());
-        ps.setTimestamp(8, Timestamp.valueOf(race.getCreatedAt()));
-        ps.setTimestamp(9, Timestamp.valueOf(race.getUpdatedAt()));
+        if (race.getBoatClassId() != null) {
+            ps.setInt(4, race.getBoatClassId());
+        } else {
+            ps.setNull(4, java.sql.Types.INTEGER);
+        }
+        ps.setString(5, race.getGender());
+        ps.setString(6, race.getDistance());
+        ps.setInt(7, race.getOccurrence());
+        ps.setBoolean(8, race.getHidden());
+        ps.setTimestamp(9, Timestamp.valueOf(race.getCreatedAt()));
+        ps.setTimestamp(10, Timestamp.valueOf(race.getUpdatedAt()));
     }
 
 
@@ -67,12 +73,17 @@ public class RaceJdbcRepository
         ps.setString(1, race.getName());
         ps.setString(2, race.getDiscipline());
         ps.setString(3, race.getBoatClass());
-        ps.setString(4, race.getGender());
-        ps.setString(5, race.getDistance());
-        ps.setInt(6, race.getOccurrence());
-        ps.setBoolean(7, race.getHidden());
-        ps.setTimestamp(8, Timestamp.valueOf(race.getUpdatedAt()));
-        ps.setInt(9, race.getId());
+        if (race.getBoatClassId() != null) {
+            ps.setInt(4, race.getBoatClassId());
+        } else {
+            ps.setNull(4, java.sql.Types.INTEGER);
+        }
+        ps.setString(5, race.getGender());
+        ps.setString(6, race.getDistance());
+        ps.setInt(7, race.getOccurrence());
+        ps.setBoolean(8, race.getHidden());
+        ps.setTimestamp(9, Timestamp.valueOf(race.getUpdatedAt()));
+        ps.setInt(10, race.getId());
     }
 
 
@@ -87,22 +98,20 @@ public class RaceJdbcRepository
 
 
     public List<Race> findAllWithAgeGroupsOrdered() {
-        final String sql = "SELECT DISTINCT r.id as r_id, r.name as r_name, r.discipline as r_discipline, r.boat_class as r_boat_class, r.gender as r_gender, r.distance as r_distance, r.occurrence as r_occurrence, r.hidden as r_hidden, r.created_at as r_created_at, r.updated_at as r_updated_at, rag.race_id as rag_race_id, rag.age_group_id as rag_age_group_id, ag.id as ag_id, ag.name as ag_name, ag.created_at as ag_created_at FROM races r LEFT JOIN race_age_groups rag ON r.id = rag.race_id LEFT JOIN age_groups ag ON rag.age_group_id = ag.id ORDER BY r.occurrence DESC, r.name ASC";
+        final String sql = "SELECT DISTINCT r.id as r_id, r.name as r_name, r.discipline as r_discipline, r.boat_class as r_boat_class, r.boat_class_id as r_boat_class_id, r.gender as r_gender, r.distance as r_distance, r.occurrence as r_occurrence, r.hidden as r_hidden, r.created_at as r_created_at, r.updated_at as r_updated_at, bc.id as bc_id, bc.name as bc_name, bc.boat_type as bc_boat_type, bc.seat_count as bc_seat_count, bc.seat_count_text as bc_seat_count_text, bc.created_at as bc_created_at, rag.race_id as rag_race_id, rag.age_group_id as rag_age_group_id, ag.id as ag_id, ag.name as ag_name, ag.created_at as ag_created_at FROM races r LEFT JOIN boat_classes bc ON r.boat_class_id = bc.id LEFT JOIN race_age_groups rag ON r.id = rag.race_id LEFT JOIN age_groups ag ON rag.age_group_id = ag.id ORDER BY r.occurrence DESC, r.name ASC";
 
-        return (List<Race>) this.jdbcTemplate.query(
-            "SELECT DISTINCT r.id as r_id, r.name as r_name, r.discipline as r_discipline, r.boat_class as r_boat_class, r.gender as r_gender, r.distance as r_distance, r.occurrence as r_occurrence, r.hidden as r_hidden, r.created_at as r_created_at, r.updated_at as r_updated_at, rag.race_id as rag_race_id, rag.age_group_id as rag_age_group_id, ag.id as ag_id, ag.name as ag_name, ag.created_at as ag_created_at FROM races r LEFT JOIN race_age_groups rag ON r.id = rag.race_id LEFT JOIN age_groups ag ON rag.age_group_id = ag.id ORDER BY r.occurrence DESC, r.name ASC",
-            (ResultSetExtractor) new RaceWithAgeGroupsExtractor());
+        return (List<Race>) this.jdbcTemplate.query(sql,
+            (ResultSetExtractor) new RaceWithAgeGroupsAndBoatClassExtractor());
     }
 
 
     public List<Race> findBySearchTermWithAgeGroups(final String searchTerm) {
-        final String sql = "SELECT DISTINCT r.id as r_id, r.name as r_name, r.discipline as r_discipline, r.boat_class as r_boat_class, r.gender as r_gender, r.distance as r_distance, r.occurrence as r_occurrence, r.hidden as r_hidden, r.created_at as r_created_at, r.updated_at as r_updated_at, rag.race_id as rag_race_id, rag.age_group_id as rag_age_group_id, ag.id as ag_id, ag.name as ag_name, ag.created_at as ag_created_at FROM races r LEFT JOIN race_age_groups rag ON r.id = rag.race_id LEFT JOIN age_groups ag ON rag.age_group_id = ag.id WHERE r.name LIKE ? OR r.discipline LIKE ? OR r.boat_class LIKE ? OR r.gender LIKE ? OR r.distance LIKE ? OR ag.name LIKE ? ORDER BY r.occurrence DESC, r.name ASC";
+        final String sql = "SELECT DISTINCT r.id as r_id, r.name as r_name, r.discipline as r_discipline, r.boat_class as r_boat_class, r.boat_class_id as r_boat_class_id, r.gender as r_gender, r.distance as r_distance, r.occurrence as r_occurrence, r.hidden as r_hidden, r.created_at as r_created_at, r.updated_at as r_updated_at, bc.id as bc_id, bc.name as bc_name, bc.boat_type as bc_boat_type, bc.seat_count as bc_seat_count, bc.seat_count_text as bc_seat_count_text, bc.created_at as bc_created_at, rag.race_id as rag_race_id, rag.age_group_id as rag_age_group_id, ag.id as ag_id, ag.name as ag_name, ag.created_at as ag_created_at FROM races r LEFT JOIN boat_classes bc ON r.boat_class_id = bc.id LEFT JOIN race_age_groups rag ON r.id = rag.race_id LEFT JOIN age_groups ag ON rag.age_group_id = ag.id WHERE r.name LIKE ? OR r.discipline LIKE ? OR r.boat_class LIKE ? OR r.gender LIKE ? OR r.distance LIKE ? OR ag.name LIKE ? OR bc.name LIKE ? OR bc.boat_type LIKE ? ORDER BY r.occurrence DESC, r.name ASC";
 
         final String likePattern = "%" + searchTerm + "%";
-        return (List<Race>) this.jdbcTemplate.query(
-            "SELECT DISTINCT r.id as r_id, r.name as r_name, r.discipline as r_discipline, r.boat_class as r_boat_class, r.gender as r_gender, r.distance as r_distance, r.occurrence as r_occurrence, r.hidden as r_hidden, r.created_at as r_created_at, r.updated_at as r_updated_at, rag.race_id as rag_race_id, rag.age_group_id as rag_age_group_id, ag.id as ag_id, ag.name as ag_name, ag.created_at as ag_created_at FROM races r LEFT JOIN race_age_groups rag ON r.id = rag.race_id LEFT JOIN age_groups ag ON rag.age_group_id = ag.id WHERE r.name LIKE ? OR r.discipline LIKE ? OR r.boat_class LIKE ? OR r.gender LIKE ? OR r.distance LIKE ? OR ag.name LIKE ? ORDER BY r.occurrence DESC, r.name ASC",
-            (ResultSetExtractor) new RaceWithAgeGroupsExtractor(),
-            new Object[]{likePattern, likePattern, likePattern, likePattern, likePattern, likePattern});
+        return (List<Race>) this.jdbcTemplate.query(sql,
+            (ResultSetExtractor) new RaceWithAgeGroupsAndBoatClassExtractor(),
+            new Object[]{likePattern, likePattern, likePattern, likePattern, likePattern, likePattern, likePattern, likePattern});
     }
 
 
@@ -112,7 +121,7 @@ public class RaceJdbcRepository
         super.deleteById(id);
     }
 
-    class RaceWithAgeGroupsExtractor
+    static class RaceWithAgeGroupsAndBoatClassExtractor
         implements ResultSetExtractor<List<Race>> {
 
         public List<Race> extractData(final ResultSet rs) throws SQLException {
@@ -128,6 +137,8 @@ public class RaceJdbcRepository
                     race.setName(rs.getString("r_name"));
                     race.setDiscipline(rs.getString("r_discipline"));
                     race.setBoatClass(rs.getString("r_boat_class"));
+                    final Integer boatClassId = (Integer) rs.getObject("r_boat_class_id");
+                    race.setBoatClassId(boatClassId);
                     race.setGender(rs.getString("r_gender"));
                     race.setDistance(rs.getString("r_distance"));
                     race.setOccurrence(rs.getInt("r_occurrence"));
@@ -140,7 +151,24 @@ public class RaceJdbcRepository
                     if (updatedAt != null) {
                         race.setUpdatedAt(updatedAt.toLocalDateTime());
                     }
-                    race.setAgeGroups(new ArrayList());
+                    race.setAgeGroups(new ArrayList<>());
+
+                    // Extract boat class data if available
+                    final Integer boatClassDataId = (Integer) rs.getObject("bc_id");
+                    if (boatClassDataId != null) {
+                        final BoatClass boatClassData = new BoatClass();
+                        boatClassData.setId(boatClassDataId);
+                        boatClassData.setName(rs.getString("bc_name"));
+                        boatClassData.setBoatType(rs.getString("bc_boat_type"));
+                        final Integer seatCount = (Integer) rs.getObject("bc_seat_count");
+                        boatClassData.setSeatCount(seatCount);
+                        boatClassData.setSeatCountText(rs.getString("bc_seat_count_text"));
+                        final Timestamp bcCreatedAt = rs.getTimestamp("bc_created_at");
+                        if (bcCreatedAt != null) {
+                            boatClassData.setCreatedAt(bcCreatedAt.toLocalDateTime());
+                        }
+                        race.setBoatClassData(boatClassData);
+                    }
 
                     raceMap.put(raceId, race);
                 }

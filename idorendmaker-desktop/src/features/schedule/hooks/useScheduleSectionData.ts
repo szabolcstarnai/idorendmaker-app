@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { RaceWithAgeGroups, ScheduleWithSections, SectionWorkingData, ScheduleRace, ScheduleSection, Level } from '../../../../shared/types/race';
+import { RaceWithAgeGroupsAndBoatClass, ScheduleWithSections, SectionWorkingData, ScheduleRace, ScheduleSection, Level } from '../../../../shared/types/race';
 import { calculateRaceTime, recalculateRaceTimes } from '../utils/scheduleTimeCalculator';
 
 interface UseScheduleSectionDataProps {
@@ -26,7 +26,7 @@ interface UseScheduleSectionDataReturn {
   setIntervalMinutes: (newInterval: number) => void;
   
   // Race operations
-  addRaceToSchedule: (race: RaceWithAgeGroups, level: Level) => void;
+  addRaceToSchedule: (race: RaceWithAgeGroupsAndBoatClass, level: Level) => void;
   removeRaceFromSchedule: (id: string) => void;
   moveRace: (fromIndex: number, toIndex: number) => void;
   emptySectionRaces: (sectionId: number) => void;
@@ -202,7 +202,7 @@ export const useScheduleSectionData = ({
   }, [currentSectionId, currentSection]);
 
   // Race operations
-  const addRaceToSchedule = useCallback((race: RaceWithAgeGroups, level: Level) => {
+  const addRaceToSchedule = useCallback((race: RaceWithAgeGroupsAndBoatClass, level: Level) => {
     if (!currentSectionId) return;
     
     setSectionDataMap(prev => {

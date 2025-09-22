@@ -10,7 +10,7 @@ import PDFProcessor from '../pdf/PDFProcessor';
 import Navbar from './Navbar';
 import UnsavedChangesDialog from '../dialogs/UnsavedChangesDialog';
 import { TwoPanelLayout } from '../layout/TwoPanelLayout';
-import { RaceWithAgeGroups, ScheduleWithSections, ScheduleSection, CreateScheduleSectionData, ScheduleRace, SectionWorkingData, Schedule, RuleWithConditions, CreateRuleData, Level, ScheduleMode } from '../../../shared/types/race';
+import { RaceWithAgeGroupsAndBoatClass, ScheduleWithSections, ScheduleSection, CreateScheduleSectionData, ScheduleRace, SectionWorkingData, Schedule, RuleWithConditions, CreateRuleData, Level, ScheduleMode } from '../../../shared/types/race';
 import { useUnsavedChanges } from '../../features/common/hooks/useUnsavedChanges';
 import { Toaster } from '../ui/sonner';
 import { toast } from 'sonner';
@@ -42,7 +42,7 @@ const App: React.FC = () => {
   const [pdfListRefreshKey, setPdfListRefreshKey] = useState(0);
   
   // Ref to hold the addRaceToSchedule function from ScheduleBuilder
-  const addRaceToScheduleRef = useRef<((race: RaceWithAgeGroups, level: Level) => void) | null>(null);
+  const addRaceToScheduleRef = useRef<((race: RaceWithAgeGroupsAndBoatClass, level: Level) => void) | null>(null);
   
   // Ref to hold the populateSectionDataMap function from ScheduleBuilder
   const populateSectionDataMapRef = useRef<((loadedSectionDataMap: Map<number, SectionWorkingData>) => void) | null>(null);
@@ -106,7 +106,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleRaceAdd = (race: RaceWithAgeGroups, level: Level) => {
+  const handleRaceAdd = (race: RaceWithAgeGroupsAndBoatClass, level: Level) => {
     if (addRaceToScheduleRef.current) {
       addRaceToScheduleRef.current(race, level);
     }

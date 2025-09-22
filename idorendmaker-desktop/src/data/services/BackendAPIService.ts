@@ -12,7 +12,7 @@ import {
   ScheduleItemWithRace,
   ScheduleItemWithRaceAndSection,
   CreateScheduleSectionData,
-  RaceWithAgeGroups,
+  RaceWithAgeGroupsAndBoatClass,
   PDFProcessingResult,
   ExtractedRace,
   RaceWithCompetitorData,
@@ -102,7 +102,8 @@ export class BackendConfig {
     SCHEDULES: '/schedules',
     RULES: '/rules',
     COMPETITORS: '/competitors',
-    PDF: '/pdf'
+    PDF: '/pdf',
+    BOAT_CLASSES: '/boat-classes'
   } as const
 }
 
@@ -275,6 +276,14 @@ export class BackendAPIService {
    */
   static async getScheduleItems(scheduleId: number): Promise<ScheduleItemWithRaceAndSection[]> {
     return this.get<ScheduleItemWithRaceAndSection[]>(`${BackendConfig.ENDPOINTS.SCHEDULES}/${scheduleId}/items`)
+  }
+
+  static async getAllSeatCounts(): Promise<string[]> {
+    return this.get<string[]>(`${BackendConfig.ENDPOINTS.BOAT_CLASSES}/seat-counts`)
+  }
+
+  static async getAllBoatTypes(): Promise<string[]> {
+    return this.get<string[]>(`${BackendConfig.ENDPOINTS.BOAT_CLASSES}/types`)
   }
 
   /**
@@ -468,8 +477,8 @@ export class BackendAPIService {
    * Replaces: RaceService.getAllRaces()
    * Endpoint: GET /api/races
    */
-  static async getAllRaces(): Promise<RaceWithAgeGroups[]> {
-    return this.get<RaceWithAgeGroups[]>(BackendConfig.ENDPOINTS.RACES)
+  static async getAllRaces(): Promise<RaceWithAgeGroupsAndBoatClass[]> {
+    return this.get<RaceWithAgeGroupsAndBoatClass[]>(BackendConfig.ENDPOINTS.RACES)
   }
 
   /**
@@ -477,8 +486,8 @@ export class BackendAPIService {
    * Replaces: RaceService.searchRaces()
    * Endpoint: GET /api/races/search?term={searchTerm}
    */
-  static async searchRaces(searchTerm: string): Promise<RaceWithAgeGroups[]> {
-    return this.get<RaceWithAgeGroups[]>(`${BackendConfig.ENDPOINTS.RACES}/search?term=${encodeURIComponent(searchTerm)}`)
+  static async searchRaces(searchTerm: string): Promise<RaceWithAgeGroupsAndBoatClass[]> {
+    return this.get<RaceWithAgeGroupsAndBoatClass[]>(`${BackendConfig.ENDPOINTS.RACES}/search?term=${encodeURIComponent(searchTerm)}`)
   }
 
   /**

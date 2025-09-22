@@ -1,16 +1,18 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { RaceWithAgeGroups, Schedule, ScheduleItemWithRace, RuleWithConditions, CreateRuleData, RuleViolation, ScheduleRace, ScheduleSection, ScheduleItemWithRaceAndSection, ScheduleWithSections, CreateScheduleSectionData, Level, PDFProcessingResult, RaceWithCompetitorData, CompetitorSchedule } from '../shared/types/race';
+import { RaceWithAgeGroupsAndBoatClass, Schedule, ScheduleItemWithRace, RuleWithConditions, CreateRuleData, RuleViolation, ScheduleRace, ScheduleSection, ScheduleItemWithRaceAndSection, ScheduleWithSections, CreateScheduleSectionData, Level, PDFProcessingResult, RaceWithCompetitorData, CompetitorSchedule } from '../shared/types/race';
 import { ScheduleStatistics } from './data/services/BackendAPIService';
 
 export interface ElectronAPI {
   // Database operations
-  getAllRaces: () => Promise<RaceWithAgeGroups[]>;
-  searchRaces: (searchTerm: string) => Promise<RaceWithAgeGroups[]>;
+  getAllRaces: () => Promise<RaceWithAgeGroupsAndBoatClass[]>;
+  searchRaces: (searchTerm: string) => Promise<RaceWithAgeGroupsAndBoatClass[]>;
   getAllAgeGroups: () => Promise<{ id: number; name: string; createdAt: Date; }[]>;
   getAllLevels: () => Promise<Level[]>;
   getDefaultLevel: () => Promise<Level>;
   getAllSchedules: () => Promise<Schedule[]>;
   getScheduleItems: (scheduleId: number) => Promise<ScheduleItemWithRace[]>;
+  getAllSeatCounts: () => Promise<string[]>;
+  getAllBoatTypes: () => Promise<string[]>;
   // Rule operations
   getAllRules: () => Promise<RuleWithConditions[]>;
   getActiveRules: () => Promise<RuleWithConditions[]>;
@@ -182,6 +184,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getDefaultLevel: () => ipcRenderer.invoke('db:getDefaultLevel'),
   getAllSchedules: () => ipcRenderer.invoke('db:getAllSchedules'),
   getScheduleItems: (scheduleId: number) => ipcRenderer.invoke('db:getScheduleItems', scheduleId),
+  getAllSeatCounts: () => ipcRenderer.invoke('db:getAllSeatCounts'),
+  getAllBoatTypes: () => ipcRenderer.invoke('db:getAllBoatTypes'),
   // Rule operations
   getAllRules: () => ipcRenderer.invoke('db:getAllRules'),
   getActiveRules: () => ipcRenderer.invoke('db:getActiveRules'),

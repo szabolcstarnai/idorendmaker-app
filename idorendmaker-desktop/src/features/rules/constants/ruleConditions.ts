@@ -71,6 +71,20 @@ export const CONDITION_FIELDS: FieldOption[] = [
     hasDropdown: true,
     allowsMultiSelect: true,
   },
+  {
+    value: "boatType",
+    label: "Hajóosztály típus",
+    description: "pl. Kajak, Minikajak, Kenu",
+    hasDropdown: true, // Populated from backend
+    allowsMultiSelect: true,
+  },
+  {
+    value: "seatCount",
+    label: "Ülésszám",
+    description: "pl. 1, 2, 4, csapat",
+    hasDropdown: true, // Populated from backend
+    allowsMultiSelect: true,
+  },
 ];
 
 // Discipline options
@@ -234,6 +248,12 @@ export function getDropdownOptions(field: string): DropdownValue[] {
       return LEVEL_TYPE_OPTIONS;
     case "level":
       // This will be populated from database
+      return [];
+    case "boatType":
+      // This will be populated from backend API
+      return [];
+    case "seatCount":
+      // This will be populated from backend API
       return [];
     default:
       return [];

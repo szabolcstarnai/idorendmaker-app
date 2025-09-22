@@ -1,4 +1,4 @@
-import { RaceWithAgeGroups, Level, ScheduleRace, ScheduleMode } from '../../shared/types/race';
+import { RaceWithAgeGroupsAndBoatClass, Level, ScheduleRace, ScheduleMode } from '../../shared/types/race';
 
 /**
  * Utility functions for level management and filtering
@@ -9,7 +9,7 @@ import { RaceWithAgeGroups, Level, ScheduleRace, ScheduleMode } from '../../shar
  * Returns levels that haven't been used for this race in the current schedule
  */
 export const getAvailableLevels = (
-  race: RaceWithAgeGroups,
+  race: RaceWithAgeGroupsAndBoatClass,
   scheduleRaces: ScheduleRace[],
   allLevels: Level[]
 ): Level[] => {
@@ -30,7 +30,7 @@ export const getAvailableLevels = (
  * In full mode, returns all unused levels
  */
 export const getAvailableLevelsForMode = (
-  race: RaceWithAgeGroups,
+  race: RaceWithAgeGroupsAndBoatClass,
   scheduleRaces: ScheduleRace[],
   allLevels: Level[],
   mode: ScheduleMode
@@ -50,7 +50,7 @@ export const getAvailableLevelsForMode = (
  * Get levels already added for a specific race
  */
 export const getAddedLevels = (
-  race: RaceWithAgeGroups,
+  race: RaceWithAgeGroupsAndBoatClass,
   scheduleRaces: ScheduleRace[]
 ): Level[] => {
   return scheduleRaces
