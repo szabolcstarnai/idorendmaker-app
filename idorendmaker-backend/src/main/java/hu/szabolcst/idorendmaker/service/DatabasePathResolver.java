@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class DatabasePathResolver {
 
-    @Value("${app.database.mode:development}")
+    @Value("${app.database.mode:production}")
     private String databaseMode;
     
     @Value("${app.database.development.relative-path:../idorendmaker-desktop/idorendmaker.db}")

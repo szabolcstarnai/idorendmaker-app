@@ -136,7 +136,8 @@ export class BackendService {
         `--server.port=${this.port}`,
         '--logging.level.org.springframework.web=INFO',
         '--logging.level.root=INFO',
-        '--spring.datasource.url=jdbc:sqlite:idorendmaker.db'
+        '--spring.profiles.active=prod'/*,
+        '--spring.datasource.url=jdbc:sqlite:idorendmaker.db'*/
       ], {
         stdio: ['ignore', 'pipe', 'pipe'],
         detached: false,

@@ -158,6 +158,7 @@
 
                         <!-- enable SBOM generation -->
                         <buildArg>--enable-sbom=export,classpath,cyclonedx</buildArg>
+                        <buildArg>-Dspring.profiles.active=prod</buildArg>
                     </buildArgs>
 				</configuration>
 			</plugin>
