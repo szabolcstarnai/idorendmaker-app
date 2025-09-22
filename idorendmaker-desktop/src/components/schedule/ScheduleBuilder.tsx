@@ -416,7 +416,7 @@ const ScheduleBuilder: React.FC<ScheduleBuilderProps> = React.memo(({
                         {violations.length} probléma
                       </Badge>
                       <span className="text-sm text-muted-foreground">
-                        {violations.filter(v => v.severity === 'error').length > 0 ? 'Konfliktusok találhatók' : 'Figyelmeztetések vannak'}
+                        {violations.filter(v => v.severity === 'error').length > 0 ? 'Konfliktusok találhatóak' : 'Figyelmeztetések találhatóak'}
                         {dismissedCount > 0 && ` • ${dismissedCount} figyelmen kívül hagyva`}
                       </span>
                     </div>

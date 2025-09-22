@@ -369,7 +369,7 @@ const PDFExtractionList: React.FC<PDFExtractionListProps> = ({
             title={searchTerm ? 'Nincs találat' : 'Még nincs feldolgozott nevezési lista'}
             description={searchTerm
               ? 'Próbáljon más keresési kifejezést használni.'
-              : 'Töltsön fel egy megfelelő formátumú nevezési listaPDF fájlt a jobb oldalon.'
+              : 'Töltsön fel egy megfelelő formátumú nevezési lista PDF fájlt a jobb oldalon.'
             }
           />
         ) : (

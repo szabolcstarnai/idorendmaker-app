@@ -107,6 +107,28 @@ export const useScheduleSectionData = ({
     }
   }, [currentSectionId, currentSection, sectionDataMap]);
 
+  // Sync working data start time with section start time changes
+  useEffect(() => {
+    if (currentSectionId && currentSection) {
+      setSectionDataMap(prev => {
+        const newMap = new Map(prev);
+        const workingData = newMap.get(currentSectionId);
+
+        if (workingData && workingData.settings.startTime !== currentSection.startTime) {
+          newMap.set(currentSectionId, {
+            ...workingData,
+            settings: {
+              ...workingData.settings,
+              startTime: currentSection.startTime
+            }
+          });
+        }
+
+        return newMap;
+      });
+    }
+  }, [currentSectionId, currentSection?.startTime]);
+
   // Section settings setters
   const setStartTime = useCallback((newStartTime: string) => {
     if (!currentSectionId) return;

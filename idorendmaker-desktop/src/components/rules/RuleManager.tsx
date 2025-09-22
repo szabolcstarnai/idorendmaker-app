@@ -305,7 +305,7 @@ const RuleManager: React.FC<RuleManagerProps> = ({
               className="h-8 px-3 flex-shrink-0"
             >
               <Plus className="h-3 w-3 mr-1" />
-              Új Szabály
+              Új szabály
             </Button>
           </div>
           
