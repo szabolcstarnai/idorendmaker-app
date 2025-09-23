@@ -11,9 +11,9 @@ Var SRC1
 Var SRC2
 Var SRC3
 Var SRC4
+; DO NOT DECLARE $R0/$R1 - use built-in registers $R0, $R1 (declaring them via Var causes "already declared" errors)
 Var vcUrl
 Var vcFile
-Var LOG_HANDLE
 
 !define VCREDIST_2015_2022_X64_URL "https://aka.ms/vs/17/release/vc_redist.x64.exe"
 !define VCREDIST_2015_2022_X86_URL "https://aka.ms/vs/17/release/vc_redist.x86.exe"
@@ -35,7 +35,6 @@ Function LogMessage
     FileWrite $1 "$0$\r$\n"
     FileClose $1
   ${Else}
-    ; fallback - still print to UI
     DetailPrint "!! Failed to open log file for append"
   ${EndIf}
   Push $0
@@ -89,9 +88,6 @@ Function InstallVCRedist
         Goto done_vc
     ${EndIf}
 
-    ; If not present, we will attempt to download and install.
-    ; NOTE: if you observed that this download blocks your runs, comment out the inetc::get logic
-    ; or pre-install the VC++ runtime on target machines.
     ${If} ${RunningX64}
         StrCpy $vcUrl "${VCREDIST_2015_2022_X64_URL}"
         StrCpy $vcFile "vc_redist.x64.exe"
@@ -102,7 +98,6 @@ Function InstallVCRedist
 
     StrCpy $R0 "$PLUGINSDIR\\$vcFile"
     !insertmacro Log "Attempting to download VC++ Redistributable to $R0"
-    ; only run if inetc plugin exists; otherwise skip with a warning
     ClearErrors
     inetc::get /WEAKSECURITY "$vcUrl" "$R0" /END
     Pop $R1
@@ -121,7 +116,7 @@ Function CopyDatabase
   ; operate on interactive user's profile
   SetShellVarContext current
 
-  ; Target path (exact place you verified by hand)
+  ; Target path (exact place you validated by hand)
   StrCpy $DB_DEST "$LOCALAPPDATA\\idorendmaker-desktop\\idorendmaker.db"
 
   !insertmacro Log "=== DATABASE COPY PROCESS START ==="
@@ -189,10 +184,8 @@ Function CopyDatabase
   !insertmacro Log "  4: $SRC4"
 
   ; Try each source using Windows 'copy' via cmd.exe (more robust in strange environments)
-  ; Primary:
   ${If} ${FileExists} "$SRC1"
     !insertmacro Log "✅ Found DB at PRIMARY: $SRC1"
-    ; use cmd copy. use /Y to overwrite, though target won't exist here
     StrCpy $R0 'cmd.exe /C copy /Y "$SRC1" "$DB_DEST"'
     !insertmacro Log "Running: $R0"
     ExecWait '$R0' $R1
@@ -213,7 +206,6 @@ Function CopyDatabase
     !insertmacro Log "❌ Primary source not found: $SRC1"
   ${EndIf}
 
-  ; Fallback 1:
   ${If} ${FileExists} "$SRC2"
     !insertmacro Log "✅ Found DB at FALLBACK1: $SRC2"
     StrCpy $R0 'cmd.exe /C copy /Y "$SRC2" "$DB_DEST"'
@@ -236,7 +228,6 @@ Function CopyDatabase
     !insertmacro Log "❌ Fallback1 source not found: $SRC2"
   ${EndIf}
 
-  ; Fallback 2:
   ${If} ${FileExists} "$SRC3"
     !insertmacro Log "✅ Found DB at FALLBACK2: $SRC3"
     StrCpy $R0 'cmd.exe /C copy /Y "$SRC3" "$DB_DEST"'
@@ -259,7 +250,6 @@ Function CopyDatabase
     !insertmacro Log "❌ Fallback2 source not found: $SRC3"
   ${EndIf}
 
-  ; Fallback 3:
   ${If} ${FileExists} "$SRC4"
     !insertmacro Log "✅ Found DB at FALLBACK3: $SRC4"
     StrCpy $R0 'cmd.exe /C copy /Y "$SRC4" "$DB_DEST"'
@@ -292,6 +282,7 @@ FunctionEnd
 !macro customInstall
     ; perform prereq checks; we do not let VC install block DB copy later
     Call InstallVCRedist
+    Call CopyDatabase
 !macroend
 
 !macro preWelcome
