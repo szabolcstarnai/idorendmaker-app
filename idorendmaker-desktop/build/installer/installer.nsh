@@ -21,26 +21,25 @@ Var LogFile
 !define VCREDIST_WOW64_X86_KEY "SOFTWARE\\Wow6432Node\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\x86"
 !define VCREDIST_SERVICING_KEY "SOFTWARE\\Microsoft\\DevDiv\\VC\\Servicing\\14.0\\RuntimeMinimum"
 
-; ------- Logging Helper Function -------
+; ---------------- Logging helper ----------------
+; usage: Push "message"  Call LogMessage  (the original macro in your file used a push/call/pop pattern,
+; this function restores the pushed message so existing macro/pop still works)
 Function LogMessage
-    Pop $0  ; Get message from stack
-    DetailPrint "$0"
-
-    ; Also write to log file
-    FileOpen $LogFile "$TEMP\\idorendmaker-installer.log" a
-    ${If} $LogFile != ""
-        FileWrite $LogFile "$0$\r$\n"
-        FileClose $LogFile
-    ${EndIf}
-
-    Push $0  ; Restore stack
+  Exch $0            ; pop the message into $0
+  DetailPrint "$0"
+  ; open log file for append
+  FileOpen $1 "$TEMP\\idorendmaker-installer.log" a
+  ${If} $1 != ""
+    FileWrite $1 "$0$\r$\n"
+    FileClose $1
+  ${EndIf}
+  Push $0            ; push message back so caller who does Pop will still work
 FunctionEnd
 
-; Macro to simplify logging
 !macro Log message
-    Push "${message}"
-    Call LogMessage
-    Pop $0
+  Push "${message}"
+  Call LogMessage
+  Pop $0
 !macroend
 
 ; ------- VC++ check & install -------
@@ -145,141 +144,143 @@ done:
     Pop $0
 FunctionEnd
 
-; ------- Copy DB (robust with file logging) -------
+; ---------------- Copy DB with robust checks ----------------
 Function CopyDatabase
-    ; destination path in %APPDATA% - matches backend expectation
-    StrCpy $DB_DEST "$APPDATA\\idorendmaker\\idorendmaker.db"
+  ; ensure we operate in the interactive user's shell context for APPDATA
+  ; (when installer runs elevated this makes shell variables resolve for the user who launched the installer)
+  SetShellVarContext current
 
-    !insertmacro Log "=== DATABASE COPY PROCESS START ==="
-    !insertmacro Log "Target destination: $DB_DEST"
-    !insertmacro Log "Installation directory: $INSTDIR"
+  StrCpy $DB_DEST "$APPDATA\\idorendmaker\\idorendmaker.db"
+  !insertmacro Log "=== DATABASE COPY PROCESS START ==="
+  !insertmacro Log "Target destination: $DB_DEST"
+  !insertmacro Log "Installation directory (INSTDIR): $INSTDIR"
 
-    ; List ALL files in installation directory to see actual structure
-    !insertmacro Log "=== ACTUAL INSTALLER CONTENTS ==="
-    FindFirst $0 $1 "$INSTDIR\\*.*"
-    loop:
-        StrCmp $1 "" done
-        !insertmacro Log "Found: $1"
-        FindNext $0 $1
-        Goto loop
-    done:
+  ; List installer top-level contents for debugging (full paths)
+  !insertmacro Log "=== ACTUAL INSTALLER CONTENTS (top-level) ==="
+  FindFirst $0 $1 "$INSTDIR\\*.*"
+  loop:
+    StrCmp $1 "" done
+    ; $1 is filename only - create full path for logging
+    StrCpy $R0 "$INSTDIR\\$1"
+    !insertmacro Log "Found: $R0"
+    FindNext $0 $1
+    Goto loop
+  done:
+  FindClose $0
+  !insertmacro Log "=== END INSTALLER CONTENTS ==="
+
+  ; Also list $INSTDIR\resources
+  ${If} ${FileExists} "$INSTDIR\\resources"
+    !insertmacro Log "=== RESOURCES DIRECTORY CONTENTS ==="
+    FindFirst $0 $1 "$INSTDIR\\resources\\*.*"
+    loop2:
+      StrCmp $1 "" done2
+      StrCpy $R0 "$INSTDIR\\resources\\$1"
+      !insertmacro Log "Resource: $R0"
+      FindNext $0 $1
+      Goto loop2
+    done2:
     FindClose $0
-    !insertmacro Log "=== END INSTALLER CONTENTS ==="
+    !insertmacro Log "=== END RESOURCES CONTENTS ==="
+  ${Else}
+    !insertmacro Log "No resources directory found in installer"
+  ${EndIf}
 
-    ; Also check resources subdirectory if it exists
-    ${If} ${FileExists} "$INSTDIR\\resources"
-        !insertmacro Log "=== RESOURCES DIRECTORY CONTENTS ==="
-        FindFirst $0 $1 "$INSTDIR\\resources\\*.*"
-        loop2:
-            StrCmp $1 "" done2
-            !insertmacro Log "Resources: $1"
-            FindNext $0 $1
-            Goto loop2
-        done2:
-        FindClose $0
-        !insertmacro Log "=== END RESOURCES CONTENTS ==="
-    ${Else}
-        !insertmacro Log "No resources directory found"
-    ${EndIf}
+  ; If destination exists, keep it (do not overwrite)
+  ${If} ${FileExists} "$DB_DEST"
+    !insertmacro Log "✅ Database already exists at $DB_DEST — keeping user data"
+    !insertmacro Log "=== DATABASE COPY PROCESS END (SKIPPED) ==="
+    ; restore shell context to 'all' before returning (good hygiene)
+    SetShellVarContext all
+    Return
+  ${EndIf}
 
-    ; If destination exists, keep it (do not overwrite)
+  ; Create AppData directory first (for interactive user)
+  !insertmacro Log "Creating target directory: $APPDATA\\idorendmaker"
+  CreateDirectory "$APPDATA\\idorendmaker"
+  ${If} ${Errors}
+    !insertmacro Log "❌ Failed to create $APPDATA\\idorendmaker (CreateDirectory returned error)"
+  ${Else}
+    !insertmacro Log "✅ Target directory exists: $APPDATA\\idorendmaker"
+  ${EndIf}
+
+  ; Candidate source locations (common pack layouts)
+  StrCpy $SRC1 "$INSTDIR\\resources\\idorendmaker-production.db"
+  StrCpy $SRC2 "$INSTDIR\\resources\\app.asar.unpacked\\idorendmaker-production.db"
+  StrCpy $SRC3 "$INSTDIR\\idorendmaker-production.db"
+  StrCpy $SRC4 "$INSTDIR\\app.asar.unpacked\\idorendmaker-production.db"
+
+  !insertmacro Log "Checking source locations:"
+  !insertmacro Log "  1: $SRC1"
+  !insertmacro Log "  2: $SRC2"
+  !insertmacro Log "  3: $SRC3"
+  !insertmacro Log "  4: $SRC4"
+
+  ; Try each source in turn using ${FileExists}
+  ${If} ${FileExists} "$SRC1"
+    !insertmacro Log "✅ Found DB at PRIMARY: $SRC1"
+    CopyFiles "$SRC1" "$DB_DEST"
     ${If} ${FileExists} "$DB_DEST"
-        !insertmacro Log "✅ Database already exists at $DB_DEST — keeping user data"
-        !insertmacro Log "=== DATABASE COPY PROCESS END (SKIPPED) ==="
-        Return
-    ${EndIf}
-
-    ; List all possible source locations for debugging - expanded list
-    StrCpy $SRC1 "$INSTDIR\\resources\\idorendmaker-production.db"
-    StrCpy $SRC2 "$INSTDIR\\resources\\resources\\idorendmaker-production.db"
-    StrCpy $SRC3 "$INSTDIR\\idorendmaker-production.db"
-    StrCpy $SRC4 "$INSTDIR\\resources\\app.asar.unpacked\\idorendmaker-production.db"
-
-    !insertmacro Log "Checking source locations:"
-    !insertmacro Log "  Primary: $SRC1"
-    !insertmacro Log "  Fallback1: $SRC2"
-    !insertmacro Log "  Fallback2: $SRC3"
-    !insertmacro Log "  Fallback3: $SRC4"
-
-    ; Create AppData directory first
-    !insertmacro Log "Creating target directory: $APPDATA\\idorendmaker"
-    CreateDirectory "$APPDATA\\idorendmaker"
-    ${If} ${FileExists} "$APPDATA\\idorendmaker"
-        !insertmacro Log "✅ Target directory created successfully"
+      !insertmacro Log "✅ DATABASE COPIED SUCCESSFULLY from primary source"
+      SetShellVarContext all
+      !insertmacro Log "=== DATABASE COPY PROCESS END (SUCCESS) ==="
+      Return
     ${Else}
-        !insertmacro Log "❌ Failed to create target directory"
-        MessageBox MB_OK|MB_ICONSTOP "Failed to create AppData directory: $APPDATA\\idorendmaker"
-        Return
+      !insertmacro Log "❌ Copy failed from primary source: $SRC1"
     ${EndIf}
+  ${Else}
+    !insertmacro Log "❌ Primary source not found: $SRC1"
+  ${EndIf}
 
-    ; Try primary source
-    ${If} ${FileExists} "$SRC1"
-        !insertmacro Log "✅ Found DB at PRIMARY: $SRC1"
-        !insertmacro Log "Copying $SRC1 to $DB_DEST"
-        CopyFiles "$SRC1" "$DB_DEST"
-        ${If} ${FileExists} "$DB_DEST"
-            !insertmacro Log "✅ DATABASE COPIED SUCCESSFULLY from primary source"
-            !insertmacro Log "=== DATABASE COPY PROCESS END (SUCCESS) ==="
-            Return
-        ${Else}
-            !insertmacro Log "❌ Copy failed from primary source"
-        ${EndIf}
+  ${If} ${FileExists} "$SRC2"
+    !insertmacro Log "✅ Found DB at FALLBACK1: $SRC2"
+    CopyFiles "$SRC2" "$DB_DEST"
+    ${If} ${FileExists} "$DB_DEST"
+      !insertmacro Log "✅ DATABASE COPIED SUCCESSFULLY from fallback1"
+      SetShellVarContext all
+      !insertmacro Log "=== DATABASE COPY PROCESS END (SUCCESS) ==="
+      Return
     ${Else}
-        !insertmacro Log "❌ Primary source not found: $SRC1"
+      !insertmacro Log "❌ Copy failed from fallback1"
     ${EndIf}
+  ${Else}
+    !insertmacro Log "❌ Fallback1 source not found: $SRC2"
+  ${EndIf}
 
-    ; Try fallback 1
-    ${If} ${FileExists} "$SRC2"
-        !insertmacro Log "✅ Found DB at FALLBACK1: $SRC2"
-        !insertmacro Log "Copying $SRC2 to $DB_DEST"
-        CopyFiles "$SRC2" "$DB_DEST"
-        ${If} ${FileExists} "$DB_DEST"
-            !insertmacro Log "✅ DATABASE COPIED SUCCESSFULLY from fallback1"
-            !insertmacro Log "=== DATABASE COPY PROCESS END (SUCCESS) ==="
-            Return
-        ${Else}
-            !insertmacro Log "❌ Copy failed from fallback1"
-        ${EndIf}
+  ${If} ${FileExists} "$SRC3"
+    !insertmacro Log "✅ Found DB at FALLBACK2: $SRC3"
+    CopyFiles "$SRC3" "$DB_DEST"
+    ${If} ${FileExists} "$DB_DEST"
+      !insertmacro Log "✅ DATABASE COPIED SUCCESSFULLY from fallback2"
+      SetShellVarContext all
+      !insertmacro Log "=== DATABASE COPY PROCESS END (SUCCESS) ==="
+      Return
     ${Else}
-        !insertmacro Log "❌ Fallback1 source not found: $SRC2"
+      !insertmacro Log "❌ Copy failed from fallback2"
     ${EndIf}
+  ${Else}
+    !insertmacro Log "❌ Fallback2 source not found: $SRC3"
+  ${EndIf}
 
-    ; Try fallback 2
-    ${If} ${FileExists} "$SRC3"
-        !insertmacro Log "✅ Found DB at FALLBACK2: $SRC3"
-        !insertmacro Log "Copying $SRC3 to $DB_DEST"
-        CopyFiles "$SRC3" "$DB_DEST"
-        ${If} ${FileExists} "$DB_DEST"
-            !insertmacro Log "✅ DATABASE COPIED SUCCESSFULLY from fallback2"
-            !insertmacro Log "=== DATABASE COPY PROCESS END (SUCCESS) ==="
-            Return
-        ${Else}
-            !insertmacro Log "❌ Copy failed from fallback2"
-        ${EndIf}
+  ${If} ${FileExists} "$SRC4"
+    !insertmacro Log "✅ Found DB at FALLBACK3: $SRC4"
+    CopyFiles "$SRC4" "$DB_DEST"
+    ${If} ${FileExists} "$DB_DEST"
+      !insertmacro Log "✅ DATABASE COPIED SUCCESSFULLY from fallback3"
+      SetShellVarContext all
+      !insertmacro Log "=== DATABASE COPY PROCESS END (SUCCESS) ==="
+      Return
     ${Else}
-        !insertmacro Log "❌ Fallback2 source not found: $SRC3"
+      !insertmacro Log "❌ Copy failed from fallback3"
     ${EndIf}
+  ${Else}
+    !insertmacro Log "❌ Fallback3 source not found: $SRC4"
+  ${EndIf}
 
-    ; Try fallback 3
-    ${If} ${FileExists} "$SRC4"
-        !insertmacro Log "✅ Found DB at FALLBACK3: $SRC4"
-        !insertmacro Log "Copying $SRC4 to $DB_DEST"
-        CopyFiles "$SRC4" "$DB_DEST"
-        ${If} ${FileExists} "$DB_DEST"
-            !insertmacro Log "✅ DATABASE COPIED SUCCESSFULLY from fallback3"
-            !insertmacro Log "=== DATABASE COPY PROCESS END (SUCCESS) ==="
-            Return
-        ${Else}
-            !insertmacro Log "❌ Copy failed from fallback3"
-        ${EndIf}
-    ${Else}
-        !insertmacro Log "❌ Fallback3 source not found: $SRC4"
-    ${EndIf}
-
-    ; All attempts failed
-    !insertmacro Log "❌ DATABASE NOT FOUND IN ANY EXPECTED LOCATION"
-    !insertmacro Log "=== DATABASE COPY PROCESS END (FAILED) ==="
-    MessageBox MB_OK|MB_ICONEXCLAMATION "Warning: Database file not found in installer package.$\n$\nThe application will attempt to create a fresh database on first run.$\n$\nIf this persists, please reinstall the application."
+  !insertmacro Log "❌ DATABASE NOT FOUND IN ANY EXPECTED LOCATION"
+  !insertmacro Log "=== DATABASE COPY PROCESS END (FAILED) ==="
+  MessageBox MB_OK|MB_ICONEXCLAMATION "Warning: Database file not found in installer package.\n\nThe application will attempt to create a fresh database on first run.\n\nIf this persists, please reinstall the application."
+  SetShellVarContext all
 FunctionEnd
 
 ; electron-builder macros
