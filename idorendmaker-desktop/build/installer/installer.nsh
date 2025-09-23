@@ -1,9 +1,11 @@
-; installer.nsh - NSIS snippet for Időrend Készítő (drop into build/installer/installer.nsh)
+; installer.nsh - robust DB copy using Windows copy command (works after unpack)
+; Save as UTF-8 (no BOM) to build/installer/installer.nsh
+
 !include "LogicLib.nsh"
 !include "x64.nsh"
-!include "FileFunc.nsh"     ; provides ${FileExists}
+!include "FileFunc.nsh"
 
-; declare user variables used later
+; ---------------- variables ----------------
 Var DB_DEST
 Var SRC1
 Var SRC2
@@ -11,6 +13,7 @@ Var SRC3
 Var SRC4
 Var vcUrl
 Var vcFile
+Var LOG_HANDLE
 
 !define VCREDIST_2015_2022_X64_URL "https://aka.ms/vs/17/release/vc_redist.x64.exe"
 !define VCREDIST_2015_2022_X86_URL "https://aka.ms/vs/17/release/vc_redist.x86.exe"
@@ -21,14 +24,19 @@ Var vcFile
 !define VCREDIST_WOW64_X86_KEY "SOFTWARE\\Wow6432Node\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\x86"
 !define VCREDIST_SERVICING_KEY "SOFTWARE\\Microsoft\\DevDiv\\VC\\Servicing\\14.0\\RuntimeMinimum"
 
-; ---------------- Logging helper ----------------
+; ---------------- logging helper ----------------
 Function LogMessage
   Exch $0
+  ; print into installer UI (useful)
   DetailPrint "$0"
+  ; append to file
   FileOpen $1 "$TEMP\\idorendmaker-installer.log" a
   ${If} $1 != ""
     FileWrite $1 "$0$\r$\n"
     FileClose $1
+  ${Else}
+    ; fallback - still print to UI
+    DetailPrint "!! Failed to open log file for append"
   ${EndIf}
   Push $0
 FunctionEnd
@@ -39,12 +47,11 @@ FunctionEnd
   Pop $0
 !macroend
 
-; ---------------- VC++ detection / install ----------------
+; ---------------- VC++ detection (non-blocking) ----------------
 Function CheckVCRedist
     Push $0
     Push $1
     Push $2
-    Push $3
     StrCpy $0 "0"
     ${If} ${RunningX64}
         ClearErrors
@@ -52,26 +59,11 @@ Function CheckVCRedist
         ${IfNot} ${Errors}
             ${If} $1 == "1"
                 StrCpy $0 "1"
-                Goto detection_done
-            ${EndIf}
-        ${EndIf}
-        ClearErrors
-        ReadRegDWORD $1 HKLM "${VCREDIST_WOW64_X64_KEY}" "Installed"
-        ${IfNot} ${Errors}
-            ${If} $1 == "1"
-                StrCpy $0 "1"
-                Goto detection_done
             ${EndIf}
         ${EndIf}
         ClearErrors
         ReadRegStr $2 HKLM "${VCREDIST_SERVICING_KEY}" "Version"
         ${IfNot} ${Errors}
-            StrCpy $0 "1"
-            Goto detection_done
-        ${EndIf}
-        ${If} ${FileExists} "$WINDIR\\System32\\vcruntime140_1.dll"
-        ${AndIf} ${FileExists} "$WINDIR\\System32\\vcruntime140.dll"
-        ${AndIf} ${FileExists} "$WINDIR\\System32\\msvcp140.dll"
             StrCpy $0 "1"
         ${EndIf}
     ${Else}
@@ -80,16 +72,9 @@ Function CheckVCRedist
         ${IfNot} ${Errors}
             ${If} $1 == "1"
                 StrCpy $0 "1"
-                Goto detection_done
             ${EndIf}
         ${EndIf}
-        ${If} ${FileExists} "$WINDIR\\SysWOW64\\vcruntime140_1.dll"
-        ${AndIf} ${FileExists} "$WINDIR\\SysWOW64\\vcruntime140.dll"
-            StrCpy $0 "1"
-        ${EndIf}
     ${EndIf}
-detection_done:
-    Pop $3
     Pop $2
     Pop $1
     Exch $0
@@ -97,17 +82,16 @@ FunctionEnd
 
 Function InstallVCRedist
     Push $0
-    Push $1
-    Push $2
-    Push $3
     Call CheckVCRedist
     Pop $0
     ${If} $0 == "1"
-        DetailPrint "Visual C++ Redistributable already installed"
         !insertmacro Log "VC++ Redistributable already installed"
-        Goto done
+        Goto done_vc
     ${EndIf}
 
+    ; If not present, we will attempt to download and install.
+    ; NOTE: if you observed that this download blocks your runs, comment out the inetc::get logic
+    ; or pre-install the VC++ runtime on target machines.
     ${If} ${RunningX64}
         StrCpy $vcUrl "${VCREDIST_2015_2022_X64_URL}"
         StrCpy $vcFile "vc_redist.x64.exe"
@@ -116,73 +100,62 @@ Function InstallVCRedist
         StrCpy $vcFile "vc_redist.x86.exe"
     ${EndIf}
 
-    StrCpy $3 "$PLUGINSDIR\\$vcFile"
-    !insertmacro Log "Downloading VC++ Redistributable..."
-    inetc::get /WEAKSECURITY "$vcUrl" "$3" /END
-    Pop $0
-    ${If} $0 != "OK"
-        MessageBox MB_OK|MB_ICONSTOP "Failed to download Visual C++ Redistributable. Please install manually from $vcUrl"
-        Abort
+    StrCpy $R0 "$PLUGINSDIR\\$vcFile"
+    !insertmacro Log "Attempting to download VC++ Redistributable to $R0"
+    ; only run if inetc plugin exists; otherwise skip with a warning
+    ClearErrors
+    inetc::get /WEAKSECURITY "$vcUrl" "$R0" /END
+    Pop $R1
+    ${If} $R1 != "OK"
+        !insertmacro Log "VC++ redistributable download failed or inetc plugin missing; skipping automatic install. ($R1)"
+        Goto done_vc
     ${EndIf}
-    ExecWait '"$3" /install /quiet /norestart' $0
-    ${If} $0 == "0"
-        DetailPrint "VC++ Redistributable installed successfully"
-        !insertmacro Log "VC++ Redistributable installed successfully"
-    ${ElseIf} $0 == "1638"
-        DetailPrint "VC++ already installed (newer version)"
-        !insertmacro Log "VC++ already installed (newer version)"
-    ${ElseIf} $0 == "3010"
-        DetailPrint "VC++ installed, restart required"
-        !insertmacro Log "VC++ installed, restart required"
-    ${Else}
-        MessageBox MB_OK|MB_ICONSTOP "VC++ Redistributable installation failed (code $0). Please install manually."
-        Abort
-    ${EndIf}
-done:
-    Pop $3
-    Pop $2
-    Pop $1
+    ExecWait '"$R0" /install /quiet /norestart' $R1
+    !insertmacro Log "VC++ installer returned exit code: $R1"
+done_vc:
     Pop $0
 FunctionEnd
 
-; ---------------- Copy DB with robust checks ----------------
+; ---------------- Copy DB using cmd copy ----------------
 Function CopyDatabase
-  ; Use the interactive user's shell context so $APPDATA points at that user's profile even if installer is elevated
+  ; operate on interactive user's profile
   SetShellVarContext current
 
-  StrCpy $DB_DEST "$APPDATA\\idorendmaker\\idorendmaker.db"
+  ; Target path (exact place you verified by hand)
+  StrCpy $DB_DEST "$LOCALAPPDATA\\idorendmaker-desktop\\idorendmaker.db"
+
   !insertmacro Log "=== DATABASE COPY PROCESS START ==="
-  !insertmacro Log "Target destination: $DB_DEST"
+  !insertmacro Log "Target destination (LOCALAPPDATA): $DB_DEST"
   !insertmacro Log "Installation directory (INSTDIR): $INSTDIR"
 
-  ; List installer top-level contents for debugging (full paths)
+  ; List top-level contents for debugging
   !insertmacro Log "=== ACTUAL INSTALLER CONTENTS (top-level) ==="
   FindFirst $0 $1 "$INSTDIR\\*.*"
-  loop:
-    StrCmp $1 "" done
+  loopA:
+    StrCmp $1 "" doneA
     StrCpy $R0 "$INSTDIR\\$1"
     !insertmacro Log "Found: $R0"
     FindNext $0 $1
-    Goto loop
-  done:
+    Goto loopA
+  doneA:
   FindClose $0
   !insertmacro Log "=== END INSTALLER CONTENTS ==="
 
-  ; Also list $INSTDIR\resources (common electron-builder location)
+  ; List resources dir for debugging
   ${If} ${FileExists} "$INSTDIR\\resources"
     !insertmacro Log "=== RESOURCES DIRECTORY CONTENTS ==="
     FindFirst $0 $1 "$INSTDIR\\resources\\*.*"
-    loop2:
-      StrCmp $1 "" done2
+    loopB:
+      StrCmp $1 "" doneB
       StrCpy $R0 "$INSTDIR\\resources\\$1"
       !insertmacro Log "Resource: $R0"
       FindNext $0 $1
-      Goto loop2
-    done2:
+      Goto loopB
+    doneB:
     FindClose $0
     !insertmacro Log "=== END RESOURCES CONTENTS ==="
   ${Else}
-    !insertmacro Log "No resources directory found in installer ($INSTDIR\\resources)"
+    !insertmacro Log "No resources directory found at $INSTDIR\\resources"
   ${EndIf}
 
   ; If destination exists, keep it (do not overwrite)
@@ -190,19 +163,20 @@ Function CopyDatabase
     !insertmacro Log "✅ Database already exists at $DB_DEST — keeping user data"
     !insertmacro Log "=== DATABASE COPY PROCESS END (SKIPPED) ==="
     SetShellVarContext all
+    MessageBox MB_OK "Database already present at: $DB_DEST"
     Return
   ${EndIf}
 
-  ; Create AppData directory first (for interactive user)
-  !insertmacro Log "Creating target directory: $APPDATA\\idorendmaker"
-  CreateDirectory "$APPDATA\\idorendmaker"
+  ; Create directory first
+  !insertmacro Log "Creating directory: $LOCALAPPDATA\\idorendmaker-desktop"
+  CreateDirectory "$LOCALAPPDATA\\idorendmaker-desktop"
   ${If} ${Errors}
-    !insertmacro Log "❌ Failed to create $APPDATA\\idorendmaker (CreateDirectory returned error)"
+    !insertmacro Log "❌ CreateDirectory reported an error for $LOCALAPPDATA\\idorendmaker-desktop"
   ${Else}
-    !insertmacro Log "✅ Target directory exists: $APPDATA\\idorendmaker"
+    !insertmacro Log "✅ Target directory exists: $LOCALAPPDATA\\idorendmaker-desktop"
   ${EndIf}
 
-  ; Candidate source locations (common pack layouts)
+  ; Candidate packaged sources
   StrCpy $SRC1 "$INSTDIR\\resources\\idorendmaker-production.db"
   StrCpy $SRC2 "$INSTDIR\\resources\\app.asar.unpacked\\idorendmaker-production.db"
   StrCpy $SRC3 "$INSTDIR\\idorendmaker-production.db"
@@ -214,62 +188,95 @@ Function CopyDatabase
   !insertmacro Log "  3: $SRC3"
   !insertmacro Log "  4: $SRC4"
 
-  ; Try each source in turn using ${FileExists}
+  ; Try each source using Windows 'copy' via cmd.exe (more robust in strange environments)
+  ; Primary:
   ${If} ${FileExists} "$SRC1"
     !insertmacro Log "✅ Found DB at PRIMARY: $SRC1"
-    CopyFiles "$SRC1" "$DB_DEST"
-    ${If} ${FileExists} "$DB_DEST"
-      !insertmacro Log "✅ DATABASE COPIED SUCCESSFULLY from primary source"
-      SetShellVarContext all
-      !insertmacro Log "=== DATABASE COPY PROCESS END (SUCCESS) ==="
-      Return
+    ; use cmd copy. use /Y to overwrite, though target won't exist here
+    StrCpy $R0 'cmd.exe /C copy /Y "$SRC1" "$DB_DEST"'
+    !insertmacro Log "Running: $R0"
+    ExecWait '$R0' $R1
+    !insertmacro Log "cmd copy returned code: $R1"
+    ${If} $R1 == 0
+      ${If} ${FileExists} "$DB_DEST"
+        !insertmacro Log "✅ DATABASE COPIED SUCCESSFULLY from primary source"
+        SetShellVarContext all
+        MessageBox MB_OK "Database copied to: $DB_DEST"
+        !insertmacro Log "=== DATABASE COPY PROCESS END (SUCCESS) ==="
+        Return
+      ${EndIf}
+      !insertmacro Log "❌ After cmd copy, destination not found even though rc=0"
     ${Else}
-      !insertmacro Log "❌ Copy failed from primary source: $SRC1"
+      !insertmacro Log "❌ cmd copy failed with exit code $R1"
     ${EndIf}
   ${Else}
     !insertmacro Log "❌ Primary source not found: $SRC1"
   ${EndIf}
 
+  ; Fallback 1:
   ${If} ${FileExists} "$SRC2"
     !insertmacro Log "✅ Found DB at FALLBACK1: $SRC2"
-    CopyFiles "$SRC2" "$DB_DEST"
-    ${If} ${FileExists} "$DB_DEST"
-      !insertmacro Log "✅ DATABASE COPIED SUCCESSFULLY from fallback1"
-      SetShellVarContext all
-      !insertmacro Log "=== DATABASE COPY PROCESS END (SUCCESS) ==="
-      Return
+    StrCpy $R0 'cmd.exe /C copy /Y "$SRC2" "$DB_DEST"'
+    !insertmacro Log "Running: $R0"
+    ExecWait '$R0' $R1
+    !insertmacro Log "cmd copy returned code: $R1"
+    ${If} $R1 == 0
+      ${If} ${FileExists} "$DB_DEST"
+        !insertmacro Log "✅ DATABASE COPIED SUCCESSFULLY from fallback1"
+        SetShellVarContext all
+        MessageBox MB_OK "Database copied to: $DB_DEST"
+        !insertmacro Log "=== DATABASE COPY PROCESS END (SUCCESS) ==="
+        Return
+      ${EndIf}
+      !insertmacro Log "❌ After cmd copy, destination not found even though rc=0"
     ${Else}
-      !insertmacro Log "❌ Copy failed from fallback1"
+      !insertmacro Log "❌ cmd copy failed with exit code $R1"
     ${EndIf}
   ${Else}
     !insertmacro Log "❌ Fallback1 source not found: $SRC2"
   ${EndIf}
 
+  ; Fallback 2:
   ${If} ${FileExists} "$SRC3"
     !insertmacro Log "✅ Found DB at FALLBACK2: $SRC3"
-    CopyFiles "$SRC3" "$DB_DEST"
-    ${If} ${FileExists} "$DB_DEST"
-      !insertmacro Log "✅ DATABASE COPIED SUCCESSFULLY from fallback2"
-      SetShellVarContext all
-      !insertmacro Log "=== DATABASE COPY PROCESS END (SUCCESS) ==="
-      Return
+    StrCpy $R0 'cmd.exe /C copy /Y "$SRC3" "$DB_DEST"'
+    !insertmacro Log "Running: $R0"
+    ExecWait '$R0' $R1
+    !insertmacro Log "cmd copy returned code: $R1"
+    ${If} $R1 == 0
+      ${If} ${FileExists} "$DB_DEST"
+        !insertmacro Log "✅ DATABASE COPIED SUCCESSFULLY from fallback2"
+        SetShellVarContext all
+        MessageBox MB_OK "Database copied to: $DB_DEST"
+        !insertmacro Log "=== DATABASE COPY PROCESS END (SUCCESS) ==="
+        Return
+      ${EndIf}
+      !insertmacro Log "❌ After cmd copy, destination not found even though rc=0"
     ${Else}
-      !insertmacro Log "❌ Copy failed from fallback2"
+      !insertmacro Log "❌ cmd copy failed with exit code $R1"
     ${EndIf}
   ${Else}
     !insertmacro Log "❌ Fallback2 source not found: $SRC3"
   ${EndIf}
 
+  ; Fallback 3:
   ${If} ${FileExists} "$SRC4"
     !insertmacro Log "✅ Found DB at FALLBACK3: $SRC4"
-    CopyFiles "$SRC4" "$DB_DEST"
-    ${If} ${FileExists} "$DB_DEST"
-      !insertmacro Log "✅ DATABASE COPIED SUCCESSFULLY from fallback3"
-      SetShellVarContext all
-      !insertmacro Log "=== DATABASE COPY PROCESS END (SUCCESS) ==="
-      Return
+    StrCpy $R0 'cmd.exe /C copy /Y "$SRC4" "$DB_DEST"'
+    !insertmacro Log "Running: $R0"
+    ExecWait '$R0' $R1
+    !insertmacro Log "cmd copy returned code: $R1"
+    ${If} $R1 == 0
+      ${If} ${FileExists} "$DB_DEST"
+        !insertmacro Log "✅ DATABASE COPIED SUCCESSFULLY from fallback3"
+        SetShellVarContext all
+        MessageBox MB_OK "Database copied to: $DB_DEST"
+        !insertmacro Log "=== DATABASE COPY PROCESS END (SUCCESS) ==="
+        Return
+      ${EndIf}
+      !insertmacro Log "❌ After cmd copy, destination not found even though rc=0"
     ${Else}
-      !insertmacro Log "❌ Copy failed from fallback3"
+      !insertmacro Log "❌ cmd copy failed with exit code $R1"
     ${EndIf}
   ${Else}
     !insertmacro Log "❌ Fallback3 source not found: $SRC4"
@@ -277,57 +284,44 @@ Function CopyDatabase
 
   !insertmacro Log "❌ DATABASE NOT FOUND IN ANY EXPECTED LOCATION"
   !insertmacro Log "=== DATABASE COPY PROCESS END (FAILED) ==="
-  MessageBox MB_OK|MB_ICONEXCLAMATION "Warning: Database file not found in installer package.\n\nThe application will attempt to create a fresh database on first run.\n\nIf this persists, please reinstall the application."
+  MessageBox MB_OK|MB_ICONEXCLAMATION "Warning: Database file not found in installer package.\n\nCheck $TEMP\\idorendmaker-installer.log for details."
   SetShellVarContext all
 FunctionEnd
 
-; electron-builder hooks
+; ---------------- electron-builder hooks ----------------
 !macro customInstall
-    ; keep VC++ install during the main install stage (so prerequisites are installed early)
+    ; perform prereq checks; we do not let VC install block DB copy later
     Call InstallVCRedist
-    ; DO NOT copy DB here — files may not yet be extracted
 !macroend
 
 !macro preWelcome
 !macroend
 
-; Run DB copy here — AFTER files are extracted to $INSTDIR
 !macro customFinish
-    DetailPrint "Installation completed successfully."
-    !insertmacro Log "Installation completed successfully."
-    ; ensure DB copy runs after unpack: call CopyDatabase now
+    DetailPrint "Installation finished (customFinish). Beginning post-unpack tasks..."
+    !insertmacro Log "Installation completed successfully. Running CopyDatabase..."
     Call CopyDatabase
-    !insertmacro Log "Log file saved to: $TEMP\\idorendmaker-installer.log"
-    DetailPrint "📋 Installation log saved to: $TEMP\\idorendmaker-installer.log"
-    ${If} ${FileExists} "$APPDATA\\idorendmaker\\idorendmaker.db"
-        MessageBox MB_OK "DB installed to: $APPDATA\\idorendmaker\\idorendmaker.db"
-    ${Else}
-        MessageBox MB_OK "DB copy failed — check $TEMP\\idorendmaker-installer.log"
-    ${EndIf}
+    !insertmacro Log "Post-unpack steps complete. Installer log: $TEMP\\idorendmaker-installer.log"
+    DetailPrint "📋 Installation log: $TEMP\\idorendmaker-installer.log"
 !macroend
 
-; ---------------- Optional verification section ----------------
-Section "Verify Installation Package" SEC_VERIFY
-    !insertmacro Log "=== INSTALLER PACKAGE VERIFICATION ==="
-    !insertmacro Log "Checking installer package integrity..."
-    ${If} ${FileExists} "$INSTDIR\\idorendmaker-production.db"
-        !insertmacro Log "✅ Database found in installer package (top-level)"
-    ${ElseIf} ${FileExists} "$INSTDIR\\resources\\idorendmaker-production.db"
-        !insertmacro Log "✅ Database found in resources directory"
+; ---------------- optional verify section ----------------
+Section "Verify installer package (debug only)" SEC_VERIFY
+    !insertmacro Log "=== PACKAGE VERIFICATION ==="
+    ${If} ${FileExists} "$INSTDIR\\resources\\idorendmaker-production.db"
+        !insertmacro Log "✅ DB present in $INSTDIR\\resources"
     ${Else}
-        !insertmacro Log "⚠️  Database not found in expected locations"
+        !insertmacro Log "❌ DB missing from $INSTDIR\\resources"
     ${EndIf}
-
-    ${If} ${FileExists} "$INSTDIR\\idorendmaker-backend.exe"
-        !insertmacro Log "✅ Backend executable found"
+    ${If} ${FileExists} "$INSTDIR\\resources\\idorendmaker-backend.exe"
+        !insertmacro Log "✅ Backend EXE present"
     ${Else}
-        !insertmacro Log "⚠️  Backend executable not found"
+        !insertmacro Log "❌ Backend EXE missing"
     ${EndIf}
-
-    ${If} ${FileExists} "$INSTDIR\\idorendmaker-pdfprocessor.exe"
-        !insertmacro Log "✅ PDF processor executable found"
+    ${If} ${FileExists} "$INSTDIR\\resources\\idorendmaker-pdfprocessor.exe"
+        !insertmacro Log "✅ PDF processor EXE present"
     ${Else}
-        !insertmacro Log "⚠️  PDF processor executable not found"
+        !insertmacro Log "❌ PDF processor EXE missing"
     ${EndIf}
     !insertmacro Log "=== PACKAGE VERIFICATION COMPLETE ==="
 SectionEnd
