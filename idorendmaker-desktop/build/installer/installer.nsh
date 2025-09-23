@@ -1,6 +1,7 @@
-; Custom NSIS installer snippet for Időrend Készítő
+; installer.nsh - NSIS snippet for Időrend Készítő (drop into build/installer/installer.nsh)
 !include "LogicLib.nsh"
 !include "x64.nsh"
+!include "FileFunc.nsh"     ; provides ${FileExists}
 
 ; declare user variables used later
 Var DB_DEST
@@ -10,7 +11,6 @@ Var SRC3
 Var SRC4
 Var vcUrl
 Var vcFile
-Var LogFile
 
 !define VCREDIST_2015_2022_X64_URL "https://aka.ms/vs/17/release/vc_redist.x64.exe"
 !define VCREDIST_2015_2022_X86_URL "https://aka.ms/vs/17/release/vc_redist.x86.exe"
@@ -22,18 +22,15 @@ Var LogFile
 !define VCREDIST_SERVICING_KEY "SOFTWARE\\Microsoft\\DevDiv\\VC\\Servicing\\14.0\\RuntimeMinimum"
 
 ; ---------------- Logging helper ----------------
-; usage: Push "message"  Call LogMessage  (the original macro in your file used a push/call/pop pattern,
-; this function restores the pushed message so existing macro/pop still works)
 Function LogMessage
-  Exch $0            ; pop the message into $0
+  Exch $0
   DetailPrint "$0"
-  ; open log file for append
   FileOpen $1 "$TEMP\\idorendmaker-installer.log" a
   ${If} $1 != ""
     FileWrite $1 "$0$\r$\n"
     FileClose $1
   ${EndIf}
-  Push $0            ; push message back so caller who does Pop will still work
+  Push $0
 FunctionEnd
 
 !macro Log message
@@ -42,7 +39,7 @@ FunctionEnd
   Pop $0
 !macroend
 
-; ------- VC++ check & install -------
+; ---------------- VC++ detection / install ----------------
 Function CheckVCRedist
     Push $0
     Push $1
@@ -107,6 +104,7 @@ Function InstallVCRedist
     Pop $0
     ${If} $0 == "1"
         DetailPrint "Visual C++ Redistributable already installed"
+        !insertmacro Log "VC++ Redistributable already installed"
         Goto done
     ${EndIf}
 
@@ -119,7 +117,7 @@ Function InstallVCRedist
     ${EndIf}
 
     StrCpy $3 "$PLUGINSDIR\\$vcFile"
-    DetailPrint "Downloading VC++ Redistributable..."
+    !insertmacro Log "Downloading VC++ Redistributable..."
     inetc::get /WEAKSECURITY "$vcUrl" "$3" /END
     Pop $0
     ${If} $0 != "OK"
@@ -129,10 +127,13 @@ Function InstallVCRedist
     ExecWait '"$3" /install /quiet /norestart' $0
     ${If} $0 == "0"
         DetailPrint "VC++ Redistributable installed successfully"
+        !insertmacro Log "VC++ Redistributable installed successfully"
     ${ElseIf} $0 == "1638"
         DetailPrint "VC++ already installed (newer version)"
+        !insertmacro Log "VC++ already installed (newer version)"
     ${ElseIf} $0 == "3010"
         DetailPrint "VC++ installed, restart required"
+        !insertmacro Log "VC++ installed, restart required"
     ${Else}
         MessageBox MB_OK|MB_ICONSTOP "VC++ Redistributable installation failed (code $0). Please install manually."
         Abort
@@ -146,8 +147,7 @@ FunctionEnd
 
 ; ---------------- Copy DB with robust checks ----------------
 Function CopyDatabase
-  ; ensure we operate in the interactive user's shell context for APPDATA
-  ; (when installer runs elevated this makes shell variables resolve for the user who launched the installer)
+  ; Use the interactive user's shell context so $APPDATA points at that user's profile even if installer is elevated
   SetShellVarContext current
 
   StrCpy $DB_DEST "$APPDATA\\idorendmaker\\idorendmaker.db"
@@ -160,7 +160,6 @@ Function CopyDatabase
   FindFirst $0 $1 "$INSTDIR\\*.*"
   loop:
     StrCmp $1 "" done
-    ; $1 is filename only - create full path for logging
     StrCpy $R0 "$INSTDIR\\$1"
     !insertmacro Log "Found: $R0"
     FindNext $0 $1
@@ -169,7 +168,7 @@ Function CopyDatabase
   FindClose $0
   !insertmacro Log "=== END INSTALLER CONTENTS ==="
 
-  ; Also list $INSTDIR\resources
+  ; Also list $INSTDIR\resources (common electron-builder location)
   ${If} ${FileExists} "$INSTDIR\\resources"
     !insertmacro Log "=== RESOURCES DIRECTORY CONTENTS ==="
     FindFirst $0 $1 "$INSTDIR\\resources\\*.*"
@@ -183,14 +182,13 @@ Function CopyDatabase
     FindClose $0
     !insertmacro Log "=== END RESOURCES CONTENTS ==="
   ${Else}
-    !insertmacro Log "No resources directory found in installer"
+    !insertmacro Log "No resources directory found in installer ($INSTDIR\\resources)"
   ${EndIf}
 
   ; If destination exists, keep it (do not overwrite)
   ${If} ${FileExists} "$DB_DEST"
     !insertmacro Log "✅ Database already exists at $DB_DEST — keeping user data"
     !insertmacro Log "=== DATABASE COPY PROCESS END (SKIPPED) ==="
-    ; restore shell context to 'all' before returning (good hygiene)
     SetShellVarContext all
     Return
   ${EndIf}
@@ -283,38 +281,43 @@ Function CopyDatabase
   SetShellVarContext all
 FunctionEnd
 
-; electron-builder macros
+; electron-builder hooks
 !macro customInstall
+    ; keep VC++ install during the main install stage (so prerequisites are installed early)
     Call InstallVCRedist
-    Call CopyDatabase
+    ; DO NOT copy DB here — files may not yet be extracted
 !macroend
 
 !macro preWelcome
 !macroend
 
+; Run DB copy here — AFTER files are extracted to $INSTDIR
 !macro customFinish
     DetailPrint "Installation completed successfully."
     !insertmacro Log "Installation completed successfully."
+    ; ensure DB copy runs after unpack: call CopyDatabase now
+    Call CopyDatabase
     !insertmacro Log "Log file saved to: $TEMP\\idorendmaker-installer.log"
     DetailPrint "📋 Installation log saved to: $TEMP\\idorendmaker-installer.log"
+    ${If} ${FileExists} "$APPDATA\\idorendmaker\\idorendmaker.db"
+        MessageBox MB_OK "DB installed to: $APPDATA\\idorendmaker\\idorendmaker.db"
+    ${Else}
+        MessageBox MB_OK "DB copy failed — check $TEMP\\idorendmaker-installer.log"
+    ${EndIf}
 !macroend
 
-; Add a section to verify installer integrity before installation
+; ---------------- Optional verification section ----------------
 Section "Verify Installation Package" SEC_VERIFY
     !insertmacro Log "=== INSTALLER PACKAGE VERIFICATION ==="
     !insertmacro Log "Checking installer package integrity..."
-
-    ; Check if database source exists in installer
     ${If} ${FileExists} "$INSTDIR\\idorendmaker-production.db"
-        !insertmacro Log "✅ Database found in installer package"
+        !insertmacro Log "✅ Database found in installer package (top-level)"
     ${ElseIf} ${FileExists} "$INSTDIR\\resources\\idorendmaker-production.db"
         !insertmacro Log "✅ Database found in resources directory"
     ${Else}
         !insertmacro Log "⚠️  Database not found in expected locations"
-        !insertmacro Log "    This may indicate a packaging issue"
     ${EndIf}
 
-    ; Check if executables exist
     ${If} ${FileExists} "$INSTDIR\\idorendmaker-backend.exe"
         !insertmacro Log "✅ Backend executable found"
     ${Else}
@@ -326,11 +329,9 @@ Section "Verify Installation Package" SEC_VERIFY
     ${Else}
         !insertmacro Log "⚠️  PDF processor executable not found"
     ${EndIf}
-
     !insertmacro Log "=== PACKAGE VERIFICATION COMPLETE ==="
 SectionEnd
 
 Section "Prerequisites" SEC_PREREQ
     Call InstallVCRedist
-    Call CopyDatabase
 SectionEnd

@@ -57,9 +57,10 @@
     ],
     "nsis": {
       "oneClick": false,
-      "perMachine": true,
+      "perMachine": false,
       "allowElevation": true,
-      "include": "build/installer/installer.nsh"
+      "include": "build/installer/installer.nsh",
+      "warningsAsErrors": false
     },
     "win": {
       "icon": "build/icon.ico"
