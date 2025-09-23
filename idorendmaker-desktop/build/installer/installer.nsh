@@ -117,10 +117,10 @@ Function CopyDatabase
   SetShellVarContext current
 
   ; Target path (exact place you validated by hand)
-  StrCpy $DB_DEST "$LOCALAPPDATA\\idorendmaker-desktop\\idorendmaker.db"
+  StrCpy $DB_DEST "$APPDATA\\idorendmaker\\idorendmaker.db"
 
   !insertmacro Log "=== DATABASE COPY PROCESS START ==="
-  !insertmacro Log "Target destination (LOCALAPPDATA): $DB_DEST"
+  !insertmacro Log "Target destination (APPDATA): $DB_DEST"
   !insertmacro Log "Installation directory (INSTDIR): $INSTDIR"
 
   ; List top-level contents for debugging
@@ -163,12 +163,12 @@ Function CopyDatabase
   ${EndIf}
 
   ; Create directory first
-  !insertmacro Log "Creating directory: $LOCALAPPDATA\\idorendmaker-desktop"
-  CreateDirectory "$LOCALAPPDATA\\idorendmaker-desktop"
+  !insertmacro Log "Creating directory: $APPDATA\\idorendmaker"
+  CreateDirectory "$APPDATA\\idorendmaker"
   ${If} ${Errors}
-    !insertmacro Log "❌ CreateDirectory reported an error for $LOCALAPPDATA\\idorendmaker-desktop"
+    !insertmacro Log "❌ CreateDirectory reported an error for $APPDATA\\idorendmaker"
   ${Else}
-    !insertmacro Log "✅ Target directory exists: $LOCALAPPDATA\\idorendmaker-desktop"
+    !insertmacro Log "✅ Target directory exists: $APPDATA\\idorendmaker"
   ${EndIf}
 
   ; Candidate packaged sources
