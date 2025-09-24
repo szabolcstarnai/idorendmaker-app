@@ -86,6 +86,13 @@ export interface RuleStats {
   inactiveRules: number
 }
 
+// Migration and version tracking types
+export interface MigrationCheckResult {
+  migrationsRun: string[]     // Versions that had migrations executed
+  unseenVersions: string[]    // Versions user hasn't seen what's new for
+  errors?: string[]           // Any migration failures
+}
+
 // Configuration constants for maintainability
 export class BackendConfig {
   static readonly REQUEST_TIMEOUT = 120000 // 120 seconds
@@ -98,12 +105,13 @@ export class BackendConfig {
   // API Endpoints
   static readonly ENDPOINTS = {
     LEVELS: '/levels',
-    RACES: '/races', 
+    RACES: '/races',
     SCHEDULES: '/schedules',
     RULES: '/rules',
     COMPETITORS: '/competitors',
     PDF: '/pdf',
-    BOAT_CLASSES: '/boat-classes'
+    BOAT_CLASSES: '/boat-classes',
+    VERSIONS: '/versions'
   } as const
 }
 
@@ -963,6 +971,76 @@ export class BackendAPIService {
         racesWithEntries: 0,
         organizationsRepresented: 0
       }
+    }
+  }
+
+  // =================== VERSION MANAGEMENT METHODS ===================
+
+  /**
+   * Check for needed migrations and run them, then return what's new versions
+   * Main method called on app startup
+   * Replaces: No direct equivalent - new feature
+   * Endpoint: POST /api/versions/check-and-migrate
+   */
+  static async checkAndRunMigrations(availableVersions: string[]): Promise<MigrationCheckResult> {
+    try {
+      return await this.post<MigrationCheckResult>(
+        `${BackendConfig.ENDPOINTS.VERSIONS}/check-and-migrate`,
+        availableVersions
+      )
+    } catch (error) {
+      console.error('Error during migration check:', error)
+      return {
+        migrationsRun: [],
+        unseenVersions: [],
+        errors: [error instanceof Error ? error.message : 'Unknown migration error']
+      }
+    }
+  }
+
+  /**
+   * Mark a version's what's new as seen by user
+   * Called when user dismisses what's new modal
+   * Replaces: No direct equivalent - new feature
+   * Endpoint: POST /api/versions/{version}/mark-seen
+   */
+  static async markVersionSeen(version: string): Promise<boolean> {
+    try {
+      await this.post<void>(`${BackendConfig.ENDPOINTS.VERSIONS}/${version}/mark-seen`, {})
+      return true
+    } catch (error) {
+      console.error('Error marking version as seen:', error)
+      return false
+    }
+  }
+
+  /**
+   * Get all versions that have unseen what's new notifications
+   * Primarily for debugging/admin purposes
+   * Replaces: No direct equivalent - new feature
+   * Endpoint: GET /api/versions/unseen
+   */
+  static async getUnseenVersions(): Promise<string[]> {
+    try {
+      return await this.get<string[]>(`${BackendConfig.ENDPOINTS.VERSIONS}/unseen`)
+    } catch (error) {
+      console.error('Error getting unseen versions:', error)
+      return []
+    }
+  }
+
+  /**
+   * Check if version tracking system is enabled
+   * Returns true if version tracking table exists
+   * Replaces: No direct equivalent - new feature
+   * Endpoint: GET /api/versions/tracking-enabled
+   */
+  static async isVersionTrackingEnabled(): Promise<boolean> {
+    try {
+      return await this.get<boolean>(`${BackendConfig.ENDPOINTS.VERSIONS}/tracking-enabled`)
+    } catch (error) {
+      console.error('Error checking version tracking status:', error)
+      return false
     }
   }
 }

@@ -132,6 +132,17 @@ CREATE TABLE IF NOT EXISTS dismissed_rule_violations (
     UNIQUE(schedule_id, violation_hash)
 );
 
+-- App version tracking - track database migrations and what's new notifications
+CREATE TABLE IF NOT EXISTS app_version_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    version TEXT NOT NULL UNIQUE,
+    migrations_run BOOLEAN NOT NULL DEFAULT 0, -- Track if migrations executed
+    whats_new_seen BOOLEAN NOT NULL DEFAULT 0, -- Track if user saw what's new
+    migrated_at DATETIME, -- When migrations ran
+    seen_at DATETIME, -- When user dismissed what's new
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- PDF Processing & Competitor-Aware Tables
 CREATE TABLE IF NOT EXISTS pdf_extractions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -230,6 +241,11 @@ CREATE INDEX IF NOT EXISTS idx_rule_matchings_field ON rule_matchings(field);
 -- Dismissed violations indexes
 CREATE INDEX IF NOT EXISTS idx_dismissed_violations_schedule_id ON dismissed_rule_violations(schedule_id);
 CREATE INDEX IF NOT EXISTS idx_dismissed_violations_hash ON dismissed_rule_violations(violation_hash);
+
+-- App version history indexes
+CREATE INDEX IF NOT EXISTS idx_app_version_history_version ON app_version_history(version);
+CREATE INDEX IF NOT EXISTS idx_app_version_history_migrations_run ON app_version_history(migrations_run);
+CREATE INDEX IF NOT EXISTS idx_app_version_history_whats_new_seen ON app_version_history(whats_new_seen);
 
 -- PDF extractions indexes
 CREATE INDEX IF NOT EXISTS idx_pdf_extractions_extraction_status ON pdf_extractions(extraction_status);

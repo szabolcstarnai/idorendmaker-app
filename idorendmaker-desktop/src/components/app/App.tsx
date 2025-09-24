@@ -10,6 +10,8 @@ import PDFProcessor from '../pdf/PDFProcessor';
 import Navbar from './Navbar';
 import UnsavedChangesDialog from '../dialogs/UnsavedChangesDialog';
 import { TwoPanelLayout } from '../layout/TwoPanelLayout';
+import { WhatsNewModalManager } from '../common';
+import { AppVersionService } from '../../features/common/services/AppVersionService';
 import { RaceWithAgeGroupsAndBoatClass, ScheduleWithSections, ScheduleSection, CreateScheduleSectionData, ScheduleRace, SectionWorkingData, Schedule, RuleWithConditions, CreateRuleData, Level, ScheduleMode } from '../../../shared/types/race';
 import { useUnsavedChanges } from '../../features/common/hooks/useUnsavedChanges';
 import { Toaster } from '../ui/sonner';
@@ -65,6 +67,58 @@ const App: React.FC = () => {
       initializeSchedule();
     }
   }, [currentView]);
+
+  // Version checking and migration on app startup
+  useEffect(() => {
+    const handleAppStartup = async () => {
+      try {
+        console.log('🚀 App startup: Checking for version updates and migrations...');
+
+        const startupResult = await AppVersionService.handleAppStartup();
+
+        if (startupResult.success) {
+          console.log('✅ App startup completed successfully');
+
+          if (startupResult.migrationsRun.length > 0) {
+            console.log(`🔄 Ran migrations for versions: ${startupResult.migrationsRun.join(', ')}`);
+            toast.success(`Adatbázis frissítve (${startupResult.migrationsRun.length} verzió)`, {
+              duration: 3000
+            });
+          }
+
+          if (startupResult.whatsNewToShow.length > 0) {
+            console.log(`📢 Showing what's new for ${startupResult.whatsNewToShow.length} version(s)`);
+
+            // Show what's new sequence
+            setTimeout(async () => {
+              await AppVersionService.showWhatsNewSequence(startupResult.whatsNewToShow);
+            }, 1000); // Wait a bit for the app to fully load
+          }
+
+        } else if (startupResult.errors.length > 0) {
+          console.error('❌ App startup encountered errors:', startupResult.errors);
+
+          // Show error toast but don't block the app
+          toast.error('Verziókezelés hiba', {
+            description: startupResult.errors[0],
+            duration: 5000
+          });
+        }
+
+      } catch (error) {
+        console.error('❌ Critical error during app startup:', error);
+
+        // Show error toast but don't block the app
+        toast.error('Alkalmazás indítás hiba', {
+          description: 'A verziókezelő rendszer nem indult el. Az alkalmazás használható, de az új funkciók értesítései nem működnek.',
+          duration: 8000
+        });
+      }
+    };
+
+    // Run startup check once when app mounts
+    handleAppStartup();
+  }, []); // Empty dependency array - run only once on mount
 
   // Initialize with a default schedule
   const initializeSchedule = async () => {
@@ -729,6 +783,7 @@ const App: React.FC = () => {
     <>
       {renderCurrentView()}
       <Toaster />
+      <WhatsNewModalManager />
       <UnsavedChangesDialog
         isOpen={showConfirmDialog}
         onClose={handleCancelNavigation}
@@ -737,7 +792,7 @@ const App: React.FC = () => {
         canSave={canSave}
         title={unsavedChangesType === 'rule' ? 'Mentetlen szabály módosítások' : 'Mentetlen időrend módosítások'}
         description={
-          unsavedChangesType === 'rule' 
+          unsavedChangesType === 'rule'
             ? 'A szabályban mentetlen módosítások vannak. Biztosan el szeretné hagyni a szerkesztőt?'
             : 'Az időrendben mentetlen módosítások vannak. Biztosan el szeretné hagyni a szerkesztőt?'
         }
