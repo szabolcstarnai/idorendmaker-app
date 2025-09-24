@@ -15,7 +15,6 @@ import { pdfProcessorService } from './features/pdf/services/PDFProcessorService
 import { backendService } from './features/common/services/BackendService';
 // import { RaceMatchingService } from './features/pdf/services/RaceMatchingService'; // TEMPORARILY COMMENTED OUT FOR PRISMA MIGRATION
 // import { CompetitorService } from '../archive/CompetitorService.ts.old';
-import { DatabaseInitializer } from './features/common/services/DatabaseInitializer';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -54,21 +53,8 @@ const initializeApp = async () => {
     console.log('✅ Backend service started successfully');
     console.log(`📍 Backend URL: ${backendService.getBaseUrl()}`);
 
-    // Initialize database based on environment (development vs production)
-    console.log('🔧 Initializing database system...');
-    const dbConfig = await DatabaseInitializer.initialize();
-    console.log(`✅ Database initialized: ${dbConfig.path}`);
-    console.log(`📍 Environment: ${dbConfig.isProduction ? 'Production' : 'Development'}`);
-    
-    if (dbConfig.wasInitialized) {
-      console.log('🎉 First-time setup completed successfully');
-    }
-    
-    // Validate database accessibility
-    const isValid = await DatabaseInitializer.validateDatabase(dbConfig.path);
-    if (!isValid) {
-      console.error('❌ Database validation failed - some features may not work properly');
-    }
+    // Database initialization is now handled by the backend service
+    console.log('✅ Database is managed by the backend service');
     
   } catch (error) {
     console.error('❌ Backend service or database initialization failed:', error);

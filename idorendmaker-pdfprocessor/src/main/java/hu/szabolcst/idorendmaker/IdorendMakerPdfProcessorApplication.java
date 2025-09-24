@@ -9,6 +9,7 @@ import java.io.IOException;
 public class IdorendMakerPdfProcessorApplication {
 
 	public static void main(final String[] args) {
+		System.setProperty("java.awt.headless", "true");
 		SpringApplication.run(IdorendMakerPdfProcessorApplication.class, args);
 	}
 

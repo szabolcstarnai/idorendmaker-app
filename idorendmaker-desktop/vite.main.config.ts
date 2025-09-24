@@ -3,8 +3,6 @@ import { defineConfig } from 'vite';
 // https://vitejs.dev/config
 export default defineConfig({
   build: {
-    rollupOptions: {
-      external: ['better-sqlite3'],
-    },
+    // Minimal build config to ensure proper main process compilation
   },
 });

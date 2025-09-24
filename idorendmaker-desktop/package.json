@@ -1,7 +1,7 @@
 {
   "name": "idorendmaker-desktop",
   "productName": "Időrend Készítő",
-  "version": "1.0.0",
+  "version": "2025.9.1",
   "description": "Kajak-kenu verseny időrend készítő alkalmazás",
   "main": ".vite/build/main.js",
   "scripts": {
@@ -13,15 +13,14 @@
     "lint": "eslint --ext .ts,.tsx .",
     "build:backend": "cd ../idorendmaker-backend && mvn -Pnative native:compile-no-fork",
     "build:backend:dev": "cd ../idorendmaker-backend && mvn -Pnative native:compile-no-fork -Dquarkus.native.debug.enabled=true",
-    "build:pdfprocessor": "cd ../idorendmaker-pdfprocessor && mvn -Pnative native:compile-no-fork",
+    "build:pdfprocessor": "cd ../idorendmaker-pdfprocessor && mvn -DskipTests package",
+    "copy:resources": "cp ../idorendmaker-backend/target/idorendmaker-backend.exe resources/ && cp ../idorendmaker-pdfprocessor/target/idorendmaker-pdfprocessor-*.jar resources/idorendmaker-pdfprocessor.jar && echo 'Resources copied to installer directory'",
+    "check:pdfprocessor": "test -f ../idorendmaker-pdfprocessor/target/idorendmaker-pdfprocessor-*.jar && echo 'PDF processor JAR found' || echo 'PDF processor JAR missing - run npm run build:pdfprocessor'",
     "build:all": "npm run build:backend && npm run build:pdfprocessor",
     "check:backend": "test -f ../idorendmaker-backend/target/idorendmaker-backend.exe && echo 'Backend executable found' || echo 'Backend executable missing - run npm run build:backend'",
-    "check:pdfprocessor": "test -f ../idorendmaker-pdfprocessor/target/idorendmaker-pdfprocessor.exe && echo 'PDF processor executable found' || echo 'PDF processor executable missing - run npm run build:pdfprocessor'",
     "check:resources": "npm run check:backend && npm run check:pdfprocessor && test -f resources/idorendmaker-production.db && echo 'All resources ready for installer' || echo 'Some resources missing - check above'",
-    "copy:resources": "cp ../idorendmaker-backend/target/idorendmaker-backend.exe resources/ && cp ../idorendmaker-pdfprocessor/target/idorendmaker-pdfprocessor.exe resources/ && echo 'Resources copied to installer directory'",
     "make:installer": "npm run check:resources && npm run make",
-    "populate-db": "tsx scripts/populate-db.ts",
-    "migrate-locking": "tsx scripts/migrate-schedule-locking.ts"
+    "beforePack": "./script/beforePack.js"
   },
   "keywords": [],
   "author": {
@@ -47,8 +46,8 @@
         "to": "idorendmaker-backend.exe"
       },
       {
-        "from": "resources/idorendmaker-pdfprocessor.exe",
-        "to": "idorendmaker-pdfprocessor.exe"
+        "from": "resources/idorendmaker-pdfprocessor.jar",
+        "to": "idorendmaker-pdfprocessor.jar"
       },
       {
         "from": "resources/idorendmaker-production.db",
@@ -98,13 +97,11 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^24.3.0",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
     "autoprefixer": "^10.4.21",
     "axios": "^1.6.0",
-    "better-sqlite3": "^12.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",

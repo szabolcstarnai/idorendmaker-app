@@ -130,15 +130,25 @@ export class BackendService {
 
     console.log(`Starting backend service on port ${this.port}...`);
 
-    return new Promise((resolve, reject) => {
-      // Spawn the GraalVM executable with port configuration
-      this.process = spawn(this.executablePath, [
+
+    let command = [
         `--server.port=${this.port}`,
         '--logging.level.org.springframework.web=INFO',
         '--logging.level.root=INFO',
-        '--spring.profiles.active=prod'/*,
-        '--spring.datasource.url=jdbc:sqlite:idorendmaker.db'*/
-      ], {
+        '--spring.datasource.url=jdbc:sqlite:idorendmaker.db'
+      ]
+    if (app.isPackaged) {
+      command = [
+        `--server.port=${this.port}`,
+        '--logging.level.org.springframework.web=INFO',
+        '--logging.level.root=INFO',
+        '--spring.profiles.active=prod'
+      ]
+    }
+
+    return new Promise((resolve, reject) => {
+      // Spawn the GraalVM executable with port configuration
+      this.process = spawn(this.executablePath, command, {
         stdio: ['ignore', 'pipe', 'pipe'],
         detached: false,
         windowsHide: true

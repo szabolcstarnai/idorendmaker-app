@@ -1,9 +1,12 @@
-; installer.nsh - robust DB copy using Windows copy command (works after unpack)
+; installer.nsh - online-only installer
 ; Save as UTF-8 (no BOM) to build/installer/installer.nsh
 
 !include "LogicLib.nsh"
 !include "x64.nsh"
 !include "FileFunc.nsh"
+
+; show the Details pane by default (must be at top-level, NOT inside a Function)
+; ShowInstDetails show
 
 ; ---------------- variables ----------------
 Var DB_DEST
@@ -11,7 +14,6 @@ Var SRC1
 Var SRC2
 Var SRC3
 Var SRC4
-; DO NOT DECLARE $R0/$R1 - use built-in registers $R0, $R1 (declaring them via Var causes "already declared" errors)
 Var vcUrl
 Var vcFile
 
@@ -24,36 +26,40 @@ Var vcFile
 !define VCREDIST_WOW64_X86_KEY "SOFTWARE\\Wow6432Node\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\x86"
 !define VCREDIST_SERVICING_KEY "SOFTWARE\\Microsoft\\DevDiv\\VC\\Servicing\\14.0\\RuntimeMinimum"
 
-; ---------------- logging helper ----------------
-Function LogMessage
-  Exch $0
-  ; print into installer UI (useful)
-  DetailPrint "$0"
-  ; append to file
-  FileOpen $1 "$TEMP\\idorendmaker-installer.log" a
-  ${If} $1 != ""
-    FileWrite $1 "$0$\r$\n"
-    FileClose $1
-  ${Else}
-    DetailPrint "!! Failed to open log file for append"
-  ${EndIf}
-  Push $0
-FunctionEnd
+; ---------------- JRE download/install configuration ----------------
+!define REQUIRED_JAVA_MAJOR "23"
+!define JRE_DOWNLOAD_URL "https://github.com/adoptium/temurin23-binaries/releases/download/jdk-23.0.2%2B7/OpenJDK23U-jre_x64_windows_hotspot_23.0.2_7.zip"
+!define JRE_FILENAME "OpenJDK23U-jre_x64_windows_hotspot_23.0.2_7.zip"
 
-!macro Log message
-  Push "${message}"
-  Call LogMessage
-  Pop $0
+; check-java.ps1 must be included in the installer build (File ... check-java.ps1)
+
+!macro customHeader
+  ShowInstDetails show
+  ShowUninstDetails show
 !macroend
+
+; ---------------- Fatal abort helper (Hungarian) ----------------
+; Usage: Push "részletek..." ; Call FatalAbort
+Function FatalAbort
+  SetDetailsPrint both
+  Exch $0
+  ; print a final detail line so the user can see the reason
+  DetailPrint "$0"
+  ; show a Hungarian message box explaining install aborted
+  MessageBox MB_OK|MB_ICONEXCLAMATION "Hiba: a telepítés megszakadt. Részletek a telepítő ablakában találhatók."
+  Abort
+FunctionEnd
 
 ; ---------------- VC++ detection (non-blocking) ----------------
 Function CheckVCRedist
+    SetDetailsPrint both
     Push $0
     Push $1
     Push $2
     StrCpy $0 "0"
+
+    ClearErrors
     ${If} ${RunningX64}
-        ClearErrors
         ReadRegDWORD $1 HKLM "${VCREDIST_2015_2022_X64_KEY}" "Installed"
         ${IfNot} ${Errors}
             ${If} $1 == "1"
@@ -65,6 +71,13 @@ Function CheckVCRedist
         ${IfNot} ${Errors}
             StrCpy $0 "1"
         ${EndIf}
+        ClearErrors
+        ReadRegDWORD $1 HKLM "${VCREDIST_WOW64_X64_KEY}" "Installed"
+        ${IfNot} ${Errors}
+            ${If} $1 == "1"
+                StrCpy $0 "1"
+            ${EndIf}
+        ${EndIf}
     ${Else}
         ClearErrors
         ReadRegDWORD $1 HKLM "${VCREDIST_2015_2022_X86_KEY}" "Installed"
@@ -73,19 +86,30 @@ Function CheckVCRedist
                 StrCpy $0 "1"
             ${EndIf}
         ${EndIf}
+        ClearErrors
+        ReadRegDWORD $1 HKLM "${VCREDIST_WOW64_X86_KEY}" "Installed"
+        ${IfNot} ${Errors}
+            ${If} $1 == "1"
+                StrCpy $0 "1"
+            ${EndIf}
+        ${EndIf}
     ${EndIf}
+
     Pop $2
     Pop $1
     Exch $0
 FunctionEnd
 
 Function InstallVCRedist
+    SetDetailsPrint both
     Push $0
+    ; check presence
     Call CheckVCRedist
     Pop $0
     ${If} $0 == "1"
-        !insertmacro Log "VC++ Redistributable already installed"
-        Goto done_vc
+        DetailPrint "VC++ futtatókörnyezet már telepítve, telepítés kihagyva."
+        Pop $0
+        Return
     ${EndIf}
 
     ${If} ${RunningX64}
@@ -97,226 +121,225 @@ Function InstallVCRedist
     ${EndIf}
 
     StrCpy $R0 "$PLUGINSDIR\\$vcFile"
-    !insertmacro Log "Attempting to download VC++ Redistributable to $R0"
+    DetailPrint "VC++ futtatókörnyezet telepítő letöltése: $vcUrl"
+
     ClearErrors
-    inetc::get /WEAKSECURITY "$vcUrl" "$R0" /END
+    inetc::get "$vcUrl" "$R0" /END
     Pop $R1
     ${If} $R1 != "OK"
-        !insertmacro Log "VC++ redistributable download failed or inetc plugin missing; skipping automatic install. ($R1)"
-        Goto done_vc
+        ; fatal: no internet or download failed
+        Push "VC++ futtatókörnyezet telepítő letöltése sikertelen. Ellenőrizze az internetkapcsolatot: $vcUrl"
+        Call FatalAbort
     ${EndIf}
+
+    DetailPrint "VC++ telepítő futtatása..."
     ExecWait '"$R0" /install /quiet /norestart' $R1
-    !insertmacro Log "VC++ installer returned exit code: $R1"
-done_vc:
+    ${If} $R1 != 0
+        Push "VC++ futtatókörnyezet telepítő hibakóddal tért vissza: $R1"
+        Call FatalAbort
+    ${EndIf}
+
+    DetailPrint "VC++ futtatókörnyezet telepítés befejeződött."
     Pop $0
+FunctionEnd
+
+; ---------------- Java detection & install ----------------
+Function InstallJRE
+  SetDetailsPrint both
+  Push $0
+  Push $1
+  Push $2
+
+  DetailPrint "Java futtatókörnyezet ellenőrzése..."
+
+  SetOutPath "$PLUGINSDIR"
+  File "${BUILD_RESOURCES_DIR}\\installer\\check-java.ps1"
+
+  nsExec::ExecToStack 'powershell -NoProfile -ExecutionPolicy Bypass -File "$PLUGINSDIR\\check-java.ps1" -RequiredMajor ${REQUIRED_JAVA_MAJOR}'
+  Pop $R0
+  Pop $R1
+
+  ${If} $R0 == 0
+    DetailPrint "Megfelelő Java (>= ${REQUIRED_JAVA_MAJOR}) futtatókörnyezet megtalálva a PATH-ban, helyi JRE csomagolás kihagyva."
+    Pop $2
+    Pop $1
+    Pop $0
+    Return
+  ${EndIf}
+
+  DetailPrint "Java futtatókörnyezet hiányzik vagy túl régi (kód: $R0). JRE letöltése és helyi kicsomagolás..."
+
+  StrCpy $R0 "$PLUGINSDIR\\${JRE_FILENAME}"
+  ClearErrors
+  inetc::get "${JRE_DOWNLOAD_URL}" "$R0" /END
+  Pop $R1
+  ${If} $R1 != "OK"
+    Push "JRE letöltése sikertelen. Ellenőrizze az internetkapcsolatot: ${JRE_DOWNLOAD_URL}"
+    Call FatalAbort
+  ${EndIf}
+
+  DetailPrint "JRE ZIP fájl kicsomagolása..."
+  CreateDirectory "$INSTDIR\\resources"
+
+  ; Extract ZIP using PowerShell - use Expand-Archive with proper variable substitution
+  nsExec::ExecToStack 'powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -Path \"$R0\" -DestinationPath \"$INSTDIR\\resources\" -Force"'
+  Pop $R1
+  Pop $R2
+  ${If} $R1 != 0
+    Push "ZIP kicsomagolása sikertelen (kód: $R1). Részletek: $R2"
+    Call FatalAbort
+  ${EndIf}
+
+  ; Verify the extracted directory exists (exact name: jdk-23.0.2+7-jre)
+  StrCpy $R3 "$INSTDIR\\resources\\jdk-23.0.2+7-jre"
+  ${If} ${FileExists} "$R3"
+    DetailPrint "Kicsomagolt JRE könyvtár megtalálva: jdk-23.0.2+7-jre"
+  ${Else}
+    Push "JRE könyvtár nem található kicsomagolás után: $R3"
+    Call FatalAbort
+  ${EndIf}
+
+  ; Create target jre directory
+  CreateDirectory "$INSTDIR\\resources\\jre"
+  ${If} ${Errors}
+    Push "JRE célkönyvtár létrehozása sikertelen"
+    Call FatalAbort
+  ${EndIf}
+
+  ; Move contents of extracted directory to jre folder using robocopy for reliability
+  DetailPrint "JRE fájlok áthelyezése a végső helyre..."
+  nsExec::ExecToStack 'robocopy "$R3" "$INSTDIR\\resources\\jre" /E /MOVE /R:2 /W:1'
+  Pop $R4
+  Pop $R5
+
+  ; robocopy exit codes: 0-7 are success, 8+ are errors
+  ${If} $R4 > 7
+    Push "JRE fájlok áthelyezése sikertelen (robocopy kód: $R4)"
+    Call FatalAbort
+  ${EndIf}
+
+  ; Clean up empty extracted directory
+  RMDir "$R3"
+
+  ; Final verification
+  ${If} ${FileExists} "$INSTDIR\\resources\\jre\\bin\\java.exe"
+    DetailPrint "JRE sikeresen telepítve és java.exe elérhető."
+  ${Else}
+    Push "JRE telepítés befejezve, de java.exe nem található: $INSTDIR\\resources\\jre\\bin\\java.exe"
+    Call FatalAbort
+  ${EndIf}
+
+  DetailPrint "JRE helyi telepítése sikeresen befejezve."
+  Pop $2
+  Pop $1
+  Pop $0
 FunctionEnd
 
 ; ---------------- Copy DB using cmd copy ----------------
 Function CopyDatabase
-  ; operate on interactive user's profile
+  SetDetailsPrint both
   SetShellVarContext current
 
-  ; Target path (exact place you validated by hand)
-  StrCpy $DB_DEST "$APPDATA\\idorendmaker\\idorendmaker.db"
+  StrCpy $DB_DEST "$LOCALAPPDATA\\idorendmaker\\idorendmaker.db"
+  DetailPrint "Adatbázis cél helye: $DB_DEST"
 
-  !insertmacro Log "=== DATABASE COPY PROCESS START ==="
-  !insertmacro Log "Target destination (APPDATA): $DB_DEST"
-  !insertmacro Log "Installation directory (INSTDIR): $INSTDIR"
-
-  ; List top-level contents for debugging
-  !insertmacro Log "=== ACTUAL INSTALLER CONTENTS (top-level) ==="
-  FindFirst $0 $1 "$INSTDIR\\*.*"
-  loopA:
-    StrCmp $1 "" doneA
-    StrCpy $R0 "$INSTDIR\\$1"
-    !insertmacro Log "Found: $R0"
-    FindNext $0 $1
-    Goto loopA
-  doneA:
-  FindClose $0
-  !insertmacro Log "=== END INSTALLER CONTENTS ==="
-
-  ; List resources dir for debugging
-  ${If} ${FileExists} "$INSTDIR\\resources"
-    !insertmacro Log "=== RESOURCES DIRECTORY CONTENTS ==="
-    FindFirst $0 $1 "$INSTDIR\\resources\\*.*"
-    loopB:
-      StrCmp $1 "" doneB
-      StrCpy $R0 "$INSTDIR\\resources\\$1"
-      !insertmacro Log "Resource: $R0"
-      FindNext $0 $1
-      Goto loopB
-    doneB:
-    FindClose $0
-    !insertmacro Log "=== END RESOURCES CONTENTS ==="
-  ${Else}
-    !insertmacro Log "No resources directory found at $INSTDIR\\resources"
-  ${EndIf}
-
-  ; If destination exists, keep it (do not overwrite)
   ${If} ${FileExists} "$DB_DEST"
-    !insertmacro Log "✅ Database already exists at $DB_DEST — keeping user data"
-    !insertmacro Log "=== DATABASE COPY PROCESS END (SKIPPED) ==="
+    DetailPrint "Adatbázis már létezik, felhasználói adatok megőrizve."
     SetShellVarContext all
-    MessageBox MB_OK "Database already present at: $DB_DEST"
     Return
   ${EndIf}
 
-  ; Create directory first
-  !insertmacro Log "Creating directory: $APPDATA\\idorendmaker"
-  CreateDirectory "$APPDATA\\idorendmaker"
-  ${If} ${Errors}
-    !insertmacro Log "❌ CreateDirectory reported an error for $APPDATA\\idorendmaker"
-  ${Else}
-    !insertmacro Log "✅ Target directory exists: $APPDATA\\idorendmaker"
-  ${EndIf}
+  CreateDirectory "$LOCALAPPDATA\\idorendmaker"
+  ; We ignore CreateDirectory errors here; copy will fail if directory creation actually failed.
 
-  ; Candidate packaged sources
   StrCpy $SRC1 "$INSTDIR\\resources\\idorendmaker-production.db"
   StrCpy $SRC2 "$INSTDIR\\resources\\app.asar.unpacked\\idorendmaker-production.db"
   StrCpy $SRC3 "$INSTDIR\\idorendmaker-production.db"
   StrCpy $SRC4 "$INSTDIR\\app.asar.unpacked\\idorendmaker-production.db"
 
-  !insertmacro Log "Checking source locations:"
-  !insertmacro Log "  1: $SRC1"
-  !insertmacro Log "  2: $SRC2"
-  !insertmacro Log "  3: $SRC3"
-  !insertmacro Log "  4: $SRC4"
+  DetailPrint "Adatbázis források ellenőrzése (sorrend):"
+  DetailPrint "  1: $SRC1"
+  DetailPrint "  2: $SRC2"
+  DetailPrint "  3: $SRC3"
+  DetailPrint "  4: $SRC4"
 
-  ; Try each source using Windows 'copy' via cmd.exe (more robust in strange environments)
   ${If} ${FileExists} "$SRC1"
-    !insertmacro Log "✅ Found DB at PRIMARY: $SRC1"
+    DetailPrint "Talált adatbázis: $SRC1"
     StrCpy $R0 'cmd.exe /C copy /Y "$SRC1" "$DB_DEST"'
-    !insertmacro Log "Running: $R0"
     ExecWait '$R0' $R1
-    !insertmacro Log "cmd copy returned code: $R1"
     ${If} $R1 == 0
       ${If} ${FileExists} "$DB_DEST"
-        !insertmacro Log "✅ DATABASE COPIED SUCCESSFULLY from primary source"
+        DetailPrint "Adatbázis sikeresen átmásolva (forrás: 1)."
         SetShellVarContext all
-        MessageBox MB_OK "Database copied to: $DB_DEST"
-        !insertmacro Log "=== DATABASE COPY PROCESS END (SUCCESS) ==="
         Return
       ${EndIf}
-      !insertmacro Log "❌ After cmd copy, destination not found even though rc=0"
-    ${Else}
-      !insertmacro Log "❌ cmd copy failed with exit code $R1"
     ${EndIf}
-  ${Else}
-    !insertmacro Log "❌ Primary source not found: $SRC1"
   ${EndIf}
 
   ${If} ${FileExists} "$SRC2"
-    !insertmacro Log "✅ Found DB at FALLBACK1: $SRC2"
+    DetailPrint "Talált adatbázis: $SRC2"
     StrCpy $R0 'cmd.exe /C copy /Y "$SRC2" "$DB_DEST"'
-    !insertmacro Log "Running: $R0"
     ExecWait '$R0' $R1
-    !insertmacro Log "cmd copy returned code: $R1"
     ${If} $R1 == 0
       ${If} ${FileExists} "$DB_DEST"
-        !insertmacro Log "✅ DATABASE COPIED SUCCESSFULLY from fallback1"
+        DetailPrint "Adatbázis sikeresen átmásolva (forrás: 2)."
         SetShellVarContext all
-        MessageBox MB_OK "Database copied to: $DB_DEST"
-        !insertmacro Log "=== DATABASE COPY PROCESS END (SUCCESS) ==="
         Return
       ${EndIf}
-      !insertmacro Log "❌ After cmd copy, destination not found even though rc=0"
-    ${Else}
-      !insertmacro Log "❌ cmd copy failed with exit code $R1"
     ${EndIf}
-  ${Else}
-    !insertmacro Log "❌ Fallback1 source not found: $SRC2"
   ${EndIf}
 
   ${If} ${FileExists} "$SRC3"
-    !insertmacro Log "✅ Found DB at FALLBACK2: $SRC3"
+    DetailPrint "Talált adatbázis: $SRC3"
     StrCpy $R0 'cmd.exe /C copy /Y "$SRC3" "$DB_DEST"'
-    !insertmacro Log "Running: $R0"
     ExecWait '$R0' $R1
-    !insertmacro Log "cmd copy returned code: $R1"
     ${If} $R1 == 0
       ${If} ${FileExists} "$DB_DEST"
-        !insertmacro Log "✅ DATABASE COPIED SUCCESSFULLY from fallback2"
+        DetailPrint "Adatbázis sikeresen átmásolva (forrás: 3)."
         SetShellVarContext all
-        MessageBox MB_OK "Database copied to: $DB_DEST"
-        !insertmacro Log "=== DATABASE COPY PROCESS END (SUCCESS) ==="
         Return
       ${EndIf}
-      !insertmacro Log "❌ After cmd copy, destination not found even though rc=0"
-    ${Else}
-      !insertmacro Log "❌ cmd copy failed with exit code $R1"
     ${EndIf}
-  ${Else}
-    !insertmacro Log "❌ Fallback2 source not found: $SRC3"
   ${EndIf}
 
   ${If} ${FileExists} "$SRC4"
-    !insertmacro Log "✅ Found DB at FALLBACK3: $SRC4"
+    DetailPrint "Talált adatbázis: $SRC4"
     StrCpy $R0 'cmd.exe /C copy /Y "$SRC4" "$DB_DEST"'
-    !insertmacro Log "Running: $R0"
     ExecWait '$R0' $R1
-    !insertmacro Log "cmd copy returned code: $R1"
     ${If} $R1 == 0
       ${If} ${FileExists} "$DB_DEST"
-        !insertmacro Log "✅ DATABASE COPIED SUCCESSFULLY from fallback3"
+        DetailPrint "Adatbázis sikeresen átmásolva (forrás: 4)."
         SetShellVarContext all
-        MessageBox MB_OK "Database copied to: $DB_DEST"
-        !insertmacro Log "=== DATABASE COPY PROCESS END (SUCCESS) ==="
         Return
       ${EndIf}
-      !insertmacro Log "❌ After cmd copy, destination not found even though rc=0"
-    ${Else}
-      !insertmacro Log "❌ cmd copy failed with exit code $R1"
     ${EndIf}
-  ${Else}
-    !insertmacro Log "❌ Fallback3 source not found: $SRC4"
   ${EndIf}
 
-  !insertmacro Log "❌ DATABASE NOT FOUND IN ANY EXPECTED LOCATION"
-  !insertmacro Log "=== DATABASE COPY PROCESS END (FAILED) ==="
-  MessageBox MB_OK|MB_ICONEXCLAMATION "Warning: Database file not found in installer package.\n\nCheck $TEMP\\idorendmaker-installer.log for details."
+  DetailPrint "Nem találtam csomagolt adatbázist; folytatom a telepítést anélkül, hogy felülírnám a felhasználói adatokat."
   SetShellVarContext all
 FunctionEnd
 
-; ---------------- electron-builder hooks ----------------
+; ---------------- electron-builder hook: canonical install entry ----------------
 !macro customInstall
-    ; perform prereq checks; we do not let VC install block DB copy later
+    SetDetailsPrint both
+    DetailPrint "Telepítés megkezdése..."
     Call InstallVCRedist
+    Call InstallJRE
     Call CopyDatabase
+    DetailPrint "Telepítés befejeződött."
 !macroend
 
-!macro preWelcome
+; ---------- early init: connectivity check (prevents unpack/install if offline) ----------
+!macro preInit
+  InitPluginsDir
+
+  ; Run a small PowerShell connectivity test (download google 204 endpoint)
+  nsExec::ExecToStack 'powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $wc = New-Object System.Net.WebClient; $wc.DownloadString(\"https://www.google.com/generate_204\") | Out-Null; exit 0 } catch { exit 1 }"'
+  Pop $R0    ; exit code
+  Pop $R1    ; stdout/stderr (ignored)
+
+  ${If} $R0 != 0
+    MessageBox MB_OK|MB_ICONEXCLAMATION "Hiba: nincs internetkapcsolat vagy a telepítő nem tud letölteni szükséges fájlokat. Kérjük, ellenőrizze az internetkapcsolatot és futtassa újra a telepítőt."
+    Abort
+  ${EndIf}
 !macroend
-
-!macro customFinish
-    DetailPrint "Installation finished (customFinish). Beginning post-unpack tasks..."
-    !insertmacro Log "Installation completed successfully. Running CopyDatabase..."
-    Call CopyDatabase
-    !insertmacro Log "Post-unpack steps complete. Installer log: $TEMP\\idorendmaker-installer.log"
-    DetailPrint "📋 Installation log: $TEMP\\idorendmaker-installer.log"
-!macroend
-
-; ---------------- optional verify section ----------------
-Section "Verify installer package (debug only)" SEC_VERIFY
-    !insertmacro Log "=== PACKAGE VERIFICATION ==="
-    ${If} ${FileExists} "$INSTDIR\\resources\\idorendmaker-production.db"
-        !insertmacro Log "✅ DB present in $INSTDIR\\resources"
-    ${Else}
-        !insertmacro Log "❌ DB missing from $INSTDIR\\resources"
-    ${EndIf}
-    ${If} ${FileExists} "$INSTDIR\\resources\\idorendmaker-backend.exe"
-        !insertmacro Log "✅ Backend EXE present"
-    ${Else}
-        !insertmacro Log "❌ Backend EXE missing"
-    ${EndIf}
-    ${If} ${FileExists} "$INSTDIR\\resources\\idorendmaker-pdfprocessor.exe"
-        !insertmacro Log "✅ PDF processor EXE present"
-    ${Else}
-        !insertmacro Log "❌ PDF processor EXE missing"
-    ${EndIf}
-    !insertmacro Log "=== PACKAGE VERIFICATION COMPLETE ==="
-SectionEnd
-
-Section "Prerequisites" SEC_PREREQ
-    Call InstallVCRedist
-SectionEnd

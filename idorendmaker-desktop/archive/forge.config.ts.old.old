@@ -19,7 +19,7 @@ const config: ForgeConfig = {
     extraResource: [
       // Bundle the GraalVM executables and production database
       'resources/idorendmaker-backend.exe',
-      'resources/idorendmaker-pdfprocessor.jar',
+      'resources/idorendmaker-pdfprocessor.exe',
       'resources/idorendmaker-production.db'
     ],
     // Squirrel requires these for proper Windows integration
@@ -126,7 +126,7 @@ async function validateResources(): Promise<void> {
 
   const requiredFiles = [
     'idorendmaker-backend.exe',
-    'idorendmaker-pdfprocessor.jar',
+    'idorendmaker-pdfprocessor.exe',
     'idorendmaker-production.db'
   ];
 

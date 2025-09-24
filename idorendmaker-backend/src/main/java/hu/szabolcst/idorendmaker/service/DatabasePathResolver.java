@@ -146,26 +146,108 @@ public class DatabasePathResolver {
      * Uses OS-specific user data directories
      */
     private String resolveProductionPath() {
+        final String os = System.getProperty("os.name").toLowerCase();
+
+        // Use Windows-specific multi-path resolution
+        if (os.contains("win")) {
+            return resolveWindowsProductionPaths();
+        }
+
+        // Use original logic for macOS and Linux
         final String userDataDir = getUserDataDirectory();
         final Path dbPath = Paths.get(userDataDir, productionFilename);
         final String absolutePath = dbPath.toAbsolutePath().toString();
-        
+
         log.info("🏭 Production database path resolution:");
         log.info("   User data directory: {}", userDataDir);
         log.info("   Database filename: {}", productionFilename);
         log.info("   Resolved path: {}", absolutePath);
         log.info("   Database exists: {}", new File(absolutePath).exists());
-        
+
         // Ensure the directory exists
         final File parentDir = new File(userDataDir);
         if (!parentDir.exists()) {
             log.info("📁 Creating user data directory: {}", userDataDir);
             parentDir.mkdirs();
         }
-        
+
         return absolutePath;
     }
     
+    /**
+     * Resolves database path for Windows production environment
+     * Tries multiple locations in priority order:
+     * 1. LOCALAPPDATA\idorendmaker\{idorendmaker.db, idorendmaker-production.db}
+     * 2. LOCALAPPDATA\idorendmaker-desktop\{idorendmaker.db, idorendmaker-production.db}
+     * 3. APPDATA\idorendmaker\{idorendmaker.db, idorendmaker-production.db}
+     * 4. APPDATA\idorendmaker-desktop\{idorendmaker.db, idorendmaker-production.db}
+     */
+    private String resolveWindowsProductionPaths() {
+        final String userHome = System.getProperty("user.home");
+        final String localAppData = System.getenv("LOCALAPPDATA");
+        final String appData = System.getenv("APPDATA");
+
+        // Base directories to try (in priority order)
+        final String[] baseDirectories = {
+            localAppData != null ? localAppData : Paths.get(userHome, "AppData", "Local").toString(),
+            localAppData != null ? localAppData : Paths.get(userHome, "AppData", "Local").toString(),
+            appData != null ? appData : Paths.get(userHome, "AppData", "Roaming").toString(),
+            appData != null ? appData : Paths.get(userHome, "AppData", "Roaming").toString()
+        };
+
+        // App folder names to try
+        final String[] appFolderNames = {
+            "idorendmaker",
+            "idorendmaker-desktop",
+            "idorendmaker",
+            "idorendmaker-desktop"
+        };
+
+        // Database filenames to try
+        final String[] dbFilenames = {"idorendmaker.db", "idorendmaker-production.db"};
+
+        log.info("🏭 Windows production database path resolution:");
+        log.info("   LOCALAPPDATA: {}", localAppData);
+        log.info("   APPDATA: {}", appData);
+
+        // Try all combinations
+        for (int i = 0; i < baseDirectories.length; i++) {
+            final String baseDir = baseDirectories[i];
+            final String appFolder = appFolderNames[i];
+
+            for (final String dbFilename : dbFilenames) {
+                final Path dbPath = Paths.get(baseDir, appFolder, dbFilename);
+                final String absolutePath = dbPath.toAbsolutePath().toString();
+                final File dbFile = new File(absolutePath);
+
+                log.info("   Checking: {}", absolutePath);
+
+                if (dbFile.exists()) {
+                    log.info("✅ Database found at: {}", absolutePath);
+                    return absolutePath;
+                }
+            }
+        }
+
+        // No existing database found, return the first path for database creation
+        final String firstBaseDir = baseDirectories[0];
+        final String firstAppFolder = appFolderNames[0];
+        final String firstDbFilename = dbFilenames[0];
+        final Path defaultPath = Paths.get(firstBaseDir, firstAppFolder, firstDbFilename);
+        final String defaultAbsolutePath = defaultPath.toAbsolutePath().toString();
+
+        log.info("⚠️ No existing database found, using default path: {}", defaultAbsolutePath);
+
+        // Ensure the directory exists
+        final File parentDir = new File(Paths.get(firstBaseDir, firstAppFolder).toString());
+        if (!parentDir.exists()) {
+            log.info("📁 Creating app data directory: {}", parentDir.getAbsolutePath());
+            parentDir.mkdirs();
+        }
+
+        return defaultAbsolutePath;
+    }
+
     /**
      * Gets the OS-specific user data directory
      * Follows Electron's app.getPath('userData') logic

@@ -1,0 +1,24 @@
+{
+  "name": "idorendmaker-db-populator",
+  "version": "1.0.0",
+  "description": "Database population script for Időrend Készítő - creates SQLite database from Excel data",
+  "main": "src/populate-db.ts",
+  "scripts": {
+    "populate": "tsx src/populate-db.ts",
+    "populate:production": "tsx src/populate-db.ts --output=../idorendmaker-desktop/resources/idorendmaker-production.db"
+  },
+  "keywords": ["database", "sqlite", "excel", "kayak", "canoe"],
+  "author": {
+    "name": "Szabolcs Tárnai",
+    "email": "tarnai.szabolcs01@gmail.com"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^12.2.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "exceljs": "^4.4.0",
+    "@types/node": "^24.3.0",
+    "tsx": "^4.20.4",
+    "typescript": "~5.3.0"
+  }
+}

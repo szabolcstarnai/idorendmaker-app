@@ -1,4 +1,4 @@
-import { spawn, ChildProcess } from 'child_process';
+import { spawn, ChildProcess, execFile } from 'child_process';
 import path from 'path';
 import axios from 'axios';
 import { promises as fs, constants } from 'fs';
@@ -21,98 +21,119 @@ interface PDFProcessorResult {
   error?: string;
 }
 
+type LaunchMode = 'bundledJava' | 'systemJava';
+
 export class PDFProcessorService {
   private process: ChildProcess | null = null;
   private port: number = 0;
   private isReady: boolean = false;
-  private readonly executablePath: string;
-  private baseUrl: string;
+  private javaPath: string | null = null;
+  private jarPath: string | null = null;
+  private launchMode: LaunchMode | null = null;
+  private baseUrl: string = '';
 
   constructor() {
-    // Determine executable path based on environment
-    this.executablePath = this.resolveExecutablePath();
-    this.baseUrl = '';
-    
     console.log('PDF processor initialization:');
     console.log('- Packaged app:', app.isPackaged);
     console.log('- Platform:', process.platform);
-    console.log('- Executable path:', this.executablePath);
+    console.log('- resourcesPath:', process.resourcesPath);
   }
 
   /**
-   * Resolve the path to the GraalVM executable
+   * Candidate paths for jar in packaged app or dev target
    */
-  private resolveExecutablePath(): string {
-    const executableName = this.getExecutableName();
-    
-    if (app.isPackaged) {
-      // Production: executable bundled in app resources
-      return path.join(process.resourcesPath, executableName);
-    } else {
-      // Development: relative path to source tree
-      return path.join(process.cwd(), '../idorendmaker-pdfprocessor/target', executableName);
-    }
+  private getJarCandidates() {
+    const packaged = path.join(process.resourcesPath, 'idorendmaker-pdfprocessor.jar');
+    const dev = path.join(process.cwd(), '..', 'idorendmaker-pdfprocessor', 'target', 'idorendmaker-pdfprocessor.jar');
+    return { packaged, dev };
   }
 
   /**
-   * Get platform-specific executable name
+   * Candidate bundled java in resources/jre
    */
-  private getExecutableName(): string {
-    switch (process.platform) {
-      case 'win32':
-        return 'idorendmaker-pdfprocessor.exe';
-      case 'darwin':
-        return 'idorendmaker-pdfprocessor-mac';
-      case 'linux':
-        return 'idorendmaker-pdfprocessor-linux';
-      default:
-        throw new Error(`Unsupported platform: ${process.platform}`);
-    }
+  private getBundledJavaCandidate() {
+    return process.platform === 'win32'
+      ? path.join(process.resourcesPath, 'jre', 'bin', 'java.exe')
+      : path.join(process.resourcesPath, 'jre', 'bin', 'java');
   }
 
   /**
-   * Validate that the executable exists and is accessible
-   */
-  private async validateExecutable(): Promise<void> {
-    try {
-      // Check if file exists
-      await fs.access(this.executablePath, constants.F_OK);
-      console.log('✅ Executable found:', this.executablePath);
-      
-      // On Unix systems, ensure executable permissions
-      if (process.platform !== 'win32') {
-        try {
-          await fs.access(this.executablePath, constants.X_OK);
-          console.log('✅ Executable permissions verified');
-        } catch (error) {
-          console.log('🔧 Setting executable permissions...');
-          await fs.chmod(this.executablePath, 0o755);
-          console.log('✅ Executable permissions set');
+ * Check if 'java' is available on PATH (and usable)
+ */
+private async findSystemJava(): Promise<string | null> {
+  return new Promise((resolve) => {
+    execFile('java', ['-version'], { timeout: 2000 }, (err, stdout, stderr) => {
+      if (err) {
+        resolve(null);
+      } else {
+        // stderr usually has the version line
+        const firstLine = (stderr || stdout || '').toString().split('\n')[0];
+        if (firstLine.includes('version')) {
+          resolve('java'); // just rely on PATH
+        } else {
+          resolve(null);
         }
       }
-    } catch (error) {
-      const errorMessage = `PDF processor executable not found or not accessible: ${this.executablePath}`;
-      console.error('❌', errorMessage);
-      throw new Error(errorMessage);
+    });
+  });
+}
+
+/**
+ * Validate presence of jar + java (bundled or system).
+ * Sets launchMode/javaPath/jarPath
+ */
+private async resolveRuntime(): Promise<void> {
+  const { packaged, dev } = this.getJarCandidates();
+
+  // Prefer packaged JAR, else dev-target
+  try {
+    await fs.access(packaged, constants.F_OK);
+    this.jarPath = packaged;
+  } catch {
+    try {
+      await fs.access(dev, constants.F_OK);
+      this.jarPath = dev;
+    } catch {
+      throw new Error(`PDF processor JAR not found. Looked at: ${packaged}, ${dev}`);
     }
   }
+
+  // Try bundled JRE first
+  const bundledCandidate = this.getBundledJavaCandidate();
+  try {
+    await fs.access(bundledCandidate, constants.F_OK);
+    this.launchMode = 'bundledJava';
+    this.javaPath = bundledCandidate;
+    console.log('Using bundled JRE:', this.javaPath);
+    return;
+  } catch {
+    // no bundled java
+  }
+
+  // Fall back to PATH java (installer ensures it’s Java >= 23)
+  const systemJava = await this.findSystemJava();
+  if (systemJava) {
+    this.launchMode = 'systemJava';
+    this.javaPath = systemJava;
+    console.log('Using system Java on PATH');
+    return;
+  }
+
+  throw new Error('No Java runtime found (neither bundled nor on PATH).');
+}
 
   /**
    * Find an available port for the Spring Boot application
    */
   private async findAvailablePort(): Promise<number> {
-    const net = await import('net');
-    
+    const netMod = await import('net');
     return new Promise((resolve, reject) => {
-      const server = net.createServer();
+      const server = netMod.createServer();
       server.listen(0, () => {
         const port = (server.address() as net.AddressInfo)?.port;
         server.close(() => {
-          if (port) {
-            resolve(port);
-          } else {
-            reject(new Error('Could not find available port'));
-          }
+          if (port) resolve(port);
+          else reject(new Error('Could not find available port'));
         });
       });
       server.on('error', reject);
@@ -120,7 +141,7 @@ export class PDFProcessorService {
   }
 
   /**
-   * Start the GraalVM Spring Boot process
+   * Start the Java -jar process that runs the Spring Boot PDF processor
    */
   async start(): Promise<void> {
     if (this.process && !this.process.killed) {
@@ -128,33 +149,46 @@ export class PDFProcessorService {
       return;
     }
 
-    // Validate executable before attempting to start
-    await this.validateExecutable();
+    // Resolve jar + java
+    await this.resolveRuntime();
 
     // Find available port
     this.port = await this.findAvailablePort();
     this.baseUrl = `http://localhost:${this.port}`;
 
-    console.log(`Starting PDF processor on port ${this.port}...`);
+    console.log(`Starting PDF processor on port ${this.port} (mode=${this.launchMode})...`);
 
     return new Promise((resolve, reject) => {
-      // Spawn the GraalVM executable with port configuration
-      this.process = spawn(this.executablePath, [
+      if (!this.javaPath || !this.jarPath) {
+        reject(new Error('Runtime not resolved'));
+        return;
+      }
+
+      // Build spawn args: java -Djava.awt.headless=true -jar <jar> --server.port=...
+      const spawnCmd = this.javaPath;
+      const spawnArgs = [
+        '-Djava.awt.headless=true',
+        '-jar',
+        this.jarPath,
         `--server.port=${this.port}`,
         '--logging.level.org.springframework.web=INFO',
         '--logging.level.root=INFO'
-      ], {
+      ];
+
+      this.process = spawn(spawnCmd, spawnArgs, {
         stdio: ['ignore', 'pipe', 'pipe'],
         detached: false,
         windowsHide: true
       });
 
       let startupTimeout: NodeJS.Timeout;
-      
-      // Handle process events
+      let outputBuffer = '';
+
       this.process.on('error', (error) => {
-        console.error('PDF processor error:', error);
+        console.error('PDF processor spawn error:', error);
         clearTimeout(startupTimeout);
+        this.process = null;
+        this.isReady = false;
         reject(new Error(`Failed to start PDF processor: ${error.message}`));
       });
 
@@ -164,18 +198,15 @@ export class PDFProcessorService {
         this.process = null;
       });
 
-      // Capture output to detect when Spring Boot is ready
-      let outputBuffer = '';
-      
       if (this.process.stdout) {
         this.process.stdout.on('data', (data) => {
           const output = data.toString();
           outputBuffer += output;
           console.log('PDF processor stdout:', output.trim());
-          
-          // Check if Spring Boot has started successfully
-          if (output.includes('Started IdorendHelperApplication') || 
-              output.includes('Tomcat started on port')) {
+
+          if (output.includes('Started IdorendMakerPdfProcessorApplication') ||
+              output.includes('Tomcat started on port') ||
+              (output.includes('Started') && output.includes('Application'))) {
             this.isReady = true;
             clearTimeout(startupTimeout);
             console.log('PDF processor ready');
@@ -186,12 +217,13 @@ export class PDFProcessorService {
 
       if (this.process.stderr) {
         this.process.stderr.on('data', (data) => {
-          const errorOutput = data.toString();
-          console.log('PDF processor stderr:', errorOutput.trim());
-          
-          // Also check stderr for startup messages (some Spring Boot logs go to stderr)
-          if (errorOutput.includes('Started IdorendHelperApplication') || 
-              errorOutput.includes('Tomcat started on port')) {
+          const errOut = data.toString();
+          outputBuffer += errOut;
+          console.log('PDF processor stderr:', errOut.trim());
+
+          if (errOut.includes('Started IdorendMakerPdfProcessorApplication') ||
+              errOut.includes('Tomcat started on port') ||
+              (errOut.includes('Started') && errOut.includes('Application'))) {
             this.isReady = true;
             clearTimeout(startupTimeout);
             console.log('PDF processor ready (from stderr)');
@@ -200,11 +232,11 @@ export class PDFProcessorService {
         });
       }
 
-      // Set startup timeout (GraalVM should be very fast)
+      // Startup timeout: adjust if needed
       startupTimeout = setTimeout(() => {
         if (!this.isReady) {
           console.log('PDF processor startup timeout - captured output:', outputBuffer);
-          this.stop();
+          this.stop().catch(() => {});
           reject(new Error('PDF processor startup timeout (20 seconds)'));
         }
       }, 20000);
@@ -220,14 +252,8 @@ export class PDFProcessorService {
     }
 
     console.log('Stopping PDF processor...');
-    
-    return new Promise((resolve) => {
-      if (!this.process) {
-        resolve();
-        return;
-      }
 
-      // Give the process time to shutdown gracefully
+    return new Promise((resolve) => {
       const shutdownTimeout = setTimeout(() => {
         if (this.process && !this.process.killed) {
           console.log('Force killing PDF processor...');
@@ -243,7 +269,6 @@ export class PDFProcessorService {
         resolve();
       });
 
-      // Send termination signal
       this.process.kill('SIGTERM');
     });
   }
@@ -257,13 +282,11 @@ export class PDFProcessorService {
     }
 
     try {
-      // Try to ping the Spring Boot actuator endpoint or base endpoint
       const response = await axios.get(`${this.baseUrl}/actuator/health`, {
         timeout: 2000
       });
       return response.status === 200;
     } catch (error) {
-      // If health endpoint doesn't exist, try base endpoint
       try {
         await axios.get(`${this.baseUrl}`, {
           timeout: 2000
@@ -280,21 +303,14 @@ export class PDFProcessorService {
    */
   async processPDF(pdfFilePath: string): Promise<PDFProcessorResult> {
     try {
-      // Ensure the processor is running
       if (!await this.isProcessorReady()) {
         await this.start();
-        
-        // Wait a bit more for the service to be fully ready
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
 
-      // Check if file exists
       await fs.access(pdfFilePath);
-
-      // Read PDF file
       const pdfBuffer = await fs.readFile(pdfFilePath);
-      
-      // Create FormData for multipart upload
+
       const FormData = (await import('form-data')).default;
       const form = new FormData();
       form.append('file', pdfBuffer, {
@@ -304,7 +320,6 @@ export class PDFProcessorService {
 
       console.log(`Processing PDF: ${path.basename(pdfFilePath)}`);
 
-      // Send request to Spring Boot endpoint
       const response = await axios.post(
         `${this.baseUrl}/versenyszam/extract`,
         form,
@@ -312,63 +327,44 @@ export class PDFProcessorService {
           headers: {
             ...form.getHeaders(),
           },
-          timeout: 30000, // 30 second timeout for PDF processing
+          timeout: 30000,
         }
       );
 
       if (response.status === 200) {
-        console.log(`Successfully processed PDF, extracted ${response.data.length} competition entries`);
-        return {
-          success: true,
-          data: response.data
-        };
+        console.log(`Successfully processed PDF, extracted ${response.data.length} entries`);
+        return { success: true, data: response.data };
       } else {
-        return {
-          success: false,
-          error: `Unexpected response status: ${response.status}`
-        };
+        return { success: false, error: `Unexpected response status: ${response.status}` };
       }
     } catch (error) {
       console.error('PDF processing error:', error);
-      
+
       if (axios.isAxiosError(error)) {
-        if (error.code === 'ECONNREFUSED') {
-          return {
-            success: false,
-            error: 'A PDF feldolgozó szolgáltatás nem elérhető'
-          };
+        if ((error as any).code === 'ECONNREFUSED') {
+          return { success: false, error: 'A PDF feldolgozó szolgáltatás nem elérhető' };
         } else if (error.response?.status === 400) {
-          return {
-            success: false,
-            error: 'Hibás PDF fájl vagy formátum'
-          };
-        } else if (error.code === 'ENOENT') {
-          return {
-            success: false,
-            error: 'PDF fájl nem található'
-          };
+          return { success: false, error: 'Hibás PDF fájl vagy formátum' };
+        } else if ((error as any).code === 'ENOENT') {
+          return { success: false, error: 'PDF fájl nem található' };
         }
       }
 
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Ismeretlen hiba történt'
-      };
+      return { success: false, error: error instanceof Error ? error.message : 'Ismeretlen hiba történt' };
     }
   }
 
-  /**
-   * Get the current status of the processor
-   */
   getStatus() {
     return {
       isRunning: this.process !== null && !this.process.killed,
       isReady: this.isReady,
       port: this.port,
-      pid: this.process?.pid
+      pid: this.process?.pid,
+      launchMode: this.launchMode,
+      javaPath: this.javaPath,
+      jarPath: this.jarPath
     };
   }
 }
 
-// Singleton instance
 export const pdfProcessorService = new PDFProcessorService();
