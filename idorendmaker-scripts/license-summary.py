@@ -1,60 +1,82 @@
-import xml.etree.ElementTree as ET
+#!/usr/bin/env python3
+import sys
+import json
 from pathlib import Path
-from collections import defaultdict
+import xml.etree.ElementTree as ET
+import urllib.parse  # <-- for URL encoding
 
-def process_license_summary_grouped(xml_file: str, output_file: str):
-    tree = ET.parse(xml_file)
-    root = tree.getroot()
+def main():
+    if len(sys.argv) < 2:
+        print("Usage: python3 generate_third_party_licenses.py <root_dir>")
+        sys.exit(1)
 
-    # license_name -> list of (groupId, artifactId, version, file, url)
-    license_map = defaultdict(list)
+    root_dir = Path(sys.argv[1]).resolve()
+    licenses_dir = root_dir / "licenses"
 
-    for dep in root.findall(".//dependency"):
-        group_id = dep.findtext("groupId", default="N/A")
-        artifact_id = dep.findtext("artifactId", default="N/A")
-        version = dep.findtext("version", default="N/A")
-        licenses = dep.findall(".//license")
+    if not licenses_dir.exists():
+        print(f"licenses/ folder not found in {root_dir}")
+        sys.exit(1)
 
-        for lic in licenses:
-            name = lic.findtext("name", default="Unknown License")
-            file_ = lic.findtext("file", default="N/A")
-            url = lic.findtext("url", default="N/A")
-            license_map[name].append((group_id, artifact_id, version, file_, url))
+    output_file = root_dir / "THIRD-PARTY-LICENSES.md"
+    lines = ["# Third-Party Licenses", ""]
 
-    lines = [
-        "THIRD-PARTY LICENSES",
-        "",
-        "This project uses the following third-party libraries.",
-        "Each library is distributed under its respective license.",
-        "Please refer to the corresponding license files for full terms.",
-        ""
-    ]
+    # Extras
+    extras_json = licenses_dir / "extras" / "extras.json"
+    if extras_json.exists():
+        with extras_json.open("r", encoding="utf-8-sig") as f:  # <-- use utf-8-sig
+            extras = json.load(f)
+        if extras:
+            lines.append("## Extra Credits")
+            for key, val in extras.items():
+                lines.append(f"- **{key}**: {val}")
+            lines.append("")
 
-    for license_name, deps in license_map.items():
-        lines.append("=" * 60)
-        lines.append(f"License: {license_name}")
-        for i, (group_id, artifact_id, version, file_, url) in enumerate(deps, start=1):
-            lines.append(f"{i}) {artifact_id} ({group_id}, version {version})")
-            lines.append(f"     License file: {file_}")
-            lines.append(f"     License URL: {url}")
-        lines.append("")
+    # Component sections
+    for component_dir in sorted(licenses_dir.iterdir()):
+        if component_dir.is_dir() and component_dir.name != "extras":
+            component_name = component_dir.name
+            lines.append(f"## {component_name}")
+            lines.append("| Dependency | License | File |")
+            lines.append("| --- | --- | --- |")
 
-    # Write output
-    with open(output_file, "w", encoding="utf-8") as f:
-        f.write("\n".join(lines))
+            # XML licenses
+            licenses_xml = component_dir / "licenses.xml"
+            if licenses_xml.exists():
+                tree = ET.parse(licenses_xml)
+                root = tree.getroot()
+                for dep in root.findall("dependencies/dependency"):
+                    group = dep.find("groupId").text if dep.find("groupId") is not None else ""
+                    artifact = dep.find("artifactId").text if dep.find("artifactId") is not None else ""
+                    licenses = dep.findall("licenses/license")
+                    for lic in licenses:
+                        name = lic.find("name").text if lic.find("name") is not None else ""
+                        file_elem = lic.find("file")
+                        file_name = file_elem.text if file_elem is not None else ""
+                        file_path = licenses_dir / file_name
+                        if file_path.exists():
+                            file_url = urllib.parse.quote(str(file_name))  # <-- encode spaces
+                            lines.append(f"| {group}:{artifact} | {name} | [{file_name}](./licenses/{file_url}) |")
+                        else:
+                            lines.append(f"| {group}:{artifact} | {name} | MISSING FILE: {file_name} |")
 
-    print(f"Third-party licenses written to {output_file}")
+            # JSON licenses
+            licenses_json = component_dir / "licenses.json"
+            if licenses_json.exists():
+                with licenses_json.open("r", encoding="utf-8-sig") as f:
+                    data = json.load(f)
+                for key, info in data.items():
+                    license_file_path = Path(info.get("licenseFile", ""))
+                    if license_file_path.exists():
+                        dest_file = licenses_dir / f"{component_name}_{license_file_path.name}"
+                        dest_file.write_bytes(license_file_path.read_bytes())
+                        file_url = urllib.parse.quote(dest_file.name)
+                        lines.append(f"| {key} | {info.get('licenses','')} | [{dest_file.name}](./licenses/{file_url}) |")
+                    else:
+                        lines.append(f"| {key} | {info.get('licenses','')} | MISSING FILE |")
+            lines.append("")
 
+    output_file.write_text("\n".join(lines), encoding="utf-8")
+    print(f"THIRD-PARTY-LICENSES.md generated at {output_file}")
 
 if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(description="Generate grouped third-party licenses file from Maven licenseSummary XML.")
-    parser.add_argument("xml_file", help="Path to the licenseSummary.xml")
-    parser.add_argument("-o", "--output", default="THIRD-PARTY-LICENSES.txt", help="Output file name")
-    args = parser.parse_args()
-
-    if not Path(args.xml_file).is_file():
-        print(f"Error: XML file '{args.xml_file}' not found")
-    else:
-        process_license_summary_grouped(args.xml_file, args.output)
+    main()
