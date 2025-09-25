@@ -1,0 +1,17 @@
+{
+  "name": "idorendmaker-app",
+  "version": "1.0.0",
+  "description": "Build orchestration for Időrend Készítő application",
+  "private": true,
+  "scripts": {
+    "build:quick": "node scripts/license-manager.js && node scripts/desktop-packager.js",
+    "build:full": "node scripts/build-backend.js && node scripts/build-pdfprocessor.js && node scripts/license-manager.js && node scripts/desktop-packager.js",
+    "build:backend-only": "node scripts/build-backend.js",
+    "build:pdfprocessor-only": "node scripts/build-pdfprocessor.js"
+  },
+  "devDependencies": {
+    "fs-extra": "^11.1.1"
+  },
+  "author": "Szabolcs Tárnai",
+  "license": "MIT"
+}

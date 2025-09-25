@@ -93,6 +93,10 @@ out/
 
 dist/
 
+
+licenses.json
+resources/
+
 *.exe
 *.jar
 *.db

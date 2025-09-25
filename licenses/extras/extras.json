@@ -1,3 +1,6 @@
 {
-    "App icon": "'<a href=\"https://www.flaticon.com/free-icons/schedule\" title=\"schedule icons\">Schedule icons created by Freepik - Flaticon</a>'"
+    "App icon": "'<a href=\"https://www.flaticon.com/free-icons/schedule\" title=\"schedule icons\">Schedule icons created by Freepik - Flaticon</a>'",
+    "NSIS Installer": "NSIS (Nullsoft Scriptable Install System) — Licensed under the zlib/libpng license. See: https://nsis.sourceforge.io/License",
+    "Microsoft VC++ Runtime": "Downloaded during installation from Microsoft servers. Licensed under Microsoft Software License Terms.",
+    "Adoptium Temurin JRE": "Downloaded during installation from Adoptium GitHub releases. Licensed under GPL+Classpath Exception."
 }

@@ -52,6 +52,18 @@
       {
         "from": "resources/idorendmaker-production.db",
         "to": "idorendmaker-production.db"
+      },
+      {
+        "from": "resources/LICENSE",
+        "to": "LICENSE"
+      },
+      {
+        "from": "resources/THIRD-PARTY-LICENSES.md",
+        "to": "THIRD-PARTY-LICENSES.md"
+      },
+      {
+        "from": "resources/licenses",
+        "to": "licenses"
       }
     ],
     "nsis": {
