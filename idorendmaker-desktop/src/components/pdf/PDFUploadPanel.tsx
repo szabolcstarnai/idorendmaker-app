@@ -51,6 +51,7 @@ const PDFUploadPanel: React.FC<PDFUploadPanelProps> = ({
   const [pdfExtractionId, setPdfExtractionId] = useState<number | null>(null);
   const [racesToProcess, setRacesToProcess] = useState<number | null>(null);
   const [isCleaningUp, setIsCleaningUp] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
 
   // Load processor status
   const loadProcessorStatus = useCallback(async () => {
@@ -70,6 +71,7 @@ const PDFUploadPanel: React.FC<PDFUploadPanelProps> = ({
     let isMounted = true;
     const startProcessor = async () => {
       setIsLoadingStatus(true);
+      setIsStarting(true);
       try {
         const result = await window.electronAPI.pdfStart();
         if (result.success && isMounted) {
@@ -78,7 +80,10 @@ const PDFUploadPanel: React.FC<PDFUploadPanelProps> = ({
       } catch (error) {
         console.error('Processor start error:', error);
       } finally {
-        if (isMounted) setIsLoadingStatus(false);
+        if (isMounted) {
+          setIsLoadingStatus(false);
+          setIsStarting(false);
+        }
       }
     };
     startProcessor();
@@ -214,14 +219,16 @@ const PDFUploadPanel: React.FC<PDFUploadPanelProps> = ({
                 ) : (
                   <div className="flex items-center gap-2">
                     <div className="flex items-center gap-1">
-                      <div 
+                      <div
                         className={`h-2 w-2 rounded-full ${
-                          processorStatus?.isReady ? 'bg-green-500' : 
+                          isStarting ? 'bg-yellow-500' :
+                          processorStatus?.isReady ? 'bg-green-500' :
                           processorStatus?.isRunning ? 'bg-yellow-500' : 'bg-red-500'
                         }`}
                       />
                       <span className="text-sm font-medium">
-                        {processorStatus?.isReady ? 'Készen áll' : 
+                        {isStarting ? 'Indítás...' :
+                         processorStatus?.isReady ? 'Készen áll' :
                          processorStatus?.isRunning ? 'Indítás...' : 'Leállítva'}
                       </span>
                     </div>

@@ -107,7 +107,7 @@ Function InstallVCRedist
     Call CheckVCRedist
     Pop $0
     ${If} $0 == "1"
-        DetailPrint "VC++ futtatókörnyezet már telepítve, telepítés kihagyva."
+        DetailPrint "Microsoft VC++ futtatókörnyezet megtalálva, letöltés és telepítés kihagyva."
         Pop $0
         Return
     ${EndIf}
@@ -322,7 +322,6 @@ FunctionEnd
 ; ---------------- electron-builder hook: canonical install entry ----------------
 !macro customInstall
     SetDetailsPrint both
-    DetailPrint "Telepítés megkezdése..."
     Call InstallVCRedist
     Call InstallJRE
     Call CopyDatabase
@@ -343,3 +342,10 @@ FunctionEnd
     Abort
   ${EndIf}
 !macroend
+
+Section "Log start" LOG_START
+    SetDetailsPrint both
+    DetailPrint "Aktív internet kapcsolat van. Amennyiben szükséges, a telepítő fájlokat tölthet le."
+    DetailPrint "Telepítés megkezdése..."
+    DetailPrint "Fájlok kicsomagolása..."
+SectionEnd

@@ -189,10 +189,10 @@ public class DatabasePathResolver {
 
         // Base directories to try (in priority order)
         final String[] baseDirectories = {
-            localAppData != null ? localAppData : Paths.get(userHome, "AppData", "Local").toString(),
-            localAppData != null ? localAppData : Paths.get(userHome, "AppData", "Local").toString(),
             appData != null ? appData : Paths.get(userHome, "AppData", "Roaming").toString(),
-            appData != null ? appData : Paths.get(userHome, "AppData", "Roaming").toString()
+            appData != null ? appData : Paths.get(userHome, "AppData", "Roaming").toString(),
+            localAppData != null ? localAppData : Paths.get(userHome, "AppData", "Local").toString(),
+            localAppData != null ? localAppData : Paths.get(userHome, "AppData", "Local").toString()
         };
 
         // App folder names to try
@@ -207,8 +207,8 @@ public class DatabasePathResolver {
         final String[] dbFilenames = {"idorendmaker.db", "idorendmaker-production.db"};
 
         log.info("🏭 Windows production database path resolution:");
-        log.info("   LOCALAPPDATA: {}", localAppData);
         log.info("   APPDATA: {}", appData);
+        log.info("   LOCALAPPDATA: {}", localAppData);
 
         // Try all combinations
         for (int i = 0; i < baseDirectories.length; i++) {
