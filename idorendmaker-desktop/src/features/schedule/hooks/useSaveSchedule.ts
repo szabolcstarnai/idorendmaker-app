@@ -74,7 +74,7 @@ export const useSaveSchedule = ({
               raceId: sr.race.id,
               levelId: sr.level.id,
               orderIndex: index,
-              intervalMinutes: workingData.intervals[index] || workingData.settings.defaultInterval,
+              intervalMinutes: workingData.intervals[index] ?? workingData.settings.defaultInterval,
               notes: undefined
             })) || []
           };

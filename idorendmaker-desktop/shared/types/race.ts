@@ -298,7 +298,7 @@ export interface CreateScheduleItemData {
   raceId: number
   levelId: number  // Reference to competitive level
   orderIndex: number
-  intervalMinutes?: number
+  intervalMinutes: number
   notes?: string
 }
 

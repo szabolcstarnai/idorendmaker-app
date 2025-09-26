@@ -297,7 +297,7 @@ export class BackendAPIService {
     raceId: number,
     levelId: number,
     orderIndex: number, 
-    intervalMinutes: number = 15,
+    intervalMinutes: number = 0,
     notes?: string
   ): Promise<number> {
     const payload = {

@@ -218,8 +218,8 @@ const CombinedSettingsPanel: React.FC<CombinedSettingsPanelProps> = ({
                         type="number"
                         value={intervalMinutes}
                         onChange={(e) => setIntervalMinutes(Number(e.target.value))}
-                        min="5"
-                        max="60"
+                        min="0"
+                        max="99"
                         className="h-8 w-14"
                       />
                       <span className="text-xs text-muted-foreground">perc</span>

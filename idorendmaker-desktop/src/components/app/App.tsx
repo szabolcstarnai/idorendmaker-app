@@ -330,13 +330,13 @@ const App: React.FC = () => {
         }));
         
         // Extract intervals from intervalMinutes
-        const intervals: number[] = ((section as any).items || []).map((item: any) => item.intervalMinutes || 15);
+        const intervals: number[] = ((section as any).items || []).map((item: any) => item.intervalMinutes);
         
         // Determine default interval (use most common interval or fallback to 15)
-        const defaultInterval = intervals.length > 0 
-          ? intervals.reduce((a, b, _, arr) => 
+        const defaultInterval = intervals.length > 0
+          ? intervals.reduce((a, b, _, arr) =>
               arr.filter(v => v === a).length >= arr.filter(v => v === b).length ? a : b
-            ) || 15
+            ) ?? 15
           : 15;
         
         // Create SectionWorkingData
@@ -486,7 +486,7 @@ const App: React.FC = () => {
             raceId: sr.race.id,
             levelId: sr.level.id,
             orderIndex: index,
-            intervalMinutes: workingData?.intervals[index] || workingData?.settings.defaultInterval || 15,
+            intervalMinutes: workingData?.intervals[index] ?? (workingData?.settings.defaultInterval ?? 0),
             notes: undefined
           }))
         };

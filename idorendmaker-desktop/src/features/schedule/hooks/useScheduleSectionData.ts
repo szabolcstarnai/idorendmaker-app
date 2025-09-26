@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { RaceWithAgeGroupsAndBoatClass, ScheduleWithSections, SectionWorkingData, ScheduleRace, ScheduleSection, Level } from '../../../../shared/types/race';
 import { calculateRaceTime, recalculateRaceTimes } from '../utils/scheduleTimeCalculator';
+import { DEFAULT_INTERVAL_MINUTES } from '../constants/scheduleConstants';
 
 interface UseScheduleSectionDataProps {
   schedule?: ScheduleWithSections;
@@ -82,7 +83,7 @@ export const useScheduleSectionData = ({
   const scheduleRaces = currentSectionData?.races || [];
   const intervals = currentSectionData?.intervals || [];
   const startTime = currentSectionData?.settings.startTime || currentSection?.startTime || '09:00';
-  const intervalMinutes = currentSectionData?.settings.defaultInterval || 15;
+  const intervalMinutes = currentSectionData?.settings.defaultInterval ?? DEFAULT_INTERVAL_MINUTES;
 
   // Initialize section data when section changes or is accessed for the first time
   useEffect(() => {
@@ -94,7 +95,7 @@ export const useScheduleSectionData = ({
         intervals: [],
         settings: {
           startTime: currentSection.startTime,
-          defaultInterval: 15
+          defaultInterval: DEFAULT_INTERVAL_MINUTES
         },
         day: currentSection.dayNumber
       };
@@ -153,7 +154,7 @@ export const useScheduleSectionData = ({
           intervals: [],
           settings: {
             startTime: newStartTime,
-            defaultInterval: 15
+            defaultInterval: DEFAULT_INTERVAL_MINUTES
           },
           day: currentSection?.dayNumber || 1
         });
@@ -219,7 +220,7 @@ export const useScheduleSectionData = ({
           intervals: [],
           settings: {
             startTime: section?.startTime || '09:00',
-            defaultInterval: 15
+            defaultInterval: DEFAULT_INTERVAL_MINUTES
           },
           day: section?.dayNumber || 1
         };

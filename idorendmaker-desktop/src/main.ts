@@ -379,9 +379,9 @@ const initializeApp = async () => {
   });
 
   // Schedule item operations - MIGRATED TO BACKEND API
-  ipcMain.handle('db:createScheduleItem', async (_, scheduleId: number, sectionId: number, raceId: number, levelId: number, orderIndex: number, intervalMinutes?: number, notes?: string) => {
+  ipcMain.handle('db:createScheduleItem', async (_, scheduleId: number, sectionId: number, raceId: number, levelId: number, orderIndex: number, intervalMinutes: number, notes?: string) => {
     // return await ScheduleService.createScheduleItem(scheduleId, sectionId, raceId, levelId, orderIndex, intervalMinutes || 15, notes); // OLD PRISMA VERSION
-    return await BackendAPIService.createScheduleItem(scheduleId, sectionId, raceId, levelId, orderIndex, intervalMinutes || 15, notes); // NEW BACKEND VERSION
+    return await BackendAPIService.createScheduleItem(scheduleId, sectionId, raceId, levelId, orderIndex, intervalMinutes, notes); // NEW BACKEND VERSION
   });
 
   ipcMain.handle('db:getScheduleItemsBySection', async (_, sectionId: number) => {
