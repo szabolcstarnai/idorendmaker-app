@@ -1,25 +1,15 @@
 {
   "name": "idorendmaker-desktop",
   "productName": "Időrend Készítő",
-  "version": "2025.9.1",
+  "version": "2025.9.2",
   "description": "Kajak-kenu verseny időrend készítő alkalmazás",
   "main": ".vite/build/main.js",
   "scripts": {
     "postinstall": "electron-rebuild",
     "start": "electron-forge start",
     "package": "electron-forge package",
-    "make": "electron-forge make",
     "publish": "electron-forge publish",
     "lint": "eslint --ext .ts,.tsx .",
-    "build:backend": "cd ../idorendmaker-backend && mvn -Pnative native:compile-no-fork",
-    "build:backend:dev": "cd ../idorendmaker-backend && mvn -Pnative native:compile-no-fork -Dquarkus.native.debug.enabled=true",
-    "build:pdfprocessor": "cd ../idorendmaker-pdfprocessor && mvn -DskipTests package",
-    "copy:resources": "cp ../idorendmaker-backend/target/idorendmaker-backend.exe resources/ && cp ../idorendmaker-pdfprocessor/target/idorendmaker-pdfprocessor-*.jar resources/idorendmaker-pdfprocessor.jar && echo 'Resources copied to installer directory'",
-    "check:pdfprocessor": "test -f ../idorendmaker-pdfprocessor/target/idorendmaker-pdfprocessor-*.jar && echo 'PDF processor JAR found' || echo 'PDF processor JAR missing - run npm run build:pdfprocessor'",
-    "build:all": "npm run build:backend && npm run build:pdfprocessor",
-    "check:backend": "test -f ../idorendmaker-backend/target/idorendmaker-backend.exe && echo 'Backend executable found' || echo 'Backend executable missing - run npm run build:backend'",
-    "check:resources": "npm run check:backend && npm run check:pdfprocessor && test -f resources/idorendmaker-production.db && echo 'All resources ready for installer' || echo 'Some resources missing - check above'",
-    "make:installer": "npm run check:resources && npm run make",
     "beforePack": "./script/beforePack.js"
   },
   "keywords": [],
@@ -27,7 +17,7 @@
     "name": "Szabolcs Tárnai",
     "email": "tarnai.szabolcs01@gmail.com"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "build": {
     "appId": "hu.szabolcst.idorendmaker",
     "productName": "Időrend készítő",

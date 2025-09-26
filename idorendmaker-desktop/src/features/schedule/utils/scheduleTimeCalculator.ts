@@ -2,7 +2,6 @@
  * Schedule Time Calculator Utility
  * 
  * Pure functions for time calculations in schedule building.
- * All functions are side-effect free and easily testable.
  */
 
 /**

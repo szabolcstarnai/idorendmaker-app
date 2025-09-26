@@ -2,19 +2,12 @@ import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import path from 'node:path';
 import { promises as fs } from 'fs';
 import started from 'electron-squirrel-startup';
-// import { RaceService } from './data/services/RaceService'; // TEMPORARILY COMMENTED OUT FOR PRISMA MIGRATION
-// import { ScheduleService } from './data/services/ScheduleService'; // TEMPORARILY COMMENTED OUT FOR PRISMA MIGRATION
-// import { RuleService } from './data/services/RuleService'; // TEMPORARILY COMMENTED OUT FOR PRISMA MIGRATION
-// import { LevelService } from './data/services/LevelService'; // TEMPORARILY COMMENTED OUT FOR PRISMA MIGRATION
 import { BackendAPIService } from './data/services/BackendAPIService';
 import { ConflictDetector } from './features/rules/utils/ruleEngine';
-// import { closePrismaClient } from './data/services/prisma'; // REMOVED FOR PRISMA ELIMINATION - Backend handles database cleanup
 import { CreateRuleData, ScheduleRace } from '../shared/types/race';
 import { ExportService } from './features/common/services/ExportService';
 import { pdfProcessorService } from './features/pdf/services/PDFProcessorService';
 import { backendService } from './features/common/services/BackendService';
-// import { RaceMatchingService } from './features/pdf/services/RaceMatchingService'; // TEMPORARILY COMMENTED OUT FOR PRISMA MIGRATION
-// import { CompetitorService } from '../archive/CompetitorService.ts.old';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -62,43 +55,34 @@ const initializeApp = async () => {
     // This allows for debugging and error recovery
   }
 
-  // IPC handlers for database operations using Prisma services
-  // TODO: After Prisma migration, these will be replaced with HTTP client calls
   ipcMain.handle('db:getAllRaces', async () => {
-    // return await RaceService.getAllRaces(); // OLD PRISMA VERSION
-    return await BackendAPIService.getAllRaces(); // NEW BACKEND VERSION
+    return await BackendAPIService.getAllRaces();
   });
   
   ipcMain.handle('db:searchRaces', async (_, searchTerm: string) => {
-    // return await RaceService.searchRaces(searchTerm); // OLD PRISMA VERSION
-    return await BackendAPIService.searchRaces(searchTerm); // NEW BACKEND VERSION
+    return await BackendAPIService.searchRaces(searchTerm);
   });
   
   ipcMain.handle('db:getAllAgeGroups', async () => {
-    // return await RaceService.getAllAgeGroups(); // OLD PRISMA VERSION
-    return await BackendAPIService.getAllAgeGroups(); // NEW BACKEND VERSION
+    return await BackendAPIService.getAllAgeGroups();
   });
   
   // Level operations - MIGRATED TO BACKEND API
   ipcMain.handle('db:getAllLevels', async () => {
-    // return await LevelService.getAllLevels(); // OLD PRISMA VERSION
-    return await BackendAPIService.getAllLevels(); // NEW BACKEND VERSION
+    return await BackendAPIService.getAllLevels();
   });
   
   ipcMain.handle('db:getDefaultLevel', async () => {
-    // return await LevelService.getDefaultLevel(); // OLD PRISMA VERSION  
-    return await BackendAPIService.getDefaultLevel(); // NEW BACKEND VERSION
+    return await BackendAPIService.getDefaultLevel();
   });
   
   // Schedule operations - MIGRATED TO BACKEND API
   ipcMain.handle('db:getAllSchedules', async () => {
-    // return await ScheduleService.getAllSchedules(); // OLD PRISMA VERSION
-    return await BackendAPIService.getAllSchedules(); // NEW BACKEND VERSION
+    return await BackendAPIService.getAllSchedules();
   });
   
   ipcMain.handle('db:getScheduleItems', async (_, scheduleId: number) => {
-    // return await ScheduleService.getScheduleItems(scheduleId); // OLD PRISMA VERSION
-    return await BackendAPIService.getScheduleItems(scheduleId); // NEW BACKEND VERSION
+    return await BackendAPIService.getScheduleItems(scheduleId);
   });
 
   ipcMain.handle('db:getAllSeatCounts', async () => {
@@ -111,48 +95,39 @@ const initializeApp = async () => {
   
   // Rule operations
   ipcMain.handle('db:getAllRules', async () => {
-    // return await RuleService.getAllRules(); // OLD PRISMA VERSION
-    return await BackendAPIService.getAllRules(); // NEW BACKEND VERSION
+    return await BackendAPIService.getAllRules();
   });
 
   ipcMain.handle('db:getActiveRules', async () => {
-    // return await RuleService.getActiveRules(); // OLD PRISMA VERSION
-    return await BackendAPIService.getActiveRules(); // NEW BACKEND VERSION
+    return await BackendAPIService.getActiveRules();
   });
 
   ipcMain.handle('db:getRuleById', async (_, id: number) => {
-    // return await RuleService.getRuleById(id); // OLD PRISMA VERSION
-    return await BackendAPIService.getRuleById(id); // NEW BACKEND VERSION
+    return await BackendAPIService.getRuleById(id);
   });
 
   ipcMain.handle('db:createRule', async (_, data: CreateRuleData) => {
-    // return await RuleService.createRule(data); // OLD PRISMA VERSION
-    return await BackendAPIService.createRule(data); // NEW BACKEND VERSION
+    return await BackendAPIService.createRule(data);
   });
 
   ipcMain.handle('db:updateRule', async (_, id: number, data: Partial<CreateRuleData>) => {
-    // return await RuleService.updateRule(id, data); // OLD PRISMA VERSION
-    return await BackendAPIService.updateRule(id, data); // NEW BACKEND VERSION
+    return await BackendAPIService.updateRule(id, data);
   });
 
   ipcMain.handle('db:deleteRule', async (_, id: number) => {
-    // return await RuleService.deleteRule(id); // OLD PRISMA VERSION
-    return await BackendAPIService.deleteRule(id); // NEW BACKEND VERSION
+    return await BackendAPIService.deleteRule(id);
   });
 
   ipcMain.handle('db:toggleRuleActive', async (_, id: number, isActive: boolean) => {
-    // return await RuleService.toggleRuleActive(id, isActive); // OLD PRISMA VERSION
-    return await BackendAPIService.toggleRuleActive(id, isActive); // NEW BACKEND VERSION
+    return await BackendAPIService.toggleRuleActive(id, isActive);
   });
 
   ipcMain.handle('db:searchRules', async (_, searchTerm: string) => {
-    // return await RuleService.searchRules(searchTerm); // OLD PRISMA VERSION
-    return await BackendAPIService.searchRules(searchTerm); // NEW BACKEND VERSION
+    return await BackendAPIService.searchRules(searchTerm);
   });
 
   ipcMain.handle('db:getRuleStats', async () => {
-    // return await RuleService.getRuleStats(); // OLD PRISMA VERSION
-    return await BackendAPIService.getRuleStats(); // NEW BACKEND VERSION
+    return await BackendAPIService.getRuleStats();
   });
 
   // Rule engine operations
@@ -300,93 +275,77 @@ const initializeApp = async () => {
 
   // Violation dismissal operations
   ipcMain.handle('db:dismissViolation', async (_, scheduleId: number, violationHash: string) => {
-    // return await RuleService.dismissViolation(scheduleId, violationHash); // OLD PRISMA VERSION
-    return await BackendAPIService.dismissViolation(scheduleId, violationHash); // NEW BACKEND VERSION
+    return await BackendAPIService.dismissViolation(scheduleId, violationHash);
   });
 
   ipcMain.handle('db:getDismissedViolations', async (_, scheduleId: number) => {
-    // return await RuleService.getDismissedViolations(scheduleId); // OLD PRISMA VERSION
-    return await BackendAPIService.getDismissedViolations(scheduleId); // NEW BACKEND VERSION
+    return await BackendAPIService.getDismissedViolations(scheduleId);
   });
 
   ipcMain.handle('db:undismissViolation', async (_, scheduleId: number, violationHash: string) => {
-    // return await RuleService.undismissViolation(scheduleId, violationHash); // OLD PRISMA VERSION
-    return await BackendAPIService.undismissViolation(scheduleId, violationHash); // NEW BACKEND VERSION
+    return await BackendAPIService.undismissViolation(scheduleId, violationHash);
   });
 
   ipcMain.handle('db:clearDismissedViolations', async (_, scheduleId: number) => {
-    // return await RuleService.clearDismissedViolations(scheduleId); // OLD PRISMA VERSION
-    return await BackendAPIService.clearDismissedViolations(scheduleId); // NEW BACKEND VERSION
+    return await BackendAPIService.clearDismissedViolations(scheduleId);
   });
 
   ipcMain.handle('db:getDismissedViolationCount', async (_, scheduleId: number) => {
-    // return await RuleService.getDismissedViolationCount(scheduleId); // OLD PRISMA VERSION
-    return await BackendAPIService.getDismissedViolationCount(scheduleId); // NEW BACKEND VERSION
+    return await BackendAPIService.getDismissedViolationCount(scheduleId);
   });
   
   ipcMain.handle('db:getStats', async () => {
-    // return await RaceService.getStats(); // OLD PRISMA VERSION
-    return await BackendAPIService.getStats(); // NEW BACKEND VERSION
+    return await BackendAPIService.getStats();
   });
 
   ipcMain.handle('db:updateRaceHidden', async (_, raceId: number, hidden: boolean) => {
-    // return await RaceService.updateRaceHidden(raceId, hidden); // OLD PRISMA VERSION
-    return await BackendAPIService.updateRaceHidden(raceId, hidden); // NEW BACKEND VERSION
+    return await BackendAPIService.updateRaceHidden(raceId, hidden);
   });
 
   ipcMain.handle('db:saveScheduleWithSections', async (_, name: string, sectionsData: any[], pdfExtractionId?: number) => {
-    // return await ScheduleService.saveScheduleWithSections(name, sectionsData, pdfExtractionId); // OLD PRISMA VERSION
-    return await BackendAPIService.saveScheduleWithSections(name, sectionsData, pdfExtractionId); // NEW BACKEND VERSION
+    return await BackendAPIService.saveScheduleWithSections(name, sectionsData, pdfExtractionId);
   });
 
   ipcMain.handle('db:updateScheduleWithSections', async (_, scheduleId: number, name: string, sectionsData: any[], pdfExtractionId?: number) => {
-    // return await ScheduleService.updateScheduleWithSections(scheduleId, name, sectionsData, pdfExtractionId); // OLD PRISMA VERSION
-    return await BackendAPIService.updateScheduleWithSections(scheduleId, name, sectionsData, pdfExtractionId); // NEW BACKEND VERSION
+    return await BackendAPIService.updateScheduleWithSections(scheduleId, name, sectionsData, pdfExtractionId);
   });
 
   // Schedule section operations - MIGRATED TO BACKEND API
   ipcMain.handle('db:createScheduleSection', async (_, sectionData: any) => {
-    // return await ScheduleService.createScheduleSection(sectionData); // OLD PRISMA VERSION
-    return await BackendAPIService.createScheduleSection(sectionData); // NEW BACKEND VERSION
+    return await BackendAPIService.createScheduleSection(sectionData);
   });
 
   ipcMain.handle('db:getScheduleSections', async (_, scheduleId: number) => {
-    // return await ScheduleService.getScheduleSections(scheduleId); // OLD PRISMA VERSION
-    return await BackendAPIService.getScheduleSections(scheduleId); // NEW BACKEND VERSION
+    return await BackendAPIService.getScheduleSections(scheduleId);
   });
 
   ipcMain.handle('db:getScheduleWithSections', async (_, scheduleId: number) => {
-    // return await ScheduleService.getScheduleWithSections(scheduleId); // OLD PRISMA VERSION
-    return await BackendAPIService.getScheduleWithSections(scheduleId); // NEW BACKEND VERSION
+    return await BackendAPIService.getScheduleWithSections(scheduleId);
   });
 
   ipcMain.handle('db:getScheduleWithPDFContext', async (_, scheduleId: number) => {
-    // return await ScheduleService.getScheduleWithPDFContext(scheduleId); // OLD PRISMA VERSION
-    return await BackendAPIService.getScheduleWithPDFContext(scheduleId); // NEW BACKEND VERSION
+    return await BackendAPIService.getScheduleWithPDFContext(scheduleId);
   });
 
   ipcMain.handle('db:deleteSchedule', async (_, scheduleId: number) => {
-    // return await ScheduleService.deleteSchedule(scheduleId); // OLD PRISMA VERSION
-    return await BackendAPIService.deleteSchedule(scheduleId); // NEW BACKEND VERSION
+    return await BackendAPIService.deleteSchedule(scheduleId);
   });
 
   ipcMain.handle('db:renameSchedule', async (_, scheduleId: number, newName: string) => {
-    return await BackendAPIService.renameSchedule(scheduleId, newName); // NEW BACKEND VERSION
+    return await BackendAPIService.renameSchedule(scheduleId, newName);
   });
 
   ipcMain.handle('db:getScheduleStatistics', async (_, scheduleId: number) => {
-    return await BackendAPIService.getScheduleStatistics(scheduleId); // NEW BACKEND VERSION
+    return await BackendAPIService.getScheduleStatistics(scheduleId);
   });
 
   // Schedule item operations - MIGRATED TO BACKEND API
   ipcMain.handle('db:createScheduleItem', async (_, scheduleId: number, sectionId: number, raceId: number, levelId: number, orderIndex: number, intervalMinutes: number, notes?: string) => {
-    // return await ScheduleService.createScheduleItem(scheduleId, sectionId, raceId, levelId, orderIndex, intervalMinutes || 15, notes); // OLD PRISMA VERSION
-    return await BackendAPIService.createScheduleItem(scheduleId, sectionId, raceId, levelId, orderIndex, intervalMinutes, notes); // NEW BACKEND VERSION
+    return await BackendAPIService.createScheduleItem(scheduleId, sectionId, raceId, levelId, orderIndex, intervalMinutes, notes);
   });
 
   ipcMain.handle('db:getScheduleItemsBySection', async (_, sectionId: number) => {
-    // return await ScheduleService.getScheduleItemsBySection(sectionId); // OLD PRISMA VERSION
-    return await BackendAPIService.getScheduleItemsBySection(sectionId); // NEW BACKEND VERSION
+    return await BackendAPIService.getScheduleItemsBySection(sectionId);
   });
 
   // Export operations
@@ -662,8 +621,7 @@ const initializeApp = async () => {
 
   ipcMain.handle('pdf:getExtractionStats', async (_, pdfExtractionId: number) => {
     try {
-      // return await RaceMatchingService.getPDFExtractionStats(pdfExtractionId); // OLD PRISMA VERSION
-      return await BackendAPIService.getPDFExtractionStats(pdfExtractionId); // NEW BACKEND VERSION
+      return await BackendAPIService.getPDFExtractionStats(pdfExtractionId);
     } catch (error) {
       console.error('Error getting extraction stats:', error);
       return null;
@@ -673,8 +631,7 @@ const initializeApp = async () => {
   // PDF data lifecycle management
   ipcMain.handle('pdf:cleanupExpiredSessions', async () => {
     try {
-      // return await RaceMatchingService.cleanupExpiredSessions(); // OLD PRISMA VERSION
-      return await BackendAPIService.cleanupExpiredSessions(); // NEW BACKEND VERSION
+      return await BackendAPIService.cleanupExpiredSessions();
     } catch (error) {
       console.error('Error during PDF cleanup:', error);
       return { deletedExtractions: 0, deletedRecords: 0 };
@@ -684,8 +641,7 @@ const initializeApp = async () => {
   // PDF management operations
   ipcMain.handle('pdf:getAllExtractions', async () => {
     try {
-      // return await RaceMatchingService.getAllPDFExtractions(); // OLD PRISMA VERSION
-      return await BackendAPIService.getAllPDFExtractions(); // NEW BACKEND VERSION
+      return await BackendAPIService.getAllPDFExtractions();
     } catch (error) {
       console.error('Error getting all PDF extractions:', error);
       return [];
@@ -694,8 +650,7 @@ const initializeApp = async () => {
 
   ipcMain.handle('pdf:deleteExtraction', async (_, pdfExtractionId: number) => {
     try {
-      // return await RaceMatchingService.deletePDFExtraction(pdfExtractionId); // OLD PRISMA VERSION
-      return await BackendAPIService.deletePDFExtraction(pdfExtractionId); // NEW BACKEND VERSION
+      return await BackendAPIService.deletePDFExtraction(pdfExtractionId);
     } catch (error) {
       console.error('Error deleting PDF extraction:', error);
       return { 
@@ -760,8 +715,7 @@ const initializeApp = async () => {
   (async () => {
     try {
       console.log('Performing startup cleanup of expired PDF session data...');
-      // const result = await RaceMatchingService.cleanupExpiredSessions(); // OLD PRISMA VERSION
-      const result = await BackendAPIService.cleanupExpiredSessions(); // NEW BACKEND VERSION
+      const result = await BackendAPIService.cleanupExpiredSessions();
       if (result.deletedExtractions > 0) {
         console.log(`Startup cleanup completed: ${result.deletedExtractions} expired PDF extractions removed, ${result.deletedRecords} total records deleted`);
       } else {
@@ -786,9 +740,6 @@ app.on('ready', async () => {
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
 app.on('window-all-closed', async () => {
-  // Close Prisma database connection
-  // await closePrismaClient(); // REMOVED FOR PRISMA ELIMINATION - Backend handles database cleanup
-  
   // Stop backend service if running
   await backendService.stop();
   

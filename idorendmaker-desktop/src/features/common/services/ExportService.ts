@@ -1,7 +1,5 @@
 import ExcelJS from 'exceljs'
-// import { ScheduleService } from '../../../data/services/ScheduleService' // TEMPORARILY COMMENTED OUT FOR PRISMA MIGRATION
-import { BackendAPIService } from '../../../data/services/BackendAPIService' // NEW BACKEND SERVICE
-// import { RuleService } from '../../../../archive/RuleService' // TEMPORARILY COMMENTED OUT FOR PRISMA MIGRATION
+import { BackendAPIService } from '../../../data/services/BackendAPIService'
 import { ConflictDetector } from '../../rules/utils/ruleEngine'
 import { 
   ScheduleWithSections, 
@@ -60,15 +58,13 @@ export class ExportService {
    */
   private static async getScheduleExportData(scheduleId: number) {
     // Get schedule with sections
-    // const schedule = await ScheduleService.getScheduleWithSections(scheduleId) // OLD PRISMA VERSION
-    const schedule = await BackendAPIService.getScheduleWithSections(scheduleId) // NEW BACKEND VERSION
+    const schedule = await BackendAPIService.getScheduleWithSections(scheduleId)
     if (!schedule) return null
 
     // Get all schedule items across all sections
     const allItems: ScheduleItemWithRaceAndSection[] = []
     for (const section of schedule.sections) {
-      // const sectionItems = await ScheduleService.getScheduleItemsBySection(section.id) // OLD PRISMA VERSION
-      const sectionItems = await BackendAPIService.getScheduleItemsBySection(section.id) // NEW BACKEND VERSION
+      const sectionItems = await BackendAPIService.getScheduleItemsBySection(section.id)
       allItems.push(...sectionItems)
     }
 
@@ -462,7 +458,6 @@ export class ExportService {
       problemCell.alignment = { wrapText: true, vertical: 'top' }
       
       // Let Excel auto-fit row height when file is opened
-      // This is much more accurate than manual calculation
       
       // Highlight severity column
       const severityCell = row.getCell(5)

@@ -14,8 +14,6 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 public class IdorendMakerApplication {
 
     public static void main(final String[] args) {
-        log.info("🚀 Starting Időrend Maker Backend with GraalVM UPDATE operation fixes");
-        log.info("🔧 Transaction management enabled with GraalVM-compatible settings");
         SpringApplication.run(IdorendMakerApplication.class, args);
     }
 }
