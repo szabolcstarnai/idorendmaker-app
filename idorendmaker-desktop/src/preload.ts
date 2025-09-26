@@ -43,7 +43,7 @@ export interface ElectronAPI {
   getScheduleItemsBySection: (sectionId: number) => Promise<ScheduleItemWithRaceAndSection[]>;
   
   // Schedule item operations
-  createScheduleItem: (scheduleId: number, sectionId: number, raceId: number, levelId: number, orderIndex: number, intervalMinutes?: number, notes?: string) => Promise<number>;
+  createScheduleItem: (scheduleId: number, sectionId: number, raceId: number, levelId: number, orderIndex: number, intervalMinutes: number, notes?: string) => Promise<number>;
   
   // Unified schedule operations
   saveScheduleWithSections: (name: string, sectionsData: Array<{
@@ -226,7 +226,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('db:getScheduleItemsBySection', sectionId),
     
   // Schedule item operations
-  createScheduleItem: (scheduleId: number, sectionId: number, raceId: number, levelId: number, orderIndex: number, intervalMinutes?: number, notes?: string) => 
+  createScheduleItem: (scheduleId: number, sectionId: number, raceId: number, levelId: number, orderIndex: number, intervalMinutes: number, notes?: string) => 
     ipcRenderer.invoke('db:createScheduleItem', scheduleId, sectionId, raceId, levelId, orderIndex, intervalMinutes, notes),
     
   // Unified schedule operations

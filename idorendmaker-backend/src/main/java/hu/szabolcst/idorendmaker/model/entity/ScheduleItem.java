@@ -12,7 +12,7 @@ public class ScheduleItem {
     private Integer raceId;
     private Integer levelId;
     private Integer orderIndex;
-    private Integer intervalMinutes = 15;
+    private Integer intervalMinutes;
     private String notes;
     private LocalDateTime createdAt;
     private Schedule schedule;

@@ -115,7 +115,7 @@ public class ScheduleServiceImpl implements ScheduleService {
         item.setRaceId(raceId);
         item.setLevelId(levelId);
         item.setOrderIndex(orderIndex);
-        item.setIntervalMinutes(intervalMinutes != null ? intervalMinutes : 15);
+        item.setIntervalMinutes(intervalMinutes != null ? intervalMinutes : 0);
         item.setNotes(notes);
         // createdAt is set automatically by @PrePersist
         
@@ -458,7 +458,7 @@ public class ScheduleServiceImpl implements ScheduleService {
                 .entrySet().stream()
                 .max(java.util.Map.Entry.comparingByValue())
                 .map(java.util.Map.Entry::getKey)
-                .orElse(15); // Default to 15 minutes if no intervals found
+                .orElse(0); // Default to 0 minutes if no intervals found
 
         // Calculate average races per section
         final Double averageRacesPerSection = totalSections > 0 ? (double) totalRaces / totalSections : 0.0;

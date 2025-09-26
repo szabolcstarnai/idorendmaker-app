@@ -56,7 +56,7 @@ const ScheduleRaceList: React.FC<ScheduleRaceListProps> = React.memo(({
   const saveIntervalEdit = useCallback(() => {
     if (editingIntervalIndex !== null) {
       const newValue = parseInt(editingIntervalValue);
-      if (!isNaN(newValue) && newValue > 0) {
+      if (!isNaN(newValue) && newValue >= 0) {
         onUpdateInterval(editingIntervalIndex, newValue);
       }
     }
