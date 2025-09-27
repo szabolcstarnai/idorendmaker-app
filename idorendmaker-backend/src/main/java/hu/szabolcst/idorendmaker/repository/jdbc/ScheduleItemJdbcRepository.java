@@ -1,6 +1,7 @@
 package hu.szabolcst.idorendmaker.repository.jdbc;
 
 import hu.szabolcst.idorendmaker.model.entity.AgeGroup;
+import hu.szabolcst.idorendmaker.model.entity.BoatClass;
 import hu.szabolcst.idorendmaker.model.entity.Level;
 import hu.szabolcst.idorendmaker.model.entity.PDFExtraction;
 import hu.szabolcst.idorendmaker.model.entity.Race;
@@ -97,10 +98,9 @@ public class ScheduleItemJdbcRepository
 
 
     public List<ScheduleItem> findAllBySectionIdWithRaceAndLevelAndSection(final Integer sectionId) {
-        final String sql = "SELECT si.id as si_id, si.schedule_id as si_schedule_id, si.section_id as si_section_id, si.race_id as si_race_id, si.level_id as si_level_id, si.order_index as si_order_index, si.interval_minutes as si_interval_minutes, si.notes as si_notes, si.created_at as si_created_at, r.id as r_id, r.name as r_name, r.discipline as r_discipline, r.boat_class as r_boat_class, r.gender as r_gender, r.distance as r_distance, r.occurrence as r_occurrence, r.hidden as r_hidden, r.created_at as r_created_at, r.updated_at as r_updated_at, rag.race_id as rag_race_id, rag.age_group_id as rag_age_group_id, ag.id as ag_id, ag.name as ag_name, ag.created_at as ag_created_at, l.id as l_id, l.name as l_name, l.level_type as l_level_type, l.sort_order as l_sort_order, l.is_default as l_is_default, l.created_at as l_created_at, ss.id as ss_id, ss.schedule_id as ss_schedule_id, ss.day_number as ss_day_number, ss.section_type as ss_section_type, ss.start_time as ss_start_time, ss.created_at as ss_created_at FROM schedule_items si JOIN races r ON si.race_id = r.id LEFT JOIN race_age_groups rag ON r.id = rag.race_id LEFT JOIN age_groups ag ON rag.age_group_id = ag.id LEFT JOIN levels l ON si.level_id = l.id LEFT JOIN schedule_sections ss ON si.section_id = ss.id WHERE si.section_id = ? ORDER BY si.order_index ASC, ag.name ASC";
+        final String sql = "SELECT si.id as si_id, si.schedule_id as si_schedule_id, si.section_id as si_section_id, si.race_id as si_race_id, si.level_id as si_level_id, si.order_index as si_order_index, si.interval_minutes as si_interval_minutes, si.notes as si_notes, si.created_at as si_created_at, r.id as r_id, r.name as r_name, r.discipline as r_discipline, r.boat_class as r_boat_class, r.boat_class_id as r_boat_class_id, r.gender as r_gender, r.distance as r_distance, r.occurrence as r_occurrence, r.hidden as r_hidden, r.created_at as r_created_at, r.updated_at as r_updated_at, bc.id as bc_id, bc.name as bc_name, bc.boat_type as bc_boat_type, bc.seat_count as bc_seat_count, bc.seat_count_text as bc_seat_count_text, bc.created_at as bc_created_at, rag.race_id as rag_race_id, rag.age_group_id as rag_age_group_id, ag.id as ag_id, ag.name as ag_name, ag.created_at as ag_created_at, l.id as l_id, l.name as l_name, l.level_type as l_level_type, l.sort_order as l_sort_order, l.is_default as l_is_default, l.created_at as l_created_at, ss.id as ss_id, ss.schedule_id as ss_schedule_id, ss.day_number as ss_day_number, ss.section_type as ss_section_type, ss.start_time as ss_start_time, ss.created_at as ss_created_at FROM schedule_items si JOIN races r ON si.race_id = r.id LEFT JOIN boat_classes bc ON r.boat_class_id = bc.id LEFT JOIN race_age_groups rag ON r.id = rag.race_id LEFT JOIN age_groups ag ON rag.age_group_id = ag.id LEFT JOIN levels l ON si.level_id = l.id LEFT JOIN schedule_sections ss ON si.section_id = ss.id WHERE si.section_id = ? ORDER BY si.order_index ASC, ag.name ASC";
 
-        return (List<ScheduleItem>) this.jdbcTemplate.query(
-            "SELECT si.id as si_id, si.schedule_id as si_schedule_id, si.section_id as si_section_id, si.race_id as si_race_id, si.level_id as si_level_id, si.order_index as si_order_index, si.interval_minutes as si_interval_minutes, si.notes as si_notes, si.created_at as si_created_at, r.id as r_id, r.name as r_name, r.discipline as r_discipline, r.boat_class as r_boat_class, r.gender as r_gender, r.distance as r_distance, r.occurrence as r_occurrence, r.hidden as r_hidden, r.created_at as r_created_at, r.updated_at as r_updated_at, rag.race_id as rag_race_id, rag.age_group_id as rag_age_group_id, ag.id as ag_id, ag.name as ag_name, ag.created_at as ag_created_at, l.id as l_id, l.name as l_name, l.level_type as l_level_type, l.sort_order as l_sort_order, l.is_default as l_is_default, l.created_at as l_created_at, ss.id as ss_id, ss.schedule_id as ss_schedule_id, ss.day_number as ss_day_number, ss.section_type as ss_section_type, ss.start_time as ss_start_time, ss.created_at as ss_created_at FROM schedule_items si JOIN races r ON si.race_id = r.id LEFT JOIN race_age_groups rag ON r.id = rag.race_id LEFT JOIN age_groups ag ON rag.age_group_id = ag.id LEFT JOIN levels l ON si.level_id = l.id LEFT JOIN schedule_sections ss ON si.section_id = ss.id WHERE si.section_id = ? ORDER BY si.order_index ASC, ag.name ASC",
+        return (List<ScheduleItem>) this.jdbcTemplate.query(sql,
             (ResultSetExtractor) new ScheduleItemWithRelationshipsAndSectionExtractor(), new Object[]{sectionId});
     }
 
@@ -149,6 +149,8 @@ public class ScheduleItemJdbcRepository
                     race.setName(rs.getString("r_name"));
                     race.setDiscipline(rs.getString("r_discipline"));
                     race.setBoatClass(rs.getString("r_boat_class"));
+                    final Integer boatClassId = (Integer) rs.getObject("r_boat_class_id");
+                    race.setBoatClassId(boatClassId);
                     race.setGender(rs.getString("r_gender"));
                     race.setDistance(rs.getString("r_distance"));
                     race.setOccurrence(rs.getInt("r_occurrence"));
@@ -156,6 +158,23 @@ public class ScheduleItemJdbcRepository
                     race.setCreatedAt(rs.getTimestamp("r_created_at").toLocalDateTime());
                     race.setUpdatedAt(rs.getTimestamp("r_updated_at").toLocalDateTime());
                     race.setAgeGroups(new ArrayList());
+
+                    // Extract boat class data if available
+                    final Integer boatClassDataId = (Integer) rs.getObject("bc_id");
+                    if (boatClassDataId != null) {
+                        final BoatClass boatClassData = new BoatClass();
+                        boatClassData.setId(boatClassDataId);
+                        boatClassData.setName(rs.getString("bc_name"));
+                        boatClassData.setBoatType(rs.getString("bc_boat_type"));
+                        final Integer seatCount = (Integer) rs.getObject("bc_seat_count");
+                        boatClassData.setSeatCount(seatCount);
+                        boatClassData.setSeatCountText(rs.getString("bc_seat_count_text"));
+                        final Timestamp bcCreatedAt = rs.getTimestamp("bc_created_at");
+                        if (bcCreatedAt != null) {
+                            boatClassData.setCreatedAt(bcCreatedAt.toLocalDateTime());
+                        }
+                        race.setBoatClassData(boatClassData);
+                    }
 
                     item.setRace(race);
 
