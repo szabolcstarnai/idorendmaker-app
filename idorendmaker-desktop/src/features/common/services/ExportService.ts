@@ -102,30 +102,59 @@ export class ExportService {
       // Get unique race IDs from schedule items
       const raceIds = [...new Set(allItems.map((item) => item.raceId))];
 
-      // Fetch competitor summary for each race
-      for (const raceId of raceIds) {
-        try {
-          const competitorSummary =
-            await BackendAPIService.getRaceCompetitorSummary(
-              raceId,
-              schedule.pdfExtractionId
+      // Fetch competitor summaries for all races in a single batch call
+      try {
+        const competitorSummaries = await BackendAPIService.getBatchRaceCompetitorSummary(
+          raceIds,
+          schedule.pdfExtractionId
+        );
+
+        // Process the batch results
+        for (const raceId of raceIds) {
+          const competitorSummary = competitorSummaries[raceId];
+
+          if (competitorSummary) {
+            // Get race data to access boat class information
+            const raceWithBoatClass = allItems.find(
+              (item) => item.raceId === raceId
+            )?.race;
+            const seatCount = raceWithBoatClass?.boatClassData?.seatCount || null;
+
+            raceCompetitorData.set(raceId, {
+              entryCount: competitorSummary.entryCount,
+              seatCount: seatCount,
+            });
+          } else {
+            console.warn(`No competitor data received for race ${raceId}`);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch batch competitor data:', error);
+        // Fallback to individual calls if batch fails
+        for (const raceId of raceIds) {
+          try {
+            const competitorSummary =
+              await BackendAPIService.getRaceCompetitorSummary(
+                raceId,
+                schedule.pdfExtractionId
+              );
+
+            // Get race data to access boat class information
+            const raceWithBoatClass = allItems.find(
+              (item) => item.raceId === raceId
+            )?.race;
+            const seatCount = raceWithBoatClass?.boatClassData?.seatCount || null;
+
+            raceCompetitorData.set(raceId, {
+              entryCount: competitorSummary.entryCount,
+              seatCount: seatCount,
+            });
+          } catch (individualError) {
+            console.warn(
+              `Failed to fetch competitor data for race ${raceId}:`,
+              individualError
             );
-
-          // Get race data to access boat class information
-          const raceWithBoatClass = allItems.find(
-            (item) => item.raceId === raceId
-          )?.race;
-          const seatCount = raceWithBoatClass?.boatClassData?.seatCount || null;
-
-          raceCompetitorData.set(raceId, {
-            entryCount: competitorSummary.entryCount,
-            seatCount: seatCount,
-          });
-        } catch (error) {
-          console.warn(
-            `Failed to fetch competitor data for race ${raceId}:`,
-            error
-          );
+          }
         }
       }
     }
@@ -388,7 +417,7 @@ export class ExportService {
       boatUnitsHeaderCell.note = {
         texts: [
           {
-            text: "értsd: a futam versenyszámához. \naz adott futamban indulók száma a továbbjutási sémától függ, pl. Magyar bajnoki 9 pályás = 9 induló.",
+            text: "értsd: a futam versenyszámához. \naz adott futamban indulók száma a továbbjutási sémától függ, pl. Magyar bajnoki 9 pályás = max 9 induló a futamban.",
           },
         ],
       };

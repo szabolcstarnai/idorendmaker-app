@@ -6,6 +6,7 @@ import hu.szabolcst.idorendmaker.model.dto.competitor.CompetitorStatsDto;
 import hu.szabolcst.idorendmaker.model.dto.competitor.RaceCompetitorSummaryDto;
 import hu.szabolcst.idorendmaker.model.dto.competitor.ScheduleRaceDto;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 
 /**
@@ -40,6 +41,13 @@ public interface CompetitorService {
      * Equivalent to IPC: 'competitor:getRaceSummary'
      */
     RaceCompetitorSummaryDto getRaceCompetitorSummary(Integer raceId, Integer pdfExtractionId);
+
+    /**
+     * Get competitor summaries for multiple races in a single call (batch operation)
+     * Optimized for performance when multiple race summaries are needed
+     * Returns a Map where keys are race IDs and values are competitor summaries
+     */
+    Map<Integer, RaceCompetitorSummaryDto> getBatchRaceCompetitorSummary(List<Integer> raceIds, Integer pdfExtractionId);
 
     /**
      * Get competitors at high risk (tight schedules)

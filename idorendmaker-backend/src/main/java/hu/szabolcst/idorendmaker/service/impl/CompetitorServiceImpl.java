@@ -182,6 +182,59 @@ public class CompetitorServiceImpl implements CompetitorService {
 
 	@Override
 	@Transactional
+	public Map<Integer, RaceCompetitorSummaryDto> getBatchRaceCompetitorSummary(final List<Integer> raceIds, final Integer pdfExtractionId) {
+		final Map<Integer, RaceCompetitorSummaryDto> result = new HashMap<>();
+
+		if (pdfExtractionId == null || raceIds == null || raceIds.isEmpty()) {
+			// Return empty summaries for all requested race IDs
+			raceIds.forEach(raceId -> result.put(raceId, competitorMapper.toRaceCompetitorSummaryDto(0, List.of(), List.of())));
+			return result;
+		}
+
+		try {
+			// Get all associations for all races in a single query
+			final List<RaceCompetitorAssociation> allAssociations = raceCompetitorAssociationRepository
+					.findByPdfExtractionIdAndRaceIdsWithCompetitor(pdfExtractionId, raceIds);
+
+			// Group associations by race ID
+			final Map<Integer, List<RaceCompetitorAssociation>> associationsByRace = allAssociations.stream()
+					.collect(Collectors.groupingBy(RaceCompetitorAssociation::getRaceId));
+
+			// Process each race
+			for (final Integer raceId : raceIds) {
+				final List<RaceCompetitorAssociation> associations = associationsByRace.getOrDefault(raceId, List.of());
+
+				final List<String> topCompetitors = associations.stream()
+						.limit(3)
+						.map(assoc -> assoc.getCompetitorEntry().getCompetitorName())
+						.toList();
+
+				final List<String> organizations = associations.stream()
+						.map(assoc -> assoc.getCompetitorEntry().getOrganization())
+						.filter(Objects::nonNull)
+						.distinct()
+						.toList();
+
+				final RaceCompetitorSummaryDto summary = competitorMapper.toRaceCompetitorSummaryDto(
+						associations.size(),
+						topCompetitors,
+						organizations
+				);
+
+				result.put(raceId, summary);
+			}
+
+			return result;
+		} catch (final Exception error) {
+			log.error("Error getting batch race competitor summaries", error);
+			// Return empty summaries for all requested race IDs in case of error
+			raceIds.forEach(raceId -> result.put(raceId, competitorMapper.toRaceCompetitorSummaryDto(0, List.of(), List.of())));
+			return result;
+		}
+	}
+
+	@Override
+	@Transactional
 	public List<CompetitorScheduleDto> getHighRiskCompetitors(final Integer pdfExtractionId) {
 		final List<CompetitorScheduleDto> allSchedules = analyzeCompetitorSchedules(List.of(), pdfExtractionId);
 		return allSchedules.stream()

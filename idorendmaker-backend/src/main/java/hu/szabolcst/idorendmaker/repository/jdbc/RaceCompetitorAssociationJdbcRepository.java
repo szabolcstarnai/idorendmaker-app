@@ -116,6 +116,28 @@ public class RaceCompetitorAssociationJdbcRepository
     }
 
 
+    public List<RaceCompetitorAssociation> findByPdfExtractionIdAndRaceIdsWithCompetitor(final Integer pdfExtractionId,
+        final List<Integer> raceIds) {
+        if (raceIds == null || raceIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // Create placeholders for IN clause
+        final String placeholders = String.join(",", raceIds.stream().map(id -> "?").toArray(String[]::new));
+
+        final String sql = "    SELECT\n        rca.id as rca_id, rca.pdf_extraction_id as rca_pdf_extraction_id, rca.race_id as rca_race_id,\n        rca.competitor_id as rca_competitor_id, rca.pdf_race_name as rca_pdf_race_name,\n        rca.match_confidence as rca_match_confidence, rca.created_at as rca_created_at,\n        ce.id as ce_id, ce.pdf_extraction_id as ce_pdf_extraction_id, ce.competitor_id as ce_competitor_id,\n        ce.competitor_name as ce_competitor_name, ce.organization as ce_organization,\n        ce.birth_year as ce_birth_year, ce.created_at as ce_created_at\n    FROM race_competitor_associations rca\n    JOIN competitor_entries ce ON rca.pdf_extraction_id = ce.pdf_extraction_id\n        AND rca.competitor_id = ce.competitor_id\n    WHERE rca.pdf_extraction_id = ? AND rca.race_id IN (" + placeholders + ")\n    ORDER BY rca.race_id, rca.id\n";
+
+        // Prepare parameters array
+        final Object[] parameters = new Object[1 + raceIds.size()];
+        parameters[0] = pdfExtractionId;
+        for (int i = 0; i < raceIds.size(); i++) {
+            parameters[i + 1] = raceIds.get(i);
+        }
+
+        return this.jdbcTemplate.query(sql, this::mapRaceCompetitorAssociationWithCompetitor, parameters);
+    }
+
+
     private List<RaceCompetitorAssociation> mapRaceCompetitorAssociationWithCompetitor(final ResultSet rs) throws SQLException {
         final List<RaceCompetitorAssociation> associations = new ArrayList<>();
 

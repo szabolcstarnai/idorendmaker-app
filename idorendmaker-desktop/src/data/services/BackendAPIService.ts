@@ -898,7 +898,7 @@ export class BackendAPIService {
    * Endpoint: GET /api/competitors/races/{raceId}/summary
    */
   static async getRaceCompetitorSummary(
-    raceId: number, 
+    raceId: number,
     pdfExtractionId?: number
   ): Promise<{
     entryCount: number
@@ -910,7 +910,7 @@ export class BackendAPIService {
       if (pdfExtractionId) {
         params.append('pdfExtractionId', pdfExtractionId.toString())
       }
-      
+
       const queryString = params.toString() ? `?${params.toString()}` : ''
       return await this.get<{
         entryCount: number
@@ -920,6 +920,43 @@ export class BackendAPIService {
     } catch (error) {
       console.error('Error getting race competitor summary:', error)
       return { entryCount: 0, topCompetitors: [], organizations: [] }
+    }
+  }
+
+  /**
+   * Get competitor summaries for multiple races in a single call (batch operation)
+   * Optimized for performance when multiple race summaries are needed
+   * Endpoint: POST /api/competitors/races/batch-summary
+   */
+  static async getBatchRaceCompetitorSummary(
+    raceIds: number[],
+    pdfExtractionId?: number
+  ): Promise<Record<number, {
+    entryCount: number
+    topCompetitors: string[]
+    organizations: string[]
+  }>> {
+    try {
+      return await this.post<Record<number, {
+        entryCount: number
+        topCompetitors: string[]
+        organizations: string[]
+      }>>(`${BackendConfig.ENDPOINTS.COMPETITORS}/races/batch-summary`, {
+        raceIds,
+        pdfExtractionId
+      })
+    } catch (error) {
+      console.error('Error getting batch race competitor summaries:', error)
+      // Return empty summaries for all requested race IDs in case of error
+      const fallback: Record<number, {
+        entryCount: number
+        topCompetitors: string[]
+        organizations: string[]
+      }> = {}
+      raceIds.forEach(raceId => {
+        fallback[raceId] = { entryCount: 0, topCompetitors: [], organizations: [] }
+      })
+      return fallback
     }
   }
 
