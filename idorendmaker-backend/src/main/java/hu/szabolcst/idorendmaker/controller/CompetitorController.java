@@ -7,6 +7,7 @@ import hu.szabolcst.idorendmaker.model.dto.competitor.RaceCompetitorSummaryDto;
 import hu.szabolcst.idorendmaker.model.dto.competitor.ScheduleRaceDto;
 import hu.szabolcst.idorendmaker.service.CompetitorService;
 import java.util.List;
+import java.util.Map;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -89,6 +90,23 @@ public class CompetitorController {
     }
 
     /**
+     * Get competitor summaries for multiple races in a single call (batch operation)
+     * Optimized for performance when multiple race summaries are needed
+     */
+    @PostMapping("/races/batch-summary")
+    public ResponseEntity<Map<Integer, RaceCompetitorSummaryDto>> getBatchRaceCompetitorSummary(
+            @RequestBody final BatchSummaryRequest request) {
+        log.debug("POST /api/competitors/races/batch-summary - Getting batch race competitor summaries for {} races with PDF extraction id: {}",
+                 request.getRaceIds().size(), request.getPdfExtractionId());
+
+        final Map<Integer, RaceCompetitorSummaryDto> summaries = competitorService.getBatchRaceCompetitorSummary(
+                request.getRaceIds(), request.getPdfExtractionId());
+
+        log.debug("Retrieved batch summaries for {} races", summaries.size());
+        return ResponseEntity.ok(summaries);
+    }
+
+    /**
      * Get competitors at high risk (tight schedules)
      * Equivalent to IPC: 'competitor:getHighRiskCompetitors'
      * TypeScript: getHighRiskCompetitors(pdfExtractionId: number): Promise<CompetitorSchedule[]>
@@ -125,6 +143,12 @@ public class CompetitorController {
     @Data
     public static class AnalyzeScheduleRequest {
         private List<ScheduleRaceDto> scheduleRaces;
+        private Integer pdfExtractionId;
+    }
+
+    @Data
+    public static class BatchSummaryRequest {
+        private List<Integer> raceIds;
         private Integer pdfExtractionId;
     }
 }

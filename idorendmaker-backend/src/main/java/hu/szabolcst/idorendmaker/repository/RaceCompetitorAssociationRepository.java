@@ -16,6 +16,8 @@ public interface RaceCompetitorAssociationRepository {
 
     List<RaceCompetitorAssociation> findAllByPdfExtractionId(Integer paramInteger);
 
+    List<RaceCompetitorAssociation> findByPdfExtractionIdAndRaceIdsWithCompetitor(Integer paramInteger, List<Integer> raceIds);
+
     RaceCompetitorAssociation save(RaceCompetitorAssociation entity);
 
     void deleteAll(Iterable<? extends RaceCompetitorAssociation> entities);
