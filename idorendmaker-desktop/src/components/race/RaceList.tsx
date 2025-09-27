@@ -24,8 +24,15 @@ interface RaceListProps {
   pdfExtractionId?: number; // For loading competitor data
 }
 
+// Utility function to calculate boat units from entry count and seat count
+const calculateBoatUnits = (entryCount: number, seatCount: number | null | undefined): number | null => {
+  if (entryCount === 0) return 0
+  if (!seatCount || seatCount <= 0) return entryCount // Fallback to 1:1 ratio
+  return Math.ceil(entryCount / seatCount) // Round up for partial boats
+}
+
 // Memoized race card component for better performance
-const RaceCard = React.memo(({ race, onRaceClick, onToggleHidden, showAddButton = true, availableLevelsCount = 0, addedLevelsCount = 0, activeTab = 'all', scheduleMode = 'full', entryCount, topCompetitors }: {
+const RaceCard = React.memo(({ race, onRaceClick, onToggleHidden, showAddButton = true, availableLevelsCount = 0, addedLevelsCount = 0, activeTab = 'all', scheduleMode = 'full', entryCount, topCompetitors, competitorRace }: {
   race: RaceWithAgeGroupsAndBoatClass;
   onRaceClick?: (race: RaceWithAgeGroupsAndBoatClass) => void;
   onToggleHidden: (race: RaceWithAgeGroupsAndBoatClass, event: React.MouseEvent) => void;
@@ -36,6 +43,7 @@ const RaceCard = React.memo(({ race, onRaceClick, onToggleHidden, showAddButton 
   scheduleMode?: ScheduleMode;
   entryCount?: number; // Number of competitor entries (from PDF)
   topCompetitors?: string[]; // Sample competitor names
+  competitorRace?: RaceWithCompetitorData; // Full competitor race data with boat class info
 }) => {
   const getDisciplineVariant = useCallback((discipline: string) => {
     switch (discipline) {
@@ -66,7 +74,10 @@ const RaceCard = React.memo(({ race, onRaceClick, onToggleHidden, showAddButton 
             {race.name}
             {entryCount !== undefined && (
               <span className="text-green-600 font-semibold ml-1">
-                ({entryCount} nevezés)
+                {(() => {
+                  const boatUnits = calculateBoatUnits(entryCount, competitorRace?.boatClassData?.seatCount)
+                  return boatUnits !== null ? `(${boatUnits} hajóegység)` : `(${entryCount} nevezés)`
+                })()}
               </span>
             )}
           </div>
@@ -564,6 +575,7 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
                   scheduleMode={scheduleMode}
                   entryCount={competitorRace?.entryCount}
                   topCompetitors={competitorRace?.topCompetitors}
+                  competitorRace={competitorRace}
                 />
               );
             })
