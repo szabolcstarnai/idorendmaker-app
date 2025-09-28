@@ -1,6 +1,6 @@
 {
   "name": "idorendmaker-app",
-  "version": "1.0.0",
+  "version": "2025.9.2",
   "description": "Build orchestration for Időrend Készítő application",
   "private": true,
   "scripts": {
@@ -13,5 +13,5 @@
     "fs-extra": "^11.1.1"
   },
   "author": "Szabolcs Tárnai",
-  "license": "MIT"
+  "license": "Apache-2.0"
 }
