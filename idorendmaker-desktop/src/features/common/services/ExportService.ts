@@ -6,6 +6,7 @@ import {
   ScheduleItemWithRaceAndSection,
   RuleViolation,
   ScheduleRace,
+  CompetitorSchedule,
 } from "../../../../shared/types/race";
 
 export interface ExportRow {
@@ -13,7 +14,8 @@ export interface ExportRow {
   rajtIdo: string;
   versenyszamNeve: string;
   hajoegysegekSzama?: number;
-  figyelmeztetesek: string;
+  legrovidebbVersenyzoiIdokoz?: number | null;
+  szabalysertesek: string;
   megjegyzesek?: string;
   isSimultaneousStart?: boolean;
 }
@@ -45,6 +47,184 @@ export class ExportService {
     if (entryCount === 0) return 0;
     if (!seatCount || seatCount <= 0) return entryCount; // Fallback to 1:1 ratio
     return Math.ceil(entryCount / seatCount); // Round up for partial boats
+  }
+
+  /**
+   * Calculate shortest competitor intervals for each race in the schedule
+   * @param scheduleRaces The races in the schedule
+   * @param competitorSchedules Competitor analysis data
+   * @returns Map of "raceId-levelId" to shortest interval in minutes
+   */
+  private static async calculateShortestCompetitorIntervals(
+    scheduleRaces: ScheduleRace[],
+    competitorSchedules: CompetitorSchedule[]
+  ): Promise<Map<string, number>> {
+    const intervalMap = new Map<string, number>();
+
+    // For each race in the schedule, find shortest competitor interval
+    scheduleRaces.forEach((scheduleRace) => {
+      const raceKey = `${scheduleRace.race.id}-${scheduleRace.level.id}`;
+      let shortestInterval: number | null = null;
+
+      // Look through all competitor schedules
+      competitorSchedules.forEach((competitor) => {
+        // Check each race pair for this competitor
+        competitor.racePairs?.forEach((racePair) => {
+          // Check if this race is the target race (race2) in the pair
+          const isTargetRace =
+            racePair.race2Id === scheduleRace.race.id &&
+            racePair.level2Id === scheduleRace.level.id;
+
+          if (isTargetRace && racePair.intervalToNext !== null && racePair.intervalToNext !== undefined) {
+            // Update shortest interval
+            if (shortestInterval === null || racePair.intervalToNext < shortestInterval) {
+              shortestInterval = racePair.intervalToNext;
+            }
+          }
+        });
+      });
+
+      // Store the shortest interval if found
+      if (shortestInterval !== null) {
+        intervalMap.set(raceKey, shortestInterval);
+      }
+    });
+
+    return intervalMap;
+  }
+
+  /**
+   * Format time interval for Excel display
+   * @param minutes Interval in minutes
+   * @returns Formatted interval string
+   */
+  private static formatIntervalForExcel(minutes: number): string {
+    if (minutes >= 60) {
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      return `${hours}ó ${mins}p`;
+    }
+    return `${minutes}p`;
+  }
+
+  /**
+   * Create simple competitor tracker worksheet - dump all competitor data as it appears in UI
+   * @param workbook Excel workbook
+   * @param competitorSchedules Competitor data
+   */
+  private static createCompetitorTrackerSheet(
+    workbook: ExcelJS.Workbook,
+    competitorSchedules: CompetitorSchedule[]
+  ): void {
+    const worksheet = workbook.addWorksheet("Versenyző követés");
+
+    // Set column definitions
+    worksheet.columns = [
+      { header: "Versenyző neve", key: "competitorName", width: 25 },
+      { header: "Egyesület", key: "organization", width: 20 },
+      { header: "Első futam", key: "race1", width: 30 },
+      { header: "Második futam", key: "race2", width: 30 },
+      { header: "Időköz", key: "interval", width: 12 },
+      { header: "Konfliktus szint", key: "conflictLevel", width: 15 },
+      { header: "Kockázati szint", key: "riskLevel", width: 15 },
+    ];
+
+    let currentRow = 1;
+
+    // Add main title
+    const titleRow = worksheet.getRow(currentRow);
+    titleRow.getCell(1).value = "Versenyző követés - Minden konfliktus";
+    worksheet.mergeCells(`A${currentRow}:G${currentRow}`);
+    titleRow.getCell(1).font = { bold: true, size: 16, color: { argb: "FF1976D2" } };
+    titleRow.getCell(1).alignment = { horizontal: "center", vertical: "middle" };
+    titleRow.height = 25;
+    currentRow += 2;
+
+    // Add header row
+    const headerRow = worksheet.getRow(currentRow);
+    for (let col = 1; col <= 7; col++) {
+      const cell = headerRow.getCell(col);
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF2196F3" },
+      };
+      cell.alignment = { horizontal: "center", vertical: "middle" };
+    }
+    headerRow.height = 25;
+    currentRow++;
+
+    // Add all competitor data
+    competitorSchedules.forEach((competitor) => {
+      competitor.racePairs?.forEach((racePair) => {
+        if (racePair.intervalToNext !== null) {
+          const dataRow = worksheet.getRow(currentRow);
+
+          dataRow.getCell(1).value = competitor.competitorName;
+          dataRow.getCell(2).value = competitor.organization || "";
+          dataRow.getCell(3).value = `${racePair.race1Name} (${racePair.race1StartTime})`;
+          dataRow.getCell(4).value = `${racePair.race2Name || ''} (${racePair.race2StartTime || ''})`;
+          dataRow.getCell(5).value = this.formatIntervalForExcel(racePair.intervalToNext);
+
+          // Conflict level
+          const conflictCell = dataRow.getCell(6);
+          const conflictText = racePair.conflictLevel === 'critical' ? 'Kritikus' :
+                              racePair.conflictLevel === 'warning' ? 'Figyelmeztetés' : 'Nincs';
+          conflictCell.value = conflictText;
+
+          if (racePair.conflictLevel === 'critical') {
+            conflictCell.font = { bold: true, color: { argb: "FFD32F2F" } };
+          } else if (racePair.conflictLevel === 'warning') {
+            conflictCell.font = { bold: true, color: { argb: "FFFF8F00" } };
+          }
+
+          // Risk level
+          const riskCell = dataRow.getCell(7);
+          riskCell.value = competitor.riskLevel === 'high' ? 'Magas' :
+                          competitor.riskLevel === 'medium' ? 'Közepes' : 'Alacsony';
+
+          if (competitor.riskLevel === 'high') {
+            riskCell.font = { bold: true, color: { argb: "FFD32F2F" } };
+          } else if (competitor.riskLevel === 'medium') {
+            riskCell.font = { bold: true, color: { argb: "FFFF8F00" } };
+          } else {
+            riskCell.font = { color: { argb: "FF388E3C" } };
+          }
+
+          // Alternating row colors
+          if (currentRow % 2 === 0) {
+            dataRow.eachCell((cell) => {
+              cell.fill = {
+                type: "pattern",
+                pattern: "solid",
+                fgColor: { argb: "FFF8F9FA" },
+              };
+            });
+          }
+
+          currentRow++;
+        }
+      });
+    });
+
+    // Apply auto filter
+    if (currentRow > 3) {
+      worksheet.autoFilter = `A3:G${currentRow - 1}`;
+    }
+
+    // Add borders to all cells with data
+    for (let row = 1; row <= currentRow; row++) {
+      for (let col = 1; col <= 7; col++) {
+        const cell = worksheet.getCell(row, col);
+        cell.border = {
+          top: { style: "thin", color: { argb: "FFD0D0D0" } },
+          left: { style: "thin", color: { argb: "FFD0D0D0" } },
+          bottom: { style: "thin", color: { argb: "FFD0D0D0" } },
+          right: { style: "thin", color: { argb: "FFD0D0D0" } },
+        };
+      }
+    }
   }
 
   /**
@@ -97,6 +277,7 @@ export class ExportService {
       number,
       { entryCount: number; seatCount: number | null }
     > | null = null;
+    let competitorSchedules: CompetitorSchedule[] = [];
     if (schedule.pdfExtractionId) {
       raceCompetitorData = new Map();
 
@@ -158,6 +339,27 @@ export class ExportService {
           }
         }
       }
+
+      // Get competitor schedules for interval calculation
+      try {
+        // Convert schedule items to ScheduleRace format
+        const scheduleRaces: ScheduleRace[] = allItems.map((item, index) => ({
+          id: `${item.raceId}-${item.levelId}-${index}`, // Unique identifier
+          race: item.race,
+          level: item.level,
+          startTime: item.calculatedStartTime || "00:00",
+          order: item.orderIndex,
+          day: item.section.dayNumber,
+        }));
+
+        competitorSchedules = await BackendAPIService.analyzeCompetitorSchedules(
+          scheduleRaces,
+          schedule.pdfExtractionId
+        );
+      } catch (error) {
+        console.error('Failed to fetch competitor schedules for export:', error);
+        competitorSchedules = [];
+      }
     }
 
     return {
@@ -165,6 +367,7 @@ export class ExportService {
       items: allItems,
       rules,
       raceCompetitorData,
+      competitorSchedules,
     };
   }
 
@@ -179,6 +382,7 @@ export class ExportService {
       number,
       { entryCount: number; seatCount: number | null }
     > | null;
+    competitorSchedules?: CompetitorSchedule[];
   }): Promise<ExcelJS.Workbook> {
     const workbook = new ExcelJS.Workbook();
 
@@ -192,10 +396,11 @@ export class ExportService {
     const violations = await this.detectRuleViolations(data.items, data.rules);
 
     // Generate main schedule data grouped by sections
-    const groupedScheduleData = this.generateGroupedScheduleRows(
+    const groupedScheduleData = await this.generateGroupedScheduleRows(
       data.items,
       violations,
-      data.raceCompetitorData
+      data.raceCompetitorData,
+      data.competitorSchedules
     );
 
     // Create main schedule sheet with section headers
@@ -205,6 +410,11 @@ export class ExportService {
       groupedScheduleData,
       hasPDFData
     );
+
+    // Create competitor tracker sheet if data is available
+    if (data.competitorSchedules && data.competitorSchedules.length > 0) {
+      this.createCompetitorTrackerSheet(workbook, data.competitorSchedules);
+    }
 
     // Create warnings sheet if violations exist
     if (violations.length > 0) {
@@ -244,14 +454,34 @@ export class ExportService {
   /**
    * Generate main schedule rows grouped by sections for Excel
    */
-  private static generateGroupedScheduleRows(
+  private static async generateGroupedScheduleRows(
     items: ScheduleItemWithRaceAndSection[],
     violations: RuleViolation[],
     raceCompetitorData?: Map<
       number,
       { entryCount: number; seatCount: number | null }
-    > | null
-  ): SectionGroup[] {
+    > | null,
+    competitorSchedules?: CompetitorSchedule[]
+  ): Promise<SectionGroup[]> {
+    // Calculate shortest competitor intervals if competitor data is available
+    let shortestIntervals: Map<string, number> = new Map();
+    if (competitorSchedules && competitorSchedules.length > 0) {
+      // Convert items to ScheduleRace format for calculation
+      const scheduleRaces: ScheduleRace[] = items.map((item, index) => ({
+        id: `${item.raceId}-${item.levelId}-${index}`,
+        race: item.race,
+        level: item.level,
+        startTime: item.calculatedStartTime || "00:00",
+        order: item.orderIndex,
+        day: item.section.dayNumber,
+      }));
+
+      shortestIntervals = await this.calculateShortestCompetitorIntervals(
+        scheduleRaces,
+        competitorSchedules
+      );
+    }
+
     // Sort items by section and order
     const sortedItems = [...items].sort((a, b) => {
       // First by day number, then by section type, then by order
@@ -341,12 +571,17 @@ export class ExportService {
             ) || undefined;
         }
 
+        // Get shortest competitor interval if available
+        const raceKey = `${item.raceId}-${item.levelId}`;
+        const shortestInterval = shortestIntervals.get(raceKey) || null;
+
         const row: ExportRow = {
           sorszam: globalIndex++,
           rajtIdo: item.calculatedStartTime || "00:00",
           versenyszamNeve: raceName,
           hajoegysegekSzama: boatUnits,
-          figyelmeztetesek: warningText,
+          legrovidebbVersenyzoiIdokoz: shortestInterval,
+          szabalysertesek: warningText,
           megjegyzesek: item.notes || "",
           isSimultaneousStart: simultaneousStartTimes.has(item.calculatedStartTime || "00:00"),
         };
@@ -394,10 +629,20 @@ export class ExportService {
       });
     }
 
+    // Conditionally add shortest competitor interval column if PDF data exists
+    if (hasPDFData) {
+      columns.push({
+        header: "Legrövidebb versenyzői időköz",
+        key: "legrovidebbVersenyzoiIdokoz",
+        width: 22,
+        isCustomWidth: true,
+      });
+    }
+
     columns.push(
       {
-        header: "Figyelmeztetések",
-        key: "figyelmeztetesek",
+        header: "Szabálysértések",
+        key: "szabalysertesek",
         width: 20,
         isCustomWidth: true,
       },
@@ -486,14 +731,23 @@ export class ExportService {
           dataRow.getCell(colIndex++).value = row.hajoegysegekSzama || "";
         }
 
-        dataRow.getCell(colIndex++).value = row.figyelmeztetesek;
+        // Conditionally add shortest competitor interval column
+        if (hasPDFData) {
+          const intervalValue = row.legrovidebbVersenyzoiIdokoz;
+          const formattedInterval = intervalValue !== null && intervalValue !== undefined
+            ? this.formatIntervalForExcel(intervalValue)
+            : "";
+          dataRow.getCell(colIndex++).value = formattedInterval;
+        }
+
+        dataRow.getCell(colIndex++).value = row.szabalysertesek;
         dataRow.getCell(colIndex++).value = row.megjegyzesek || "";
 
         // Apply warning formatting if this row has warnings
         const hasWarning =
-          row.figyelmeztetesek &&
-          (row.figyelmeztetesek.includes("figyelmeztetés") ||
-            row.figyelmeztetesek.includes("⚠"));
+          row.szabalysertesek &&
+          (row.szabalysertesek.includes("figyelmeztetés") ||
+            row.szabalysertesek.includes("⚠"));
 
         if (hasWarning) {
           // Apply amber background to entire row
@@ -506,7 +760,7 @@ export class ExportService {
           });
 
           // Special formatting for warning column (position depends on whether PDF data exists)
-          const warningColumnIndex = hasPDFData ? 5 : 4;
+          const warningColumnIndex = hasPDFData ? 6 : 4;
           const warningCell = dataRow.getCell(warningColumnIndex);
           warningCell.font = { bold: true, color: { argb: "FF856404" } }; // Dark amber text
           warningCell.border = {
