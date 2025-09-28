@@ -15,6 +15,7 @@ export interface ExportRow {
   hajoegysegekSzama?: number;
   figyelmeztetesek: string;
   megjegyzesek?: string;
+  isSimultaneousStart?: boolean;
 }
 
 export interface ExportWarning {
@@ -282,6 +283,21 @@ export class ExportService {
       const firstItem = sectionItems[0];
       const sectionHeader = `${firstItem.section.dayNumber}. nap ${firstItem.section.sectionType.charAt(0).toUpperCase() + firstItem.section.sectionType.slice(1)}`;
 
+      // Detect simultaneous start times within this section
+      const startTimeCounts = new Map<string, number>();
+      sectionItems.forEach((item) => {
+        const startTime = item.calculatedStartTime || "00:00";
+        startTimeCounts.set(startTime, (startTimeCounts.get(startTime) || 0) + 1);
+      });
+
+      // Create set of start times that have multiple races (simultaneous starts)
+      const simultaneousStartTimes = new Set<string>();
+      startTimeCounts.forEach((count, startTime) => {
+        if (count > 1) {
+          simultaneousStartTimes.add(startTime);
+        }
+      });
+
       // Generate rows for this section
       const sectionRows = sectionItems.map((item) => {
         // Find warnings for this specific race+level+time combination
@@ -332,6 +348,7 @@ export class ExportService {
           hajoegysegekSzama: boatUnits,
           figyelmeztetesek: warningText,
           megjegyzesek: item.notes || "",
+          isSimultaneousStart: simultaneousStartTimes.has(item.calculatedStartTime || "00:00"),
         };
         return row;
       });
@@ -509,6 +526,26 @@ export class ExportService {
               };
             });
           }
+        }
+
+        // Apply simultaneous start time highlighting to start time cell (column 2)
+        if (row.isSimultaneousStart) {
+          const startTimeCell = dataRow.getCell(2); // Column 2 is "Rajt idő" (start time)
+          startTimeCell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFE1BEE7" }, // Light purple background
+          };
+          startTimeCell.font = {
+            bold: true,
+            color: { argb: "FF4A148C" } // Dark purple text
+          };
+          startTimeCell.border = {
+            top: { style: "medium", color: { argb: "FF4A148C" } },
+            left: { style: "medium", color: { argb: "FF4A148C" } },
+            bottom: { style: "medium", color: { argb: "FF4A148C" } },
+            right: { style: "medium", color: { argb: "FF4A148C" } },
+          };
         }
 
         dataRow.height = 18;

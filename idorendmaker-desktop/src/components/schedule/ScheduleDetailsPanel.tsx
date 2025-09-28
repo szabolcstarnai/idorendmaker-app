@@ -342,7 +342,7 @@ const ScheduleDetailsPanel: React.FC<ScheduleDetailsPanelProps> = ({
                   </div>
                   <div className="p-3 bg-muted rounded-lg">
                     <div className="text-2xl font-bold text-foreground">{statistics.totalRaces}</div>
-                    <div className="text-xs text-muted-foreground">Versenyszám</div>
+                    <div className="text-xs text-muted-foreground">Futam</div>
                   </div>
                   <div className="p-3 bg-muted rounded-lg">
                     <div className="text-2xl font-bold text-foreground">
@@ -354,7 +354,7 @@ const ScheduleDetailsPanel: React.FC<ScheduleDetailsPanelProps> = ({
                 <div className="grid grid-cols-2 gap-4 text-center">
                   <div className="p-3 bg-muted rounded-lg">
                     <div className="text-lg font-bold text-foreground">{statistics.uniqueRaceTypes}</div>
-                    <div className="text-xs text-muted-foreground">Egyedi versenyszám típus</div>
+                    <div className="text-xs text-muted-foreground">Versenyszám</div>
                   </div>
                   <div className="p-3 bg-muted rounded-lg">
                     <div className="text-lg font-bold text-foreground">{statistics.mostCommonInterval} perc</div>
