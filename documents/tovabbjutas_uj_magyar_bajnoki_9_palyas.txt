@@ -1,0 +1,14 @@
+{
+	[1..9]: { "A Döntő" }, 
+	[10..18]: { "I. Előfutam", "II. Előfutam", "A Döntő", "B Döntő"? }
+	[19..27]: { "I. Előfutam", "II. Előfutam", "III. Előfutam", "A Döntő", "B Döntő"?, "C Döntő"? }
+	[28..36]: { "I. Előfutam", "II. Előfutam", "III. Előfutam", "IV. Előfutam", "I. Középfutam", "II. Középfutam", "A Döntő", "B Döntő"?, "C Döntő"? }
+	[37..45]: { "I. Előfutam", "II. Előfutam", "III. Előfutam", "IV. Előfutam", "V. Előfutam", "I. Középfutam", "II. Középfutam", "III. Középfutam", "A Döntő", "B Döntő"?, "C Döntő"? }
+	[46..54]: { "I. Előfutam", "II. Előfutam", "III. Előfutam", "IV. Előfutam", "V. Előfutam", "VI. Előfutam", "I. Középfutam", "II. Középfutam", "III. Középfutam", "A Döntő", "B Döntő"?, "C Döntő"? }
+	[55..63]: { "I. Előfutam", "II. Előfutam", "III. Előfutam", "IV. Előfutam", "V. Előfutam", "VI. Előfutam", "VII. Előfutam", "I. Középfutam", "II. Középfutam", "III. Középfutam", "A Döntő", "B Döntő"?, "C Döntő"? }
+	[64..72]: { "I. Előfutam", "II. Előfutam", "III. Előfutam", "IV. Előfutam", "V. Előfutam", "VI. Előfutam", "VII. Előfutam", "VIII. Előfutam", "I. Középfutam", "II. Középfutam", "III. Középfutam", "A Döntő", "B Döntő"?, "C Döntő"? }
+	[73..81]: { "I. Előfutam", "II. Előfutam", "III. Előfutam", "IV. Előfutam", "V. Előfutam", "VI. Előfutam", "VII. Előfutam", "VIII. Előfutam", "IX. Előfutam", "I. Középfutam", "II. Középfutam", "III. Középfutam", "A Döntő", "B Döntő"?, "C Döntő"? }
+	[82..90]: { "I. Előfutam", "II. Előfutam", "III. Előfutam", "IV. Előfutam", "V. Előfutam", "VI. Előfutam", "VII. Előfutam", "VIII. Előfutam", "IX. Előfutam", "X. Előfutam", "I. Középfutam", "II. Középfutam", "III. Középfutam", "IV. Középfutam", "A Döntő", "B Döntő"?, "C Döntő"? }
+	[91..99]: { "I. Előfutam", "II. Előfutam", "III. Előfutam", "IV. Előfutam", "V. Előfutam", "VI. Előfutam", "VII. Előfutam", "VIII. Előfutam", "IX. Előfutam", "X. Előfutam", "XI. Előfutam", "I. Középfutam", "II. Középfutam", "III. Középfutam", "IV. Középfutam", "A Döntő", "B Döntő"?, "C Döntő"? }
+	[100..108]: { "I. Előfutam", "II. Előfutam", "III. Előfutam", "IV. Előfutam", "V. Előfutam", "VI. Előfutam", "VII. Előfutam", "VIII. Előfutam", "IX. Előfutam", "X. Előfutam", "XI. Előfutam", "XII. Előfutam", "I. Középfutam", "II. Középfutam", "III. Középfutam", "IV. Középfutam", "A Döntő", "B Döntő"?, "C Döntő"? }
+}
