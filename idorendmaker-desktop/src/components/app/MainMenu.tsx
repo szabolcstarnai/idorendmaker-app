@@ -91,7 +91,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onCreateNewSchedule, onLoadSchedule
               <h1 className="text-lg font-bold text-foreground">Időrend előkészítő</h1>
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="text-xs px-2 py-0">
-                  v2025.9.2
+                  v2025.10.1
                 </Badge>
               </div>
             </div>

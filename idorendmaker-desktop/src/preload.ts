@@ -172,6 +172,10 @@ export interface ElectronAPI {
     racesWithEntries: number;
     organizationsRepresented: number;
   }>;
+
+  // App version and update operations
+  getCurrentVersion: () => Promise<string>;
+  openExternalUrl: (url: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 // Expose protected methods that allow the renderer process to use
@@ -279,6 +283,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('competitor:getRaceSummary', raceId, pdfExtractionId),
   competitorGetHighRiskCompetitors: (pdfExtractionId: number) => 
     ipcRenderer.invoke('competitor:getHighRiskCompetitors', pdfExtractionId),
-  competitorGetStats: (pdfExtractionId: number) => 
+  competitorGetStats: (pdfExtractionId: number) =>
     ipcRenderer.invoke('competitor:getStats', pdfExtractionId),
+
+  // App version and update operations
+  getCurrentVersion: () => ipcRenderer.invoke('app:getCurrentVersion'),
+  openExternalUrl: (url: string) => ipcRenderer.invoke('app:openExternalUrl', url),
 } as ElectronAPI);

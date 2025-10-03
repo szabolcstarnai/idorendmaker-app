@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
 import path from 'node:path';
 import { promises as fs } from 'fs';
 import started from 'electron-squirrel-startup';
@@ -710,7 +710,34 @@ const initializeApp = async () => {
       };
     }
   });
-  
+
+  // App version and update handlers
+  ipcMain.handle('app:getCurrentVersion', () => {
+    return app.getVersion();
+  });
+
+  ipcMain.handle('app:openExternalUrl', async (_, url: string) => {
+    try {
+      // Validate URL before opening
+      const parsedUrl = new URL(url);
+
+      // Only allow https URLs to GitHub
+      if (parsedUrl.protocol === 'https:' && parsedUrl.hostname.includes('github.com')) {
+        await shell.openExternal(url);
+        return { success: true };
+      } else {
+        console.warn('Blocked attempt to open non-GitHub URL:', url);
+        return { success: false, error: 'Invalid URL' };
+      }
+    } catch (error) {
+      console.error('Error opening external URL:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to open URL'
+      };
+    }
+  });
+
   // Perform startup cleanup of expired PDF session data
   (async () => {
     try {

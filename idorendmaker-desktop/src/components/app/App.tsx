@@ -9,11 +9,13 @@ import RuleEditor from '../rules/RuleEditor';
 import PDFProcessor from '../pdf/PDFProcessor';
 import Navbar from './Navbar';
 import UnsavedChangesDialog from '../dialogs/UnsavedChangesDialog';
+import UpdateNotificationDialog from '../dialogs/UpdateNotificationDialog';
 import { TwoPanelLayout } from '../layout/TwoPanelLayout';
 import { RaceWithAgeGroupsAndBoatClass, ScheduleWithSections, ScheduleSection, CreateScheduleSectionData, ScheduleRace, SectionWorkingData, Schedule, RuleWithConditions, CreateRuleData, Level, ScheduleMode } from '../../../shared/types/race';
 import { useUnsavedChanges } from '../../features/common/hooks/useUnsavedChanges';
 import { Toaster } from '../ui/sonner';
 import { toast } from 'sonner';
+import { UpdateService, ReleaseInfo } from '../../features/common/services/UpdateService';
 
 type AppView = 'main-menu' | 'select-mode' | 'create-schedule' | 'load-schedule' | 'rule-management' | 'rule-editor' | 'pdf-processor' | 'pdf-to-schedule';
 
@@ -47,6 +49,10 @@ const App: React.FC = () => {
   // Ref to hold the populateSectionDataMap function from ScheduleBuilder
   const populateSectionDataMapRef = useRef<((loadedSectionDataMap: Map<number, SectionWorkingData>) => void) | null>(null);
 
+  // Update notification state
+  const [showUpdateDialog, setShowUpdateDialog] = useState(false);
+  const [updateReleaseInfo, setUpdateReleaseInfo] = useState<ReleaseInfo | null>(null);
+
   // Unsaved changes management
   const {
     showConfirmDialog,
@@ -65,6 +71,36 @@ const App: React.FC = () => {
       initializeSchedule();
     }
   }, [currentView]);
+
+  // Check for updates on app startup
+  useEffect(() => {
+    const checkForUpdates = async () => {
+      try {
+        // Get current version from Electron
+        const currentVersion = await window.electronAPI.getCurrentVersion();
+
+        // Check for updates
+        const result = await UpdateService.checkForUpdates(currentVersion);
+
+        if (result.updateAvailable && result.releaseInfo) {
+          // Check if this version was previously skipped
+          if (!UpdateService.isVersionSkipped(result.releaseInfo.version)) {
+            setUpdateReleaseInfo(result.releaseInfo);
+            setShowUpdateDialog(true);
+          } else {
+            console.log(`Update ${result.releaseInfo.version} is available but was skipped by user`);
+          }
+        }
+      } catch (error) {
+        // Silently fail - don't bother the user if update check fails
+        console.error('Update check failed:', error);
+      }
+    };
+
+    // Check for updates after a short delay to not block app startup
+    const timer = setTimeout(checkForUpdates, 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Initialize with a default schedule
   const initializeSchedule = async () => {
@@ -568,6 +604,38 @@ const App: React.FC = () => {
     }
   };
 
+  // Update notification handlers
+  const handleDownloadUpdate = async () => {
+    if (updateReleaseInfo) {
+      try {
+        const result = await window.electronAPI.openExternalUrl(updateReleaseInfo.downloadUrl);
+        if (result.success) {
+          toast.success('Letöltés megnyitva böngészőben', {
+            description: 'A telepítő letöltése megkezdődött'
+          });
+        } else {
+          toast.error('Nem sikerült megnyitni a letöltési linket');
+        }
+      } catch (error) {
+        console.error('Failed to open download URL:', error);
+        toast.error('Hiba történt a letöltés megnyitásakor');
+      }
+    }
+  };
+
+  const handleSkipVersion = () => {
+    if (updateReleaseInfo) {
+      UpdateService.skipVersion(updateReleaseInfo.version);
+      toast.info(`Verzió ${updateReleaseInfo.version} kihagyva`, {
+        description: 'Ezt a verziót nem fogjuk újra felajánlani'
+      });
+    }
+  };
+
+  const handleCloseUpdateDialog = () => {
+    setShowUpdateDialog(false);
+  };
+
   // Render different views based on current navigation state
   const renderCurrentView = () => {
     switch (currentView) {
@@ -737,12 +805,21 @@ const App: React.FC = () => {
         canSave={canSave}
         title={unsavedChangesType === 'rule' ? 'Mentetlen szabály módosítások' : 'Mentetlen időrend módosítások'}
         description={
-          unsavedChangesType === 'rule' 
+          unsavedChangesType === 'rule'
             ? 'A szabályban mentetlen módosítások vannak. Biztosan el szeretné hagyni a szerkesztőt?'
             : 'Az időrendben mentetlen módosítások vannak. Biztosan el szeretné hagyni a szerkesztőt?'
         }
         saveLabel={unsavedChangesType === 'rule' ? 'Szabály mentése és kilépés' : 'Időrend mentése és kilépés'}
       />
+      {updateReleaseInfo && (
+        <UpdateNotificationDialog
+          isOpen={showUpdateDialog}
+          releaseInfo={updateReleaseInfo}
+          onDownload={handleDownloadUpdate}
+          onSkipVersion={handleSkipVersion}
+          onClose={handleCloseUpdateDialog}
+        />
+      )}
     </>
   );
 };
