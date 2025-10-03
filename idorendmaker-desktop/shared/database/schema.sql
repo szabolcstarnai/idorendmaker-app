@@ -4,7 +4,7 @@
 -- Main races table
 CREATE TABLE IF NOT EXISTS races (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
+    name TEXT UNIQUE NOT NULL, -- Race names are unique identifiers
     discipline TEXT NOT NULL CHECK (discipline IN ('Kajak', 'Kenu', 'SUP', 'Kajakpóló', 'Parakenu', 'Sárkányhajó', 'Szlalom', 'Tengeri kajak')),
     boat_class TEXT NOT NULL, -- Legacy string field - kept for backward compatibility
     boat_class_id INTEGER, -- Reference to boat_classes table for enhanced rule system

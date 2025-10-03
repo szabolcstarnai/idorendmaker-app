@@ -1,0 +1,1 @@
+npm run generate-migration -- --old="C:\Users\Szabolcs\Documents\PROJECTS\idorendmaker-app\documents\archive\versenyszamok_0.xlsx" --new="C:\Users\Szabolcs\Documents\PROJECTS\idorendmaker-app\documents\versenyszamok.xlsx"

@@ -136,7 +136,7 @@ class DatabasePopulator {
 
     // Read and execute the current unified schema
     const schemaPath = path.join(
-      process.cwd(),
+      process.cwd(), "..", "idorendmaker-desktop",
       "shared",
       "database",
       "schema.sql"

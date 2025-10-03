@@ -12,7 +12,7 @@ output_file = "deduped_with_counts.xlsx"
 df = pd.read_excel(input_file)
 
 # Count duplicates
-deduped = df.value_counts().reset_index(name="Occurrences")
+deduped = df.value_counts().reset_index(name="Előfordulás")
 
 # Save result
 deduped.to_excel(output_file, index=False)
