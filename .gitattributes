@@ -3,5 +3,5 @@
 *.zip filter=lfs diff=lfs merge=lfs -text
 *.xlsx filter=lfs diff=lfs merge=lfs -text
 
-licenses/* linguist-documentation
-documents/* linguist-documentation
+licenses/** -linguist-detectable
+documents/** linguist-documentation
