@@ -284,8 +284,8 @@ export class BackendService {
    * Get the current base URL for API calls
    */
   getBaseUrl(): string {
-    return `http://localhost:8080/api`;
-    //return `${this.baseUrl}/api`;
+    //return `http://localhost:8080/api`;
+    return `${this.baseUrl}/api`;
   }
 
   /**

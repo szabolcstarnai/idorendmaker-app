@@ -492,7 +492,7 @@
 | https-proxy-agent@5.0.1 | MIT | [View](./licenses/idorendmaker-desktop/ALL-THIRD-PARTY-LICENSES.html#https-proxy-agent-5-0-1) |
 | humanize-ms@1.2.1 | MIT | [View](./licenses/idorendmaker-desktop/ALL-THIRD-PARTY-LICENSES.html#humanize-ms-1-2-1) |
 | iconv-lite@0.6.3 | MIT | [View](./licenses/idorendmaker-desktop/ALL-THIRD-PARTY-LICENSES.html#iconv-lite-0-6-3) |
-| idorendmaker-desktop@2025.9.1 | MIT | [View](./licenses/idorendmaker-desktop/ALL-THIRD-PARTY-LICENSES.html#idorendmaker-desktop-2025-9-1) |
+| idorendmaker-desktop@2025.10.1 | Apache-2.0 | [View](./licenses/idorendmaker-desktop/ALL-THIRD-PARTY-LICENSES.html#idorendmaker-desktop-2025-10-1) |
 | ieee754@1.2.1 | BSD-3-Clause | [View](./licenses/idorendmaker-desktop/ALL-THIRD-PARTY-LICENSES.html#ieee754-1-2-1) |
 | ignore@5.3.2 | MIT | [View](./licenses/idorendmaker-desktop/ALL-THIRD-PARTY-LICENSES.html#ignore-5-3-2) |
 | immediate@3.0.6 | MIT | [View](./licenses/idorendmaker-desktop/ALL-THIRD-PARTY-LICENSES.html#immediate-3-0-6) |
@@ -901,9 +901,9 @@
 | Dependency | License | File |
 | --- | --- | --- |
 | ch.qos.logback:logback-classic | Eclipse Public License - v 1.0 | [eclipse public license - v 1.0 - epl-v10.html](./licenses/eclipse%20public%20license%20-%20v%201.0%20-%20epl-v10.html) |
-| ch.qos.logback:logback-classic | GNU Lesser General Public License | [](./licenses/) |
+| ch.qos.logback:logback-classic | GNU Lesser General Public License | [gnu lesser general public license - lgpl-2.1.html](./licenses/gnu%20lesser%20general%20public%20license%20-%20lgpl-2.1.html) |
 | ch.qos.logback:logback-core | Eclipse Public License - v 1.0 | [eclipse public license - v 1.0 - epl-v10.html](./licenses/eclipse%20public%20license%20-%20v%201.0%20-%20epl-v10.html) |
-| ch.qos.logback:logback-core | GNU Lesser General Public License | [](./licenses/) |
+| ch.qos.logback:logback-core | GNU Lesser General Public License | [gnu lesser general public license - lgpl-2.1.html](./licenses/gnu%20lesser%20general%20public%20license%20-%20lgpl-2.1.html) |
 | com.fasterxml.jackson.core:jackson-annotations | The Apache Software License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
 | com.fasterxml.jackson.core:jackson-core | The Apache Software License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
 | com.fasterxml.jackson.core:jackson-databind | The Apache Software License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |

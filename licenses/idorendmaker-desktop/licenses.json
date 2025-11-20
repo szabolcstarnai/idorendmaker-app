@@ -3067,8 +3067,8 @@
     "path": "C:\\Users\\Szabolcs\\Documents\\PROJECTS\\idorendmaker-app\\idorendmaker-desktop\\node_modules\\iconv-lite",
     "licenseFile": "C:\\Users\\Szabolcs\\Documents\\PROJECTS\\idorendmaker-app\\idorendmaker-desktop\\node_modules\\iconv-lite\\LICENSE"
   },
-  "idorendmaker-desktop@2025.9.1": {
-    "licenses": "MIT",
+  "idorendmaker-desktop@2025.10.1": {
+    "licenses": "Apache-2.0",
     "publisher": "Szabolcs Tárnai",
     "email": "tarnai.szabolcs01@gmail.com",
     "path": "C:\\Users\\Szabolcs\\Documents\\PROJECTS\\idorendmaker-app\\idorendmaker-desktop"
