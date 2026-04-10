@@ -4,28 +4,31 @@ import hu.szabolcst.idorendmaker.model.entity.PDFExtraction;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
-public interface PDFExtractionRepository {
+public interface PDFExtractionRepository extends JpaRepository<PDFExtraction, Integer> {
 
-    Optional<PDFExtraction> findById(Integer id);
+    Optional<PDFExtraction> findByFileHash(String fileHash);
 
-    PDFExtraction save(PDFExtraction entity);
-
-    Optional<PDFExtraction> findByFileHash(String paramString);
-
+    @EntityGraph(attributePaths = {"schedules"})
+    @Query("SELECT DISTINCT p FROM PDFExtraction p ORDER BY p.createdAt DESC")
     List<PDFExtraction> findAllWithSchedulesOrderByCreatedAtDesc();
 
-    List<PDFExtraction> findExpiredSessionExtractions(LocalDateTime paramLocalDateTime);
+    @Query("SELECT p FROM PDFExtraction p WHERE p.status = 'session' AND p.expiresAt < :cutoff")
+    List<PDFExtraction> findExpiredSessionExtractions(@Param("cutoff") LocalDateTime cutoff);
 
-    Optional<PDFExtraction> findByIdWithSchedules(Integer paramInteger);
+    @EntityGraph(attributePaths = {"schedules"})
+    @Query("SELECT DISTINCT p FROM PDFExtraction p WHERE p.id = :id")
+    Optional<PDFExtraction> findByIdWithSchedules(@Param("id") Integer id);
 
-    long countByStatus(String paramString);
+    long countByStatus(String status);
 
-    List<PDFExtraction> findByStatusOrderByCreatedAtDesc(String paramString);
+    List<PDFExtraction> findByStatusOrderByCreatedAtDesc(String status);
 
+    @Query("SELECT p FROM PDFExtraction p WHERE p.status = 'session' "
+        + "AND NOT EXISTS (SELECT 1 FROM Schedule s WHERE s.pdfExtractionId = p.id)")
     List<PDFExtraction> findDeletableExtractions();
-
-    void delete(PDFExtraction entity);
-
-    void deleteAll(Iterable<? extends PDFExtraction> entities);
 }
