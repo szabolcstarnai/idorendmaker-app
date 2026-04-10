@@ -2,12 +2,12 @@ package hu.szabolcst.idorendmaker.repository;
 
 import hu.szabolcst.idorendmaker.model.entity.ScheduleSection;
 import java.util.List;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface ScheduleSectionRepository {
+public interface ScheduleSectionRepository extends JpaRepository<ScheduleSection, Integer> {
 
-    ScheduleSection save(ScheduleSection entity);
+    List<ScheduleSection> findAllByScheduleIdOrderByDayNumberAscSectionTypeAsc(Integer scheduleId);
 
-    List<ScheduleSection> findAllByScheduleIdOrderByDayNumberAscSectionTypeAsc(Integer paramInteger);
-
-    void deleteAllByScheduleId(Integer paramInteger);
+    void deleteAllByScheduleId(Integer scheduleId);
+    // save(entity) inherited
 }

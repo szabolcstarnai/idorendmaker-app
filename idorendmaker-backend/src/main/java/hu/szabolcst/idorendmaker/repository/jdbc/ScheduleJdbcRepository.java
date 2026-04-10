@@ -3,7 +3,9 @@ package hu.szabolcst.idorendmaker.repository.jdbc;
 import hu.szabolcst.idorendmaker.model.entity.PDFExtraction;
 import hu.szabolcst.idorendmaker.model.entity.Schedule;
 import hu.szabolcst.idorendmaker.model.entity.ScheduleSection;
+import hu.szabolcst.idorendmaker.repository.DismissedRuleViolationRepository;
 import hu.szabolcst.idorendmaker.repository.ScheduleRepository;
+import hu.szabolcst.idorendmaker.repository.ScheduleSectionRepository;
 import hu.szabolcst.idorendmaker.utils.JdbcUtils;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -26,11 +28,11 @@ public class ScheduleJdbcRepository
     implements ScheduleRepository {
 
     @Autowired
-    private ScheduleSectionJdbcRepository scheduleSectionRepository;
+    private ScheduleSectionRepository scheduleSectionRepository;
     @Autowired
     private ScheduleItemJdbcRepository scheduleItemRepository;
     @Autowired
-    private DismissedRuleViolationJdbcRepository dismissedRuleViolationRepository;
+    private DismissedRuleViolationRepository dismissedRuleViolationRepository;
 
     public ScheduleJdbcRepository() {
         super(Schedule.class);

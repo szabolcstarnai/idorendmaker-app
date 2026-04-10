@@ -2,12 +2,12 @@ package hu.szabolcst.idorendmaker.repository;
 
 import hu.szabolcst.idorendmaker.model.entity.RuleCondition;
 import java.util.List;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface RuleConditionRepository {
+public interface RuleConditionRepository extends JpaRepository<RuleCondition, Integer> {
 
-    List<RuleCondition> findByRuleIdOrderByConditionSetAsc(Integer paramInteger);
+    List<RuleCondition> findByRuleIdOrderByConditionSetAsc(Integer ruleId);
 
-    void deleteByRuleId(Integer paramInteger);
-
-    List<RuleCondition> saveAll(Iterable<RuleCondition> entities);
+    void deleteByRuleId(Integer ruleId);
+    // saveAll(Iterable<RuleCondition>) inherited
 }

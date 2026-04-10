@@ -3,6 +3,8 @@ package hu.szabolcst.idorendmaker.repository.jdbc;
 import hu.szabolcst.idorendmaker.model.entity.Rule;
 import hu.szabolcst.idorendmaker.model.entity.RuleCondition;
 import hu.szabolcst.idorendmaker.model.entity.RuleMatching;
+import hu.szabolcst.idorendmaker.repository.RuleConditionRepository;
+import hu.szabolcst.idorendmaker.repository.RuleMatchingRepository;
 import hu.szabolcst.idorendmaker.repository.RuleRepository;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -25,9 +27,9 @@ public class RuleJdbcRepository
     implements RuleRepository {
 
     @Autowired
-    private RuleConditionJdbcRepository ruleConditionRepository;
+    private RuleConditionRepository ruleConditionRepository;
     @Autowired
-    private RuleMatchingJdbcRepository ruleMatchingRepository;
+    private RuleMatchingRepository ruleMatchingRepository;
 
     public RuleJdbcRepository() {
         super(Rule.class);
