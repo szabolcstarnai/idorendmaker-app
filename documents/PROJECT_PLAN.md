@@ -1,8 +1,10 @@
 # Időrend Készítő - Current State Overview
 
 **Status**: 🎉 **PRODUCTION READY** - Modern Distributed Desktop Application
-**Last Updated**: 2025-09-26
+**Last Updated**: 2026-04-10
 **Current Phase**: All Core Development Complete → **In Production Use**
+
+> **2026-04 architecture update:** The main backend was migrated from a GraalVM native image to an idiomatic Spring Boot 3.4.5 + Spring Data JPA (Hibernate 6.6) JAR running on Temurin Java 23. Hand-written JDBC repositories (`repository/jdbc/`), the custom `SQLiteDataSourceTransactionManager`, the `native-maven-plugin` build, and `trace-config/reachability-metadata.json` are gone. The backend now ships as `idorendmaker-backend.jar` and reuses the same bundled Temurin 23 JRE that the PDF processor already depends on, so the NSIS installer no longer installs the VC++ 2015-2022 runtime. The custom `MigrationRunner` (Order(1)) and the SQLite schema are unchanged; the HTTP API surface is bit-identical.
 
 ---
 
@@ -24,8 +26,8 @@ Desktop application for creating race schedules for kayak-canoe competitions. Re
 
 ### **Current Architecture**
 - ✅ **Pure UI Client**: Electron app with zero database dependencies
-- ✅ **Spring Boot Backend**: GraalVM native executable with REST API (60+ endpoints)
-- ✅ **PDF Processor**: Spring Boot JAR service for competitor data extraction
+- ✅ **Spring Boot Backend**: Spring Boot 3.4.5 + Spring Data JPA JAR on Temurin 23, REST API (60+ endpoints)
+- ✅ **PDF Processor**: Spring Boot JAR service for competitor data extraction (shares the bundled JRE)
 - ✅ **Single Installation**: Still single executable, backend runs automatically
 - ✅ **HTTP Communication**: BackendAPIService handles all data operations
 - ✅ **Native TypeScript**: Independent type system (14 interfaces)
@@ -41,17 +43,16 @@ Desktop application for creating race schedules for kayak-canoe competitions. Re
 - **ExcelJS** - Excel export capabilities
 
 #### Backend Services
-- **Spring Boot 3.1.2** - REST API backend (GraalVM native executable)
+- **Spring Boot 3.4.5** - REST API backend (JAR) with Spring Data JPA + Hibernate 6.6
 - **Spring Boot 3.4.5** - PDF processor service (JAR)
-- **Java 21/23** - Backend runtime
-- **SQLite** - Embedded database
+- **Java 23 (Temurin)** - Shared backend runtime for both services
+- **SQLite** (xerial JDBC 3.45.x) - Embedded database, `hibernate-community-dialects` SQLiteDialect
 - **MapStruct** - DTO mapping
 - **Apache PDFBox** - PDF processing
 
 #### Build & Packaging
 - **Electron Forge** - Desktop app packaging
-- **Maven** - Java backend builds
-- **GraalVM** - Native compilation for main backend
+- **Maven** - Java backend builds (plain `mvn package` for both services)
 - **Custom Build Scripts** - Orchestrated multi-component builds
 
 ---

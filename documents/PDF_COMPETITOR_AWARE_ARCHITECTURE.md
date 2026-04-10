@@ -1,17 +1,23 @@
 # PDF Processing & Competitor-Aware Scheduling Architecture
 
-**Document Version**: 2.0  
-**Last Updated**: 2025-08-24  
-**Status**: ✅ **COMPLETE IMPLEMENTATION** - Revolutionary PDF-to-Schedule Intelligence System Operational  
+**Document Version**: 3.0
+**Last Updated**: 2026-04-10
+**Status**: ✅ **COMPLETE IMPLEMENTATION** — post GraalVM → Spring Data JPA migration
 
 ---
 
 ## 📋 Executive Summary
 
-This document outlines the revolutionary integration of PDF data extraction with competitor-aware intelligent scheduling for the Időrend Készítő application. The system transforms race scheduling from generic database browsing (2400+ races) to focused, entry-driven workflow (50-200 actual races) with precise competitor-specific conflict detection.
+This document describes the integration of PDF data extraction with competitor-aware intelligent scheduling for the Időrend Készítő application. The system transforms race scheduling from generic database browsing (2400+ races) to a focused, entry-driven workflow (50–200 actual races) with precise competitor-specific conflict detection.
 
 ### Key Innovation
-**PDF → Filtered Races → Competitor-Aware Scheduling**: A complete paradigm shift that combines lightning-fast GraalVM executable integration with sophisticated competitor tracking and intelligent rule prioritization.
+**PDF → Filtered Races → Competitor-Aware Scheduling**: the paradigm combines a dedicated PDF extraction microservice with sophisticated competitor tracking and intelligent rule prioritization in the main scheduling backend.
+
+### Current Architecture (post-migration, 2026-04)
+- **Main backend** (`idorendmaker-backend`): Spring Boot 3.4.5 + Spring Data JPA (Hibernate 6.6) on Temurin Java 23, packaged as `idorendmaker-backend.jar`. Owns the main SQLite database, the `pdf_extractions` / `competitor_entries` / `race_competitor_associations` tables, race matching, and competitor-aware rule evaluation.
+- **PDF processor** (`idorendmaker-pdfprocessor`): Separate Spring Boot 3.4.5 JAR on Temurin 23, using Apache PDFBox. Only responsibility is parsing the entry-list PDF into `Versenyszam` + `Versenyzo` DTOs — no database access.
+- **Shared JRE**: The NSIS installer bundles Temurin 23 once under `resources/jre/` and both JAR services launch through it. The VC++ 2015-2022 runtime is no longer shipped (it was only needed for the old GraalVM native executable).
+- **Electron desktop**: Spawns and supervises both JAR services via `src/features/common/services/BackendService.ts` (main backend) and `src/features/pdf/services/PDFProcessorService.ts` (PDF processor). The renderer calls both over HTTP through `src/data/services/BackendAPIService.ts`.
 
 ---
 
@@ -19,106 +25,122 @@ This document outlines the revolutionary integration of PDF data extraction with
 
 ### Current Integration Status ✅ **COMPLETE**
 
-#### GraalVM Spring Boot Integration
-- **Executable**: `idorendhelper-backend/target/idorendhelper.exe` (116MB native image)
-- **Startup Time**: Milliseconds (vs seconds for JVM)
-- **Communication**: HTTP over automatically detected ports
-- **Process Management**: Full lifecycle control with graceful cleanup
-- **Security**: Complete process isolation through child process spawning
+#### Spring Boot JAR Integration (post-migration)
+- **Artifacts**:
+  - `resources/idorendmaker-backend.jar` — main Spring Boot backend (REST API, SQLite, JPA, rule engine, schedule persistence)
+  - `resources/idorendmaker-pdfprocessor.jar` — PDF extraction microservice (PDFBox-based, no DB)
+- **Runtime**: Temurin Java 23, bundled once under `resources/jre/` by the NSIS installer. The installer falls back to a system Java 23+ on PATH if available.
+- **Communication**: Both services listen on dynamically allocated local ports and respond to HTTP from the Electron renderer via `BackendAPIService.ts`.
+- **Process Management**: Full lifecycle control by the Electron main process; graceful SIGTERM-then-SIGKILL on shutdown.
+- **Security**: Complete process isolation via child-process spawning; both services bind to `localhost` only.
 
 #### Production Packaging Architecture ✅ **COMPLETE**
-- **Smart Path Resolution**: Automatic dev vs production path detection via `app.isPackaged`
-- **Cross-Platform Support**: Windows (.exe), macOS, Linux executable naming
-- **Automatic Bundling**: GraalVM executable packaged via Electron Forge `extraResource`
-- **Executable Validation**: File existence checks and Unix permission handling
-- **Integrated Build**: Backend compilation integrated into `npm run package/make`
-- **Self-Contained Distribution**: Single installer, zero user configuration required
+- **Smart Path Resolution**: Dev-vs-prod JAR path detection via `app.isPackaged`. Dev looks in `../idorendmaker-backend/target/idorendmaker-backend-1.1.0.jar` (or the stable `idorendmaker-backend.jar` copied by `scripts/build-backend.js`); prod loads from `process.resourcesPath`.
+- **Bundled JRE First**: Both services prefer `resources/jre/bin/java(.exe)` and only fall back to PATH `java` if it's missing.
+- **Automatic Bundling**: Backend JAR, PDF processor JAR, and the production DB template are bundled via Electron Forge `extraResource` + NSIS `extraResources`.
+- **Resource Validation**: `forge.config.ts` `preMake` hook asserts each required file is present and non-empty before the installer is built.
+- **Integrated Build**: `scripts/build-backend.js` runs `mvnw clean package -DskipTests` and copies the versioned artifact to the stable `idorendmaker-backend.jar` filename. The PDF processor has its own analogous script.
+- **Self-Contained Distribution**: Single NSIS installer, zero user configuration. No VC++ runtime is installed (the VC++ requirement only existed for the old GraalVM native executable).
 
 #### Technical Implementation
 ```typescript
-// PDFProcessorService.ts - Production-ready service architecture
-class PDFProcessorService {
+// idorendmaker-desktop/src/features/common/services/BackendService.ts
+// (PDFProcessorService.ts follows the same pattern for the PDF processor JAR)
+type LaunchMode = 'bundledJava' | 'systemJava';
+
+class BackendService {
   private process: ChildProcess | null = null;
   private port: number = 0;
-  private baseUrl: string = '';
-  private readonly executablePath: string;
+  private javaPath: string | null = null;
+  private jarPath: string | null = null;
+  private launchMode: LaunchMode | null = null;
 
-  constructor() {
-    this.executablePath = this.resolveExecutablePath(); // Smart path resolution
+  private getJarCandidates() {
+    return {
+      packaged: path.join(process.resourcesPath, 'idorendmaker-backend.jar'),
+      dev: path.join(process.cwd(), '..', 'idorendmaker-backend', 'target', 'idorendmaker-backend.jar'),
+      devVersioned: path.join(process.cwd(), '..', 'idorendmaker-backend', 'target', 'idorendmaker-backend-1.1.0.jar'),
+    };
   }
 
-  private resolveExecutablePath(): string {
-    if (app.isPackaged) {
-      // Production: bundled in app resources
-      return path.join(process.resourcesPath, this.getExecutableName());
-    } else {
-      // Development: relative to source tree
-      return path.join(process.cwd(), '../idorendhelper-backend/target', this.getExecutableName());
-    }
+  private getBundledJavaCandidate(): string {
+    return process.platform === 'win32'
+      ? path.join(process.resourcesPath, 'jre', 'bin', 'java.exe')
+      : path.join(process.resourcesPath, 'jre', 'bin', 'java');
   }
 
-  private getExecutableName(): string {
-    // Cross-platform executable naming
-    switch (process.platform) {
-      case 'win32': return 'idorendhelper.exe';
-      case 'darwin': return 'idorendhelper-mac';
-      case 'linux': return 'idorendhelper-linux';
-    }
-  }
+  async start(): Promise<void> {
+    await this.resolveRuntime();           // bundled JRE → system Java → error
+    this.port = await this.findAvailablePort();
 
-  private async validateExecutable(): Promise<void> {
-    // File existence + Unix permissions handling
-  }
+    const spawnArgs = [
+      '-Djava.awt.headless=true',
+      '-jar', this.jarPath!,
+      `--server.port=${this.port}`,
+      '--logging.level.org.springframework.web=INFO',
+      '--logging.level.root=INFO',
+      ...(app.isPackaged ? ['--spring.profiles.active=prod'] : []),
+    ];
 
-  async start() // Spawn GraalVM executable on available port
-  async stop()  // Graceful shutdown with SIGTERM/SIGKILL
-  async processPDF(filePath: string) // HTTP communication to Spring Boot
-  getStatus()   // Real-time process monitoring
+    this.process = spawn(this.javaPath!, spawnArgs, {
+      stdio: ['ignore', 'pipe', 'pipe'], detached: false, windowsHide: true,
+    });
+    // Startup detection: look for "Started IdorendMakerApplication" in stdout/stderr (45 s timeout)
+  }
 }
 ```
 
 #### Production Build Integration
-```javascript
-// forge.config.ts - Automatic executable bundling
+```typescript
+// idorendmaker-desktop/forge.config.ts (excerpt)
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    name: 'Időrend Készítő',
+    executableName: 'idorendmaker',
     extraResource: [
-      '../idorendhelper-backend/target/idorendhelper.exe' // Auto-bundle GraalVM executable
+      'resources/idorendmaker-backend.jar',     // main Spring Boot backend
+      'resources/idorendmaker-pdfprocessor.jar', // PDF extraction microservice
+      'resources/idorendmaker-production.db',    // seed SQLite database
     ],
-  }
+  },
+  hooks: {
+    preMake: async () => { await validateResources(); },
+  },
+  // ...
 };
-
-// package.json - Integrated build process
-{
-  "scripts": {
-    "package": "npm run build:backend && electron-forge package",
-    "make": "npm run build:backend && electron-forge make",
-    "build:backend": "cd ../idorendhelper-backend && mvn -Pnative native:compile-no-fork"
-  }
-}
 ```
 
-#### Spring Boot Backend Analysis
+```javascript
+// scripts/build-backend.js (excerpt)
+execSync(`${mvnwCommand} clean package -DskipTests`, { stdio: 'inherit', cwd: backendDir });
+// Copies idorendmaker-backend-<version>.jar → idorendmaker-desktop/resources/idorendmaker-backend.jar
+```
+
+The NSIS installer (`idorendmaker-desktop/build/installer/installer.nsh`) downloads and extracts Temurin 23 on first run if the user doesn't already have Java 23+ on PATH, then copies the seed DB into `%LOCALAPPDATA%/idorendmaker/idorendmaker.db`. Both JAR services reuse that same JRE.
+
+#### PDF Processor Service (`idorendmaker-pdfprocessor`)
 ```java
-// Controller endpoint analysis
-@PostMapping("/versenyszam/extract")
-public ResponseEntity<List<Versenyszam>> extractFromPdf(@RequestParam("file") MultipartFile file)
-
-// Data models extracted
-public class Versenyszam {
-    private String id;                    // Race identifier  
-    private String nev;                   // Race name
-    private List<Versenyzo> nevezettek;   // Competitor entries
+// controller/VersenyszamController.java
+@RestController
+@RequestMapping("/versenyszam")
+public class VersenyszamController {
+    @PostMapping(value = "/extract", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<List<Versenyszam>> extractFromPdf(@RequestParam("file") MultipartFile file) { /* ... */ }
 }
 
-public record Versenyzo(
-    String id,           // Unique competitor identifier
-    String nev,          // Competitor name
-    String tagszervezet, // Organization/club  
-    int szuletesiEv      // Birth year
-) {}
+// model/Versenyszam.java — race + its entered competitors
+public class Versenyszam {
+    private String id;
+    private String nev;
+    private List<Versenyzo> nevezettek;
+}
+
+// model/Versenyzo.java — one competitor
+public record Versenyzo(String id, String nev, String tagszervezet, int szuletesiEv) {}
 ```
+
+The PDF processor is stateless — it returns the parsed `List<Versenyszam>` to the main backend via the desktop layer, which then persists competitor entries and race↔competitor associations into the main SQLite DB through JPA.
 
 #### Current UI Integration ✅ **COMPLETE**
 - **Main Menu Card**: "PDF Feldolgozó" with professional design consistency
@@ -457,44 +479,89 @@ export class CompetitorService {
 ```
 
 #### Enhanced Database Schema (Implemented)
-```sql
--- Prisma schema.prisma - Complete implementation
-model PDFExtraction {
-  id               Int      @id @default(autoincrement())
-  filename         String
-  totalRaces       Int      @default(0)
-  totalCompetitors Int      @default(0)
-  totalEntries     Int      @default(0)
-  extractionStatus String   @default("completed")
-  createdAt        DateTime @default(now())
-  
-  competitorEntries         CompetitorEntry[]
-  raceCompetitorAssociations RaceCompetitorAssociation[]
+
+**Note**: The authoritative source of truth is the SQLite DDL in `idorendmaker-desktop/shared/database/schema.sql` (applied by the desktop layer) plus the custom `MigrationRunner` SQL files in `idorendmaker-backend/src/main/resources/db/migrations/`. The backend's JPA entities map onto those tables read-only from a DDL standpoint (`spring.jpa.hibernate.ddl-auto=none` — Hibernate never creates or validates the schema).
+
+```java
+// idorendmaker-backend/src/main/java/hu/szabolcst/idorendmaker/model/entity/PDFExtraction.java
+@Entity
+@Table(name = "pdf_extractions")
+public class PDFExtraction {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+
+    private String filename;
+
+    @Column(name = "file_hash")
+    private String fileHash;          // SHA-256 for deduplication
+
+    @Column(name = "total_races")       private Integer totalRaces;
+    @Column(name = "total_competitors") private Integer totalCompetitors;
+    @Column(name = "total_entries")     private Integer totalEntries;
+
+    @Column(name = "extraction_status") private String extractionStatus;
+    private String status;              // 'session', 'linked', 'archived'
+
+    @Column(name = "linked_at") private LocalDateTime linkedAt;
+    @Column(name = "created_at") private LocalDateTime createdAt;
+    @Column(name = "expires_at") private LocalDateTime expiresAt;
+
+    @OneToMany(mappedBy = "pdfExtraction", fetch = FetchType.LAZY)
+    private List<CompetitorEntry> competitorEntries = new ArrayList<>();
+
+    @OneToMany(mappedBy = "pdfExtraction", fetch = FetchType.LAZY)
+    private List<RaceCompetitorAssociation> raceCompetitorAssociations = new ArrayList<>();
+
+    @OneToMany(mappedBy = "pdfExtraction", fetch = FetchType.LAZY)
+    private List<Schedule> schedules = new ArrayList<>();
 }
 
-model CompetitorEntry {
-  pdfExtractionId  Int
-  competitorId     String
-  competitorName   String
-  organization     String?
-  birthYear        Int?
-  
-  pdfExtraction              PDFExtraction
-  raceCompetitorAssociations RaceCompetitorAssociation[]
+// model/entity/CompetitorEntry.java
+@Entity
+@Table(name = "competitor_entries")
+public class CompetitorEntry {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+
+    @Column(name = "pdf_extraction_id") private Integer pdfExtractionId;
+    @Column(name = "competitor_id")     private String competitorId;   // TEXT key from PDF, not an FK
+    @Column(name = "competitor_name")   private String competitorName;
+    private String organization;
+    @Column(name = "birth_year") private Integer birthYear;
+    @Column(name = "created_at") private LocalDateTime createdAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pdf_extraction_id", insertable = false, updatable = false)
+    private PDFExtraction pdfExtraction;
 }
 
-model RaceCompetitorAssociation {
-  pdfExtractionId  Int
-  raceId           Int
-  competitorId     String
-  pdfRaceName      String
-  matchConfidence  Float    @default(1.0)
-  
-  pdfExtraction     PDFExtraction
-  race              Race
-  competitorEntry   CompetitorEntry
+// model/entity/RaceCompetitorAssociation.java
+@Entity
+@Table(name = "race_competitor_associations")
+public class RaceCompetitorAssociation {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+
+    @Column(name = "pdf_extraction_id") private Integer pdfExtractionId;
+    @Column(name = "race_id")           private Integer raceId;
+    @Column(name = "competitor_id")     private String competitorId;
+    @Column(name = "pdf_race_name")     private String pdfRaceName;
+    @Column(name = "match_confidence")  private Double matchConfidence;
+    @Column(name = "created_at")        private LocalDateTime createdAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pdf_extraction_id", insertable = false, updatable = false)
+    private PDFExtraction pdfExtraction;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "race_id", insertable = false, updatable = false)
+    private Race race;
+    // competitor_id is a TEXT key, not an FK — the matching CompetitorEntry is looked up
+    // via default repository helpers (see CompetitorEntryRepository / RaceCompetitorAssociationRepository).
 }
 ```
+
+Spring Data JPA repositories (`PDFExtractionRepository`, `CompetitorEntryRepository`, `RaceCompetitorAssociationRepository`) expose the query surface the services need, including text-key enrichment default methods because `competitor_id` is a free-text key, not an FK.
 
 #### Enhanced UI Components (Complete Implementation)
 ```typescript
@@ -642,10 +709,10 @@ NEW SYSTEM WARNINGS:
 #### Database Schema Extensions ✅ **COMPLETE**
 - [x] **Analysis Complete** - Spring Boot model analysis and integration points identified
 - [x] **Production Architecture Complete** - PDF processor packaging and distribution solved
-- [x] **Schema Design Complete** - PDFExtraction, CompetitorEntry, RaceCompetitorAssociation models implemented in Prisma
-- [x] **Migration Scripts Complete** - Full Prisma schema integration with camelCase field mapping
-- [x] **Service Layer Complete** - RaceMatchingService, CompetitorService implemented with full functionality
-- [x] **IPC Integration Complete** - 9 new Electron APIs for PDF and competitor operations
+- [x] **Schema Design Complete** - `PDFExtraction`, `CompetitorEntry`, `RaceCompetitorAssociation` implemented as Spring Data JPA entities (SQLite schema owned by `shared/database/schema.sql` + backend `MigrationRunner`)
+- [x] **Migration Complete** - Custom `MigrationRunner` (`migration/MigrationRunner.java`, `@Order(1)`) runs SQL files from `classpath:db/migrations/` before any JPA code touches the DB
+- [x] **Service Layer Complete** - `RaceMatchingService`, `CompetitorService` (both Spring services in `idorendmaker-backend`) implemented with full functionality
+- [x] **HTTP API Integration Complete** - REST endpoints consumed by the Electron renderer via `BackendAPIService.ts` (no Electron IPC in the data path)
 
 #### Race Matching Engine ✅ **COMPLETE**
 - [x] **Exact Matching Algorithm** - RaceMatchingService with exact name matching and confidence scoring
@@ -697,7 +764,7 @@ NEW SYSTEM WARNINGS:
 
 #### Performance & Scalability ✅ **COMPLETE**
 - [x] **PDF Data Processing** - Handles competitor entries with optimized database operations
-- [x] **Database Optimization** - Prisma schema with proper indexes and efficient queries
+- [x] **Database Optimization** - JPA `@EntityGraph` + `JOIN FETCH` queries in the complex repositories (`RaceRepository`, `ScheduleRepository`, `RuleRepository`, …); SQLite PRAGMAs (`WAL`, `synchronous=NORMAL`, `busy_timeout=30000`, `foreign_keys=true`) applied at connection open by `DataSourceConfig`
 - [x] **Memory Management** - Map-based competitor data storage and retrieval
 - [x] **Real-time Updates** - Instant competitor-aware conflict recalculation on schedule changes
 
@@ -736,11 +803,13 @@ NEW SYSTEM WARNINGS:
 
 ## 🔐 Technical Architecture Notes
 
-### GraalVM Integration Benefits Realized
-- **Startup Speed**: 150ms average startup (vs 3-5s JVM)
-- **Memory Efficiency**: 25MB runtime footprint (vs 100MB+ JVM)
-- **Process Isolation**: Complete security through child process model
-- **Deployment Simplicity**: Single executable, no Java runtime dependency
+### Spring Boot JAR Benefits (post-migration, 2026-04)
+- **Startup Speed**: Cold start on the target Windows machine is in the low single-digit seconds; warm start (with OS file cache primed) is sub-3-seconds. This is slower than the old GraalVM native image (which ran in ~150 ms) but well within the 45 s startup budget enforced by `BackendService.ts`, and acceptable for a desktop app where the backend starts once per session.
+- **Development Velocity**: No more hand-written JDBC repositories, no `reachability-metadata.json`, no native-image build. Adding a column means adding a field to a JPA entity and (if needed) a `@Query` — the old stack required editing insert/update SQL, row mappers, and param setters by hand.
+- **Process Isolation**: Same as before — the backend runs as a separate child process bound to `localhost`.
+- **Deployment Simplicity**: Single NSIS installer, bundled Temurin 23 JRE, no VC++ runtime dependency, no second JRE for the PDF processor. The backend JAR and the PDF processor JAR share the same `resources/jre/`.
+- **Data Layer**: Spring Data JPA (Hibernate 6.6) with `org.hibernate.community.dialect.SQLiteDialect`, `spring.jpa.hibernate.ddl-auto=none`, `spring.jpa.open-in-view=false`, JDBC metadata access disabled. HikariCP is pinned to `maximum-pool-size=1` because SQLite is a single-writer store.
+- **Migrations**: The custom `MigrationRunner` (`migration/MigrationRunner.java`, `@Order(1)`) still runs SQL files from `classpath:db/migrations/` at startup — unchanged by the migration, and runs before any JPA code touches the DB.
 
 ### HTTP Communication Protocol
 ```typescript
@@ -780,21 +849,23 @@ File: PDF binary data
 ## 📚 References & Dependencies
 
 ### Existing System Integration Points
-- **Current Rule Engine**: `src/utils/ruleEngine.ts` - ConflictDetector, RuleProcessor classes
-- **Database Services**: `src/database/*Service.ts` - Prisma-based data operations
-- **UI Components**: `src/components/Rule*.tsx` - Existing conflict visualization
-- **Schedule Builder**: `src/components/ScheduleBuilder.tsx` - Core scheduling interface
+- **Frontend Rule Engine**: `idorendmaker-desktop/src/features/rules/utils/ruleEngine.ts` — `ConditionEvaluator`, `MatchingEvaluator`, `RuleProcessor`, `ConflictDetector` classes, used by the Schedule Builder for real-time conflict detection without a server round-trip
+- **Backend Rule Engine**: `idorendmaker-backend` `RuleService` (`service/RuleService.java` + `impl/RuleServiceImpl.java`) for persistence and authoritative rule evaluation
+- **HTTP Client**: `idorendmaker-desktop/src/data/services/BackendAPIService.ts` (axios) — all data operations
+- **UI Components**: `idorendmaker-desktop/src/components/rules/Rule*.tsx` — `RuleManager`, `RuleEditor`, `RuleViolationDisplay`
+- **Schedule Builder**: `idorendmaker-desktop/src/features/schedule/components/ScheduleBuilder.tsx` — core scheduling interface
 
-### New Dependencies Required
-- **PDF Processing**: Existing GraalVM integration (complete)
-- **String Matching**: fuse.js or similar for fuzzy race name matching
-- **Date/Time Utilities**: Enhanced date-fns usage for interval calculations
-- **UI Enhancements**: Additional shadcn/ui components for competitor displays
+### Dependencies
+- **PDF Processing**: `idorendmaker-pdfprocessor` (Spring Boot 3.4.5 JAR, Java 23, Apache PDFBox)
+- **String Matching**: Hungarian-aware fuzzy matching inside the backend `RaceMatchingService`
+- **Date/Time Utilities**: `date-fns` on the frontend for interval calculations; `java.time` on the backend
+- **UI**: shadcn/ui + Tailwind CSS + lucide-react + @hello-pangea/dnd
 
 ### External System Interfaces
-- **Spring Boot Backend**: `idorendhelper-backend` (existing, analyzed)
-- **PDF Format Requirements**: Competition standard PDF layouts (to be documented)
-- **Database Schema**: SQLite with Prisma ORM (existing, to be extended)
+- **Main Backend**: `idorendmaker-backend` — Spring Boot 3.4.5 JAR, Temurin 23, Spring Data JPA, SQLite via xerial JDBC 3.45.x
+- **PDF Processor**: `idorendmaker-pdfprocessor` — Spring Boot 3.4.5 JAR, same Temurin 23 runtime, PDFBox
+- **PDF Format Requirements**: Competition standard PDF layouts (parsed positionally by `VersenyszamNevezesekExtractor`)
+- **Database Schema**: SQLite owned by `idorendmaker-desktop/shared/database/schema.sql` (applied desktop-side) + incremental SQL in `idorendmaker-backend/src/main/resources/db/migrations/`
 
 ---
 
@@ -812,50 +883,51 @@ npm start
 
 ### Production Package Testing
 ```bash
-# Build and package the complete application
-npm run package
+# From repo root — build backend JAR, PDF processor JAR, and the packaged Electron app
+node scripts/build-backend.js                  # mvnw clean package -DskipTests + copy to resources/
+node scripts/build-pdfprocessor.js             # analogous for the PDF processor
+cd idorendmaker-desktop && npm run package     # electron-forge package
 
-# Navigate to packaged app 
-cd out/idorendmaker-desktop-win32-x64
+# Run the packaged app
+cd out/Időrend\ Készítő-win32-x64
+./idorendmaker.exe
 
-# Run packaged executable
-./idorendmaker-desktop.exe
-
-# Verify PDF processor works in production mode:
-# - Console should show: "Packaged app: true"
-# - Executable path should be in resources directory
-# - All functionality should work identically to development
+# Verify the JAR services work in production mode:
+# - BackendService logs "Packaged app: true", picks the bundled JRE at resources/jre/bin/java.exe
+# - Both services load their JARs from resources/idorendmaker-backend.jar and resources/idorendmaker-pdfprocessor.jar
+# - Backend log line "Started IdorendMakerApplication in X.X seconds" shows up within ~5 s on warm start
 ```
 
 ### Full Distribution Testing
 ```bash
-# Create production installer
-npm run make
+# Create the NSIS installer
+cd idorendmaker-desktop && npm run make
 
-# Install from: out/make/squirrel.windows/x64/idorendmaker-desktop-1.0.0 Setup.exe
-# Test complete user installation experience
+# Install from: out/make/... (Electron Forge NSIS output)
+# The installer downloads Temurin 23 on first run if Java 23+ is not already on PATH,
+# then extracts it to <install dir>/resources/jre. No VC++ runtime is installed.
 ```
 
 ## 📊 Production Architecture Summary
 
 ### ✅ **Production-Ready Benefits Achieved**
-- **Self-Contained Distribution**: Single installer (~200MB) includes everything
-- **Zero User Configuration**: Works immediately after installation
-- **Cross-Platform Ready**: Architecture supports Windows/macOS/Linux builds
-- **Professional Packaging**: Standard installer with proper app metadata
-- **Maintains Performance**: Full GraalVM benefits (millisecond startup, process isolation)
-- **Automated Build**: Integrated backend compilation in packaging process
-- **Robust Validation**: Comprehensive error handling and executable verification
+- **Self-Contained Distribution**: Single NSIS installer (~150 MB including the bundled Temurin 23 JRE)
+- **Zero User Configuration**: Works immediately after installation; Java is downloaded on first run only if the user lacks Java 23+ on PATH
+- **Cross-Platform Ready**: Architecture supports Windows/macOS/Linux (only Windows is currently shipped)
+- **Professional Packaging**: Electron Forge + Squirrel/NSIS with proper app metadata
+- **Idiomatic Stack**: Spring Boot 3.4.5 + Spring Data JPA — no hand-written JDBC, no GraalVM reachability metadata
+- **Automated Build**: `scripts/build-backend.js` + `scripts/build-pdfprocessor.js` orchestrate Maven builds and copy artifacts into `resources/`
+- **Robust Validation**: `forge.config.ts` `preMake` hook verifies each bundled resource is present and non-empty
 
-### ✅ **Revolutionary PDF-to-Schedule System Complete + Enhanced Data Lifecycle**
-Phase 6 implementation is complete! The system delivers:
+### ✅ **PDF-to-Schedule System + Enhanced Data Lifecycle**
+The system delivers:
 
-- **Lightning-Fast PDF Processing**: GraalVM executable processes PDFs in seconds
-- **Intelligent Race Filtering**: Shows only races with actual entries (50-200 vs 2400+)
+- **PDF Processing**: `idorendmaker-pdfprocessor` JAR (Spring Boot + PDFBox) parses entry-list PDFs in seconds
+- **Intelligent Race Filtering**: Shows only races with actual entries (50–200 vs 2400+)
 - **Competitor-Aware Rule Checking**: Precise conflict detection with individual competitor analysis
 - **Complete Workflow Integration**: PDF → filtered races → competitor-aware scheduling
-- **Production-Ready Distribution**: Self-contained installer with zero user configuration
-- **🆕 Smart Data Lifecycle Management**: Automatic cleanup with resume workflow preservation
+- **Production-Ready Distribution**: Single NSIS installer, zero user configuration, bundled JRE shared with the PDF processor
+- **Smart Data Lifecycle Management**: Automatic cleanup with resume workflow preservation
 
 ### 🎯 **Next Development Priority: Phase 7 - Export & Finalization**
 With revolutionary PDF-to-schedule intelligence complete, development focus shifts to:
@@ -1018,10 +1090,10 @@ static async getScheduleWithPDFContext(scheduleId: number)
 ### Revolutionary Features Delivered & Operational
 
 #### 🚀 **PDF-to-Schedule Intelligence** - Complete
-- GraalVM Spring Boot integration with millisecond startup
+- Spring Boot 3.4.5 JARs (main backend + PDF processor) on shared Temurin 23 JRE
 - Automatic PDF extraction and competitor data processing
 - Race matching with exact name comparison and confidence scoring
-- Filtered race display showing only entries (50-200 vs 2400+ races)
+- Filtered race display showing only entries (50–200 vs 2400+ races)
 
 #### 🧠 **Competitor-Aware Rule Engine** - Complete  
 - CompetitorAwareRuleProcessor with overlap detection
@@ -1036,10 +1108,10 @@ static async getScheduleWithPDFContext(scheduleId: number)
 - Complete App.tsx navigation workflow
 
 #### 📦 **Production-Ready Distribution** - Complete
-- Self-contained installer with bundled GraalVM executable
-- Cross-platform support (Windows/macOS/Linux)
+- Self-contained NSIS installer with bundled Temurin 23 JRE (shared between backend and PDF processor)
+- No VC++ 2015-2022 runtime dependency (removed after the GraalVM → Spring Data JPA migration)
 - Zero user configuration required
-- Integrated build process with automated backend compilation
+- Integrated build process: `scripts/build-backend.js` and `scripts/build-pdfprocessor.js` drive Maven, Electron Forge packages the app
 
 #### 🗃️ **Smart Data Lifecycle Management** - Complete ✨ **NEW**
 - **PDF Fingerprinting**: SHA-256 deduplication prevents reprocessing identical files
@@ -1048,11 +1120,11 @@ static async getScheduleWithPDFContext(scheduleId: number)
 - **UI Status Indicators**: Clear visual feedback for PDF-enhanced vs standard modes
 
 ### System Performance Delivered
-- **Workflow Speed**: 30 minutes (vs 3-4 hours previously)
+- **Workflow Speed**: 30 minutes (vs 3–4 hours previously)
 - **Race Selection Accuracy**: Shows only races with actual entries
 - **Conflict Precision**: Individual competitor analysis with specific intervals
-- **Processing Speed**: Lightning-fast PDF extraction with GraalVM
-- **🆕 Database Efficiency**: Zero bloat with smart cleanup + perfect resume workflow
+- **Processing Speed**: PDF extraction completes in seconds on the target machine; main backend cold-start is a few seconds, well within the 45 s startup budget enforced by `BackendService.ts`
+- **Database Efficiency**: Zero bloat with smart cleanup + perfect resume workflow
 
 ### Next Development Phase: Export & Advanced Features
 With revolutionary PDF-to-schedule intelligence complete, development advances to:

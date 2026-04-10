@@ -28,7 +28,6 @@ import org.springframework.stereotype.Component;
  *
  * Executes SQL migration files from classpath:db/migrations/ directory.
  * Tracks applied migrations in schema_migrations table.
- * GraalVM native image compatible - no reflection, pure JDBC.
  */
 @Slf4j
 @Component

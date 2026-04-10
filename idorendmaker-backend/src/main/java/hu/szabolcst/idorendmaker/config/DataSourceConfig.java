@@ -39,7 +39,6 @@ public class DataSourceConfig {
         config.setAutoCommit(true);
 
         // SQLite PRAGMAs applied by xerial at connection open.
-        // WAL is the standard recommendation now that GraalVM is gone.
         config.addDataSourceProperty("foreign_keys", "true");
         config.addDataSourceProperty("journal_mode", "WAL");
         config.addDataSourceProperty("synchronous", "NORMAL");

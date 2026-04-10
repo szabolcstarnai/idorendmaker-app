@@ -1,8 +1,8 @@
 # Rule Engine Architecture Documentation
 
-**Status**: ✅ **LEVEL-AWARE** - Fully Extensible Rule System with Futamszint Integration  
-**Last Updated**: 2025-08-23  
-**Version**: 2.0.0
+**Status**: ✅ **LEVEL-AWARE** - Fully Extensible Rule System with Futamszint Integration
+**Last Updated**: 2026-04-10
+**Version**: 2.1.0 (post GraalVM → Spring Data JPA migration)
 
 ---
 
@@ -53,20 +53,26 @@ CREATE TABLE rule_matchings (
 );
 ```
 
-### Backend Services
+### Backend (Spring Boot)
 
-#### RuleService (`src/database/RuleService.ts`)
-**Complete CRUD operations for rules**
-- `getAllRules()` - Get all rules with conditions and matchings
-- `getActiveRules()` - Get only active rules for conflict detection
-- `createRule(data)` - Create new rule with conditions and matchings
-- `updateRule(id, data)` - Update existing rule
-- `deleteRule(id)` - Delete rule
-- `toggleRuleActive(id, isActive)` - Enable/disable rules
-- `searchRules(searchTerm)` - Search rules by name/description
+The rule data layer lives in `idorendmaker-backend` (Spring Boot 3.4.5 on Temurin 23, packaged as `idorendmaker-backend.jar`). Since the GraalVM → Spring Data JPA migration, all rule CRUD flows through idiomatic JPA repositories; no hand-written JDBC remains.
 
-#### Rule Engine Core (`src/utils/ruleEngine.ts`)
-**Sophisticated rule evaluation system**
+#### REST API (`controller/RuleController.java`)
+Exposes the rule endpoints consumed by the frontend over HTTP (the Electron renderer calls them via `src/data/services/BackendAPIService.ts`). Backing DTOs live in `model/dto/rule/` (`RuleWithConditionsDto`, `RuleConditionDto`, `RuleMatchingDto`, `RuleViolationDto`, `RuleStatsDto`, `CreateRuleDataDto`).
+
+#### `RuleService` (`service/RuleService.java` + `service/impl/RuleServiceImpl.java`)
+Transactional Spring service providing all rule CRUD operations:
+- `getAllRules()` / `getActiveRules()` - list rules with conditions and matchings (uses `RuleRepository.findAllWithConditionsAndMatchings()`, a default method that does two fetch-join queries to avoid `MultipleBagFetchException`)
+- `createRule(data)` / `updateRule(id, data)` - persist `Rule` + `RuleCondition` + `RuleMatching` via cascading saves; updates go through delete-by-parent + `saveAll` on the condition/matching repositories
+- `deleteRule(id)` - cascades through `rules` → `rule_conditions` + `rule_matchings` (FK ON DELETE CASCADE at the DB level)
+- `toggleRuleActive(id, isActive)` - flips `rules.is_active`
+- `searchRules(searchTerm)` - name/description LIKE via `@Query`
+
+#### `RuleRepository` (`repository/RuleRepository.java`)
+Spring Data JPA interface extending `JpaRepository<Rule, Integer>`. Uses `@EntityGraph` / `JOIN FETCH` for eager condition and matching loading; provides a `default` helper to fetch both collections in two separate queries.
+
+#### Rule Engine Core (`idorendmaker-desktop/src/features/rules/utils/ruleEngine.ts`)
+Client-side rule evaluation for real-time conflict detection in the Schedule Builder. The frontend mirrors the rule semantics so the UI can highlight violations without a round-trip to the backend.
 
 - **ConditionEvaluator** - Checks if races match condition sets
   - Supports multiple operators: `equals`, `not_in`, `not_equals`, `in`
@@ -132,12 +138,12 @@ CREATE TABLE rule_matchings (
 
 ### Integration Layer
 
-#### IPC Communication (`src/preload.ts`, `src/main.ts`)
-**Complete Electron main/renderer integration**
-- All rule CRUD operations
-- Rule engine conflict detection
-- Type-safe communication with shared types
-- Error handling and validation
+#### HTTP API Communication (`idorendmaker-desktop/src/data/services/BackendAPIService.ts`)
+**Renderer → Spring Boot backend over HTTP**
+- All rule CRUD operations are called via `axios` against the Spring Boot `RuleController` endpoints (no Electron IPC in the data path; the renderer talks to the backend JAR directly on `localhost`)
+- The backend is launched and supervised from the Electron main process by `src/features/common/services/BackendService.ts`, which spawns `java -jar idorendmaker-backend.jar --server.port=…` using the bundled Temurin 23 JRE (fallback to system Java 23+ on PATH)
+- Type-safe DTO shapes live in the frontend under `idorendmaker-desktop/src/data/` and mirror the backend DTOs in `model/dto/rule/`
+- Error handling surfaces backend validation errors as toasts via `sonner`
 
 #### ScheduleBuilder Integration (`src/components/ScheduleBuilder.tsx`)
 **Enhanced real-time conflict detection with visual feedback**

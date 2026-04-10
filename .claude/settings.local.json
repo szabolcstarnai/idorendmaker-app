@@ -7,7 +7,13 @@
       "Bash(gh repo view:*)",
       "Bash(gh issue create:*)",
       "Read(//mnt/c/Users/Szabolcs/Documents/PROJECTS/**)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(xargs ls:*)",
+      "Bash(grep:*)",
+      "Bash(wc:*)",
+      "Bash(./mvnw dependency:tree:*)",
+      "Bash(./mvnw.cmd:*)",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []
