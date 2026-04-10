@@ -2,18 +2,55 @@ package hu.szabolcst.idorendmaker.repository;
 
 import hu.szabolcst.idorendmaker.model.entity.ScheduleItem;
 import java.util.List;
+import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
-public interface ScheduleItemRepository {
+public interface ScheduleItemRepository extends JpaRepository<ScheduleItem, Integer> {
 
-    ScheduleItem save(ScheduleItem entity);
+    @EntityGraph(attributePaths = {
+        "race",
+        "race.ageGroups",
+        "race.ageGroups.ageGroup",
+        "race.boatClassData",
+        "level"
+    })
+    @Query("SELECT DISTINCT si FROM ScheduleItem si "
+        + "WHERE si.scheduleId = :scheduleId "
+        + "ORDER BY si.orderIndex ASC")
+    List<ScheduleItem> findAllByScheduleIdWithRaceAndLevel(@Param("scheduleId") Integer scheduleId);
 
-    List<ScheduleItem> findAllByScheduleIdWithRaceAndLevel(Integer paramInteger);
+    @EntityGraph(attributePaths = {
+        "race",
+        "race.ageGroups",
+        "race.ageGroups.ageGroup",
+        "race.boatClassData",
+        "level",
+        "section"
+    })
+    @Query("SELECT DISTINCT si FROM ScheduleItem si "
+        + "WHERE si.sectionId = :sectionId "
+        + "ORDER BY si.orderIndex ASC")
+    List<ScheduleItem> findAllBySectionIdWithRaceAndLevelAndSection(@Param("sectionId") Integer sectionId);
 
-    List<ScheduleItem> findAllBySectionIdWithRaceAndLevelAndSection(Integer paramInteger);
+    @Modifying
+    @Query("DELETE FROM ScheduleItem si WHERE si.scheduleId = :scheduleId")
+    void deleteAllByScheduleId(@Param("scheduleId") Integer scheduleId);
 
-    void deleteAllByScheduleId(Integer paramInteger);
+    @Modifying
+    @Query("DELETE FROM ScheduleItem si WHERE si.sectionId = :sectionId")
+    void deleteAllBySectionId(@Param("sectionId") Integer sectionId);
 
-    void deleteAllBySectionId(Integer paramInteger);
-
-    List<ScheduleItem> findAllByScheduleIdOrderByOrderIndexAsc(Integer scheduleId);
+    @EntityGraph(attributePaths = {
+        "race",
+        "race.ageGroups",
+        "race.ageGroups.ageGroup",
+        "level"
+    })
+    @Query("SELECT DISTINCT si FROM ScheduleItem si "
+        + "WHERE si.scheduleId = :scheduleId "
+        + "ORDER BY si.orderIndex ASC")
+    List<ScheduleItem> findAllByScheduleIdOrderByOrderIndexAsc(@Param("scheduleId") Integer scheduleId);
 }
