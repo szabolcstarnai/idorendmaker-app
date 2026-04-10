@@ -13,7 +13,6 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import jakarta.persistence.Transient;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -70,7 +69,7 @@ public class Race {
     @OneToMany(mappedBy = "race", fetch = FetchType.LAZY)
     private List<ScheduleItem> scheduleItems = new ArrayList<>();
 
-    @Transient
+    @OneToMany(mappedBy = "race", fetch = FetchType.LAZY)
     private List<RaceCompetitorAssociation> raceCompetitorAssociations = new ArrayList<>();
 
     public Race() {
