@@ -1,4 +1,4 @@
-import { spawn, ChildProcess } from 'child_process';
+import { spawn, ChildProcess, execFile } from 'child_process';
 import path from 'path';
 import axios from 'axios';
 import { promises as fs, constants } from 'fs';
@@ -14,90 +14,116 @@ interface BackendHealthCheck {
   };
 }
 
+type LaunchMode = 'bundledJava' | 'systemJava';
+
 export class BackendService {
   private process: ChildProcess | null = null;
   private port: number = 0;
   private isReady: boolean = false;
-  private readonly executablePath: string;
-  private baseUrl: string;
+  private javaPath: string | null = null;
+  private jarPath: string | null = null;
+  private launchMode: LaunchMode | null = null;
+  private baseUrl: string = '';
 
   constructor() {
-    // Determine executable path based on environment
-    this.executablePath = this.resolveExecutablePath();
-    this.baseUrl = '';
-
     console.log('Backend service initialization:');
     console.log('- Packaged app:', app.isPackaged);
     console.log('- Platform:', process.platform);
-    console.log('- Executable path:', this.executablePath);
+    console.log('- resourcesPath:', process.resourcesPath);
   }
 
   /**
-   * Resolve the path to the GraalVM backend executable
+   * Candidate paths for the backend jar in packaged app or dev target.
    */
-  private resolveExecutablePath(): string {
-    const executableName = this.getExecutableName();
-
-    if (app.isPackaged) {
-      // Production: executable bundled in app resources
-      return path.join(process.resourcesPath, executableName);
-    } else {
-      // Development: relative path to source tree
-      return path.join(process.cwd(), '../idorendmaker-backend/target', executableName);
-    }
+  private getJarCandidates() {
+    const packaged = path.join(process.resourcesPath, 'idorendmaker-backend.jar');
+    const dev = path.join(process.cwd(), '..', 'idorendmaker-backend', 'target', 'idorendmaker-backend.jar');
+    const devVersioned = path.join(process.cwd(), '..', 'idorendmaker-backend', 'target', 'idorendmaker-backend-1.1.0.jar');
+    return { packaged, dev, devVersioned };
   }
 
   /**
-   * Get platform-specific executable name
+   * Candidate bundled java in resources/jre
    */
-  private getExecutableName(): string {
-    switch (process.platform) {
-      case 'win32':
-        return 'idorendmaker-backend.exe';
-      case 'darwin':
-        return 'idorendmaker-backend-mac';
-      case 'linux':
-        return 'idorendmaker-backend-linux';
-      default:
-        throw new Error(`Unsupported platform: ${process.platform}`);
-    }
+  private getBundledJavaCandidate(): string {
+    return process.platform === 'win32'
+      ? path.join(process.resourcesPath, 'jre', 'bin', 'java.exe')
+      : path.join(process.resourcesPath, 'jre', 'bin', 'java');
   }
 
   /**
-   * Validate that the executable exists and is accessible
+   * Check if 'java' is available on PATH.
    */
-  private async validateExecutable(): Promise<void> {
-    try {
-      // Check if file exists
-      await fs.access(this.executablePath, constants.F_OK);
-      console.log('✅ Backend executable found:', this.executablePath);
-
-      // On Unix systems, ensure executable permissions
-      if (process.platform !== 'win32') {
-        try {
-          await fs.access(this.executablePath, constants.X_OK);
-          console.log('✅ Backend executable permissions verified');
-        } catch (error) {
-          console.log('🔧 Setting executable permissions...');
-          await fs.chmod(this.executablePath, 0o755);
-          console.log('✅ Backend executable permissions set');
+  private async findSystemJava(): Promise<string | null> {
+    return new Promise((resolve) => {
+      execFile('java', ['-version'], { timeout: 2000 }, (err, stdout, stderr) => {
+        if (err) {
+          resolve(null);
+        } else {
+          const firstLine = (stderr || stdout || '').toString().split('\n')[0];
+          if (firstLine.includes('version')) {
+            resolve('java');
+          } else {
+            resolve(null);
+          }
         }
+      });
+    });
+  }
+
+  /**
+   * Locate the backend jar and a Java runtime to run it with.
+   */
+  private async resolveRuntime(): Promise<void> {
+    const { packaged, dev, devVersioned } = this.getJarCandidates();
+
+    const candidates = [packaged, dev, devVersioned];
+    for (const candidate of candidates) {
+      try {
+        await fs.access(candidate, constants.F_OK);
+        this.jarPath = candidate;
+        break;
+      } catch {
+        // try next
       }
-    } catch (error) {
-      const errorMessage = `Backend executable not found or not accessible: ${this.executablePath}`;
-      console.error('❌', errorMessage);
-      throw new Error(errorMessage);
     }
+    if (!this.jarPath) {
+      throw new Error(`Backend JAR not found. Looked at: ${candidates.join(', ')}`);
+    }
+    console.log('Backend JAR:', this.jarPath);
+
+    // Prefer bundled JRE (installer places it under resources/jre)
+    const bundledCandidate = this.getBundledJavaCandidate();
+    try {
+      await fs.access(bundledCandidate, constants.F_OK);
+      this.launchMode = 'bundledJava';
+      this.javaPath = bundledCandidate;
+      console.log('Using bundled JRE:', this.javaPath);
+      return;
+    } catch {
+      // no bundled java
+    }
+
+    // Fall back to PATH java (installer ensures Java >= 23)
+    const systemJava = await this.findSystemJava();
+    if (systemJava) {
+      this.launchMode = 'systemJava';
+      this.javaPath = systemJava;
+      console.log('Using system Java on PATH');
+      return;
+    }
+
+    throw new Error('No Java runtime found (neither bundled nor on PATH).');
   }
 
   /**
    * Find an available port for the Spring Boot application
    */
   private async findAvailablePort(): Promise<number> {
-    const net = await import('net');
+    const netMod = await import('net');
 
     return new Promise((resolve, reject) => {
-      const server = net.createServer();
+      const server = netMod.createServer();
       server.listen(0, () => {
         const port = (server.address() as net.AddressInfo)?.port;
         server.close(() => {
@@ -113,7 +139,7 @@ export class BackendService {
   }
 
   /**
-   * Start the GraalVM Spring Boot backend process
+   * Start the Spring Boot backend process (java -jar).
    */
   async start(): Promise<void> {
     if (this.process && !this.process.killed) {
@@ -121,45 +147,43 @@ export class BackendService {
       return;
     }
 
-    // Validate executable before attempting to start
-    await this.validateExecutable();
+    await this.resolveRuntime();
 
-    // Find available port
     this.port = await this.findAvailablePort();
     this.baseUrl = `http://localhost:${this.port}`;
 
-    console.log(`Starting backend service on port ${this.port}...`);
-
-
-    let command = [
-        `--server.port=${this.port}`,
-        '--logging.level.org.springframework.web=INFO',
-        '--logging.level.root=INFO',
-        '--spring.datasource.url=jdbc:sqlite:idorendmaker.db'
-      ]
-    if (app.isPackaged) {
-      command = [
-        `--server.port=${this.port}`,
-        '--logging.level.org.springframework.web=INFO',
-        '--logging.level.root=INFO',
-        '--spring.profiles.active=prod'
-      ]
-    }
+    console.log(`Starting backend service on port ${this.port} (mode=${this.launchMode})...`);
 
     return new Promise((resolve, reject) => {
-      // Spawn the GraalVM executable with port configuration
-      this.process = spawn(this.executablePath, command, {
+      if (!this.javaPath || !this.jarPath) {
+        reject(new Error('Runtime not resolved'));
+        return;
+      }
+
+      const spawnArgs = [
+        '-Djava.awt.headless=true',
+        '-jar',
+        this.jarPath,
+        `--server.port=${this.port}`,
+        '--logging.level.org.springframework.web=INFO',
+        '--logging.level.root=INFO',
+        ...(app.isPackaged ? ['--spring.profiles.active=prod'] : []),
+      ];
+
+      this.process = spawn(this.javaPath, spawnArgs, {
         stdio: ['ignore', 'pipe', 'pipe'],
         detached: false,
-        windowsHide: true
+        windowsHide: true,
       });
 
       let startupTimeout: NodeJS.Timeout;
+      let outputBuffer = '';
 
-      // Handle process events
       this.process.on('error', (error) => {
         console.error('Backend service error:', error);
         clearTimeout(startupTimeout);
+        this.process = null;
+        this.isReady = false;
         reject(new Error(`Failed to start backend service: ${error.message}`));
       });
 
@@ -169,16 +193,12 @@ export class BackendService {
         this.process = null;
       });
 
-      // Capture output to detect when Spring Boot is ready
-      let outputBuffer = '';
-
       if (this.process.stdout) {
         this.process.stdout.on('data', (data) => {
           const output = data.toString();
           outputBuffer += output;
           console.log('Backend service stdout:', output.trim());
 
-          // Check if Spring Boot has started successfully
           if (output.includes('Started IdorendMakerApplication') ||
               output.includes('Tomcat started on port')) {
             this.isReady = true;
@@ -192,9 +212,9 @@ export class BackendService {
       if (this.process.stderr) {
         this.process.stderr.on('data', (data) => {
           const errorOutput = data.toString();
+          outputBuffer += errorOutput;
           console.log('Backend service stderr:', errorOutput.trim());
 
-          // Also check stderr for startup messages (some Spring Boot logs go to stderr)
           if (errorOutput.includes('Started IdorendMakerApplication') ||
               errorOutput.includes('Tomcat started on port')) {
             this.isReady = true;
@@ -205,14 +225,14 @@ export class BackendService {
         });
       }
 
-      // Set startup timeout (GraalVM should be very fast)
+      // JVM cold start + Spring Boot needs more headroom than the old native image.
       startupTimeout = setTimeout(() => {
         if (!this.isReady) {
           console.log('Backend service startup timeout - captured output:', outputBuffer);
-          this.stop();
-          reject(new Error('Backend service startup timeout (30 seconds)'));
+          this.stop().catch(() => {});
+          reject(new Error('Backend service startup timeout (45 seconds)'));
         }
-      }, 30000);
+      }, 45000);
     });
   }
 
@@ -232,7 +252,6 @@ export class BackendService {
         return;
       }
 
-      // Give the process time to shutdown gracefully
       const shutdownTimeout = setTimeout(() => {
         if (this.process && !this.process.killed) {
           console.log('Force killing backend service...');
@@ -248,7 +267,6 @@ export class BackendService {
         resolve();
       });
 
-      // Send termination signal
       this.process.kill('SIGTERM');
     });
   }
@@ -262,13 +280,11 @@ export class BackendService {
     }
 
     try {
-      // Try to ping the Spring Boot actuator health endpoint
       const response = await axios.get(`${this.baseUrl}/actuator/health`, {
         timeout: 2000
       });
       return response.status === 200;
     } catch (error) {
-      // If health endpoint doesn't exist, try base API endpoint
       try {
         await axios.get(`${this.baseUrl}/api`, {
           timeout: 2000
@@ -304,7 +320,10 @@ export class BackendService {
       isReady: this.isReady,
       port: this.port,
       baseUrl: this.baseUrl,
-      pid: this.process?.pid
+      pid: this.process?.pid,
+      launchMode: this.launchMode,
+      javaPath: this.javaPath,
+      jarPath: this.jarPath,
     };
   }
 
