@@ -14,17 +14,6 @@ Var SRC1
 Var SRC2
 Var SRC3
 Var SRC4
-Var vcUrl
-Var vcFile
-
-!define VCREDIST_2015_2022_X64_URL "https://aka.ms/vs/17/release/vc_redist.x64.exe"
-!define VCREDIST_2015_2022_X86_URL "https://aka.ms/vs/17/release/vc_redist.x86.exe"
-
-!define VCREDIST_2015_2022_X64_KEY "SOFTWARE\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\X64"
-!define VCREDIST_2015_2022_X86_KEY "SOFTWARE\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\X86"
-!define VCREDIST_WOW64_X64_KEY "SOFTWARE\\Wow6432Node\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\x64"
-!define VCREDIST_WOW64_X86_KEY "SOFTWARE\\Wow6432Node\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\x86"
-!define VCREDIST_SERVICING_KEY "SOFTWARE\\Microsoft\\DevDiv\\VC\\Servicing\\14.0\\RuntimeMinimum"
 
 ; ---------------- JRE download/install configuration ----------------
 !define REQUIRED_JAVA_MAJOR "23"
@@ -48,99 +37,6 @@ Function FatalAbort
   ; show a Hungarian message box explaining install aborted
   MessageBox MB_OK|MB_ICONEXCLAMATION "Hiba: a telepítés megszakadt. Részletek a telepítő ablakában találhatók."
   Abort
-FunctionEnd
-
-; ---------------- VC++ detection (non-blocking) ----------------
-Function CheckVCRedist
-    SetDetailsPrint both
-    Push $0
-    Push $1
-    Push $2
-    StrCpy $0 "0"
-
-    ClearErrors
-    ${If} ${RunningX64}
-        ReadRegDWORD $1 HKLM "${VCREDIST_2015_2022_X64_KEY}" "Installed"
-        ${IfNot} ${Errors}
-            ${If} $1 == "1"
-                StrCpy $0 "1"
-            ${EndIf}
-        ${EndIf}
-        ClearErrors
-        ReadRegStr $2 HKLM "${VCREDIST_SERVICING_KEY}" "Version"
-        ${IfNot} ${Errors}
-            StrCpy $0 "1"
-        ${EndIf}
-        ClearErrors
-        ReadRegDWORD $1 HKLM "${VCREDIST_WOW64_X64_KEY}" "Installed"
-        ${IfNot} ${Errors}
-            ${If} $1 == "1"
-                StrCpy $0 "1"
-            ${EndIf}
-        ${EndIf}
-    ${Else}
-        ClearErrors
-        ReadRegDWORD $1 HKLM "${VCREDIST_2015_2022_X86_KEY}" "Installed"
-        ${IfNot} ${Errors}
-            ${If} $1 == "1"
-                StrCpy $0 "1"
-            ${EndIf}
-        ${EndIf}
-        ClearErrors
-        ReadRegDWORD $1 HKLM "${VCREDIST_WOW64_X86_KEY}" "Installed"
-        ${IfNot} ${Errors}
-            ${If} $1 == "1"
-                StrCpy $0 "1"
-            ${EndIf}
-        ${EndIf}
-    ${EndIf}
-
-    Pop $2
-    Pop $1
-    Exch $0
-FunctionEnd
-
-Function InstallVCRedist
-    SetDetailsPrint both
-    Push $0
-    ; check presence
-    Call CheckVCRedist
-    Pop $0
-    ${If} $0 == "1"
-        DetailPrint "Microsoft VC++ futtatókörnyezet megtalálva, letöltés és telepítés kihagyva."
-        Pop $0
-        Return
-    ${EndIf}
-
-    ${If} ${RunningX64}
-        StrCpy $vcUrl "${VCREDIST_2015_2022_X64_URL}"
-        StrCpy $vcFile "vc_redist.x64.exe"
-    ${Else}
-        StrCpy $vcUrl "${VCREDIST_2015_2022_X86_URL}"
-        StrCpy $vcFile "vc_redist.x86.exe"
-    ${EndIf}
-
-    StrCpy $R0 "$PLUGINSDIR\\$vcFile"
-    DetailPrint "VC++ futtatókörnyezet telepítő letöltése: $vcUrl"
-
-    ClearErrors
-    inetc::get "$vcUrl" "$R0" /END
-    Pop $R1
-    ${If} $R1 != "OK"
-        ; fatal: no internet or download failed
-        Push "VC++ futtatókörnyezet telepítő letöltése sikertelen. Ellenőrizze az internetkapcsolatot: $vcUrl"
-        Call FatalAbort
-    ${EndIf}
-
-    DetailPrint "VC++ telepítő futtatása..."
-    ExecWait '"$R0" /install /quiet /norestart' $R1
-    ${If} $R1 != 0
-        Push "VC++ futtatókörnyezet telepítő hibakóddal tért vissza: $R1"
-        Call FatalAbort
-    ${EndIf}
-
-    DetailPrint "VC++ futtatókörnyezet telepítés befejeződött."
-    Pop $0
 FunctionEnd
 
 ; ---------------- Java detection & install ----------------
@@ -322,7 +218,6 @@ FunctionEnd
 ; ---------------- electron-builder hook: canonical install entry ----------------
 !macro customInstall
     SetDetailsPrint both
-    Call InstallVCRedist
     Call InstallJRE
     Call CopyDatabase
     DetailPrint "Telepítés befejeződött."

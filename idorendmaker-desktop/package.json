@@ -32,8 +32,8 @@
     ],
     "extraResources": [
       {
-        "from": "resources/idorendmaker-backend.exe",
-        "to": "idorendmaker-backend.exe"
+        "from": "resources/idorendmaker-backend.jar",
+        "to": "idorendmaker-backend.jar"
       },
       {
         "from": "resources/idorendmaker-pdfprocessor.jar",

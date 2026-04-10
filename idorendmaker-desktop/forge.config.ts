@@ -17,8 +17,8 @@ const config: ForgeConfig = {
     executableName: 'idorendmaker',
     icon: './assets/icon', // Add your icon path here
     extraResource: [
-      // Bundle the GraalVM executables and production database
-      'resources/idorendmaker-backend.exe',
+      // Bundle the backend + PDF processor JARs and production database
+      'resources/idorendmaker-backend.jar',
       'resources/idorendmaker-pdfprocessor.jar',
       'resources/idorendmaker-production.db'
     ],
@@ -125,7 +125,7 @@ async function validateResources(): Promise<void> {
   }
 
   const requiredFiles = [
-    'idorendmaker-backend.exe',
+    'idorendmaker-backend.jar',
     'idorendmaker-pdfprocessor.jar',
     'idorendmaker-production.db'
   ];
