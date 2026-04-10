@@ -67,7 +67,7 @@ public class Race {
     @OneToMany(mappedBy = "race", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RaceAgeGroup> ageGroups = new ArrayList<>();
 
-    @Transient
+    @OneToMany(mappedBy = "race", fetch = FetchType.LAZY)
     private List<ScheduleItem> scheduleItems = new ArrayList<>();
 
     @Transient
