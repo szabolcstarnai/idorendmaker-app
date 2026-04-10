@@ -1,10 +1,6 @@
 package hu.szabolcst.idorendmaker.config;
 
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
 import hu.szabolcst.idorendmaker.service.DatabasePathResolver;
-import java.util.HashMap;
-import java.util.Map;
 import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -57,27 +53,7 @@ public class UserDataSourceConfig {
         final String dbPath = pathResolver.resolveUserDbPath();
         final String jdbcUrl = "jdbc:sqlite:" + dbPath;
         log.info("userDataSource JDBC URL: {}", jdbcUrl);
-
-        final HikariConfig config = new HikariConfig();
-        config.setPoolName("userDataSource");
-        config.setJdbcUrl(jdbcUrl);
-        config.setDriverClassName("org.sqlite.JDBC");
-        config.setMaximumPoolSize(1);
-        config.setMinimumIdle(1);
-        config.setConnectionTimeout(30_000L);
-        config.setIdleTimeout(600_000L);
-        config.setMaxLifetime(1_800_000L);
-        config.setAutoCommit(true);
-
-        // SQLite PRAGMAs applied by xerial at connection open.
-        config.addDataSourceProperty("foreign_keys", "true");
-        config.addDataSourceProperty("journal_mode", "WAL");
-        config.addDataSourceProperty("synchronous", "NORMAL");
-        config.addDataSourceProperty("busy_timeout", "30000");
-        config.addDataSourceProperty("cache_size", "10000");
-        config.addDataSourceProperty("temp_store", "memory");
-
-        return new HikariDataSource(config);
+        return SqliteDataSourceFactory.createPool("user-pool", jdbcUrl);
     }
 
     @Bean(name = "userEntityManagerFactory")
@@ -93,12 +69,7 @@ public class UserDataSourceConfig {
         vendorAdapter.setDatabasePlatform("org.hibernate.community.dialect.SQLiteDialect");
         emf.setJpaVendorAdapter(vendorAdapter);
 
-        final Map<String, Object> jpaProperties = new HashMap<>();
-        jpaProperties.put("hibernate.hbm2ddl.auto", "none");
-        jpaProperties.put("hibernate.boot.allow_jdbc_metadata_access", false);
-        jpaProperties.put("hibernate.temp.use_jdbc_metadata_defaults", false);
-        jpaProperties.put("hibernate.jdbc.time_zone", "UTC");
-        emf.setJpaPropertyMap(jpaProperties);
+        emf.setJpaPropertyMap(SqliteDataSourceFactory.jpaProperties());
 
         return emf;
     }

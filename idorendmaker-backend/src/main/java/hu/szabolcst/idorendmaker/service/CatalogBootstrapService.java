@@ -24,6 +24,13 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class CatalogBootstrapService {
 
+    /**
+     * Spring bean name for this component. Exposed as a constant so that
+     * {@code @DependsOn} references from other configuration classes stay in
+     * sync if the class is ever renamed.
+     */
+    public static final String BEAN_NAME = "catalogBootstrapService";
+
     private final DatabasePathResolver pathResolver;
 
     @PostConstruct

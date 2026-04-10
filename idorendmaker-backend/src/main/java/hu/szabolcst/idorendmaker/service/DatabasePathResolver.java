@@ -24,23 +24,11 @@ public class DatabasePathResolver {
     @Value("${app.database.mode:production}")
     private String databaseMode;
 
-    /**
-     * @deprecated Use {@code app.database.development.relative-dir} together with
-     * {@code app.database.user.filename} / {@code app.database.catalog.filename}.
-     * Phase 9 will remove this property entirely.
-     */
-    @Deprecated
-    @Value("${app.database.development.relative-path:../../idorendmaker-desktop/idorendmaker.db}")
-    private String developmentRelativePath;
-
     @Value("${app.database.development.relative-dir:../../idorendmaker-desktop}")
     private String developmentRelativeDir;
 
     @Value("${app.database.production.app-name:idorendmaker}")
     private String productionAppName;
-
-    @Value("${app.database.production.filename:idorendmaker.db}")
-    private String productionFilename;
 
     @Value("${app.database.user.filename:user.db}")
     private String userFilename;
@@ -138,33 +126,28 @@ public class DatabasePathResolver {
             }
         }
 
-        // Try alternative paths for different execution contexts
+        // Compute the best-effort path once, preferring the project root so fresh
+        // files are created alongside the desktop project as intended. This same
+        // path is used both for the existence check and for the final fallthrough.
         final Path projectRoot = findProjectRoot(currentPath);
-        if (projectRoot != null) {
-            dbPath = projectRoot.resolve("idorendmaker-desktop").resolve(filename);
-            absolutePath = dbPath.toAbsolutePath().toString();
-            log.info("   Alternative path (from project root): {}", absolutePath);
-            if (new File(absolutePath).exists()) {
-                log.info("Database found at project root path: {}", absolutePath);
-                return absolutePath;
-            }
-        }
+        final Path bestEffort = (projectRoot != null)
+            ? projectRoot.resolve("idorendmaker-desktop").resolve(filename)
+            : Paths.get(currentDir, developmentRelativeDir, filename).normalize();
+        absolutePath = bestEffort.toAbsolutePath().toString();
 
-        // Return a best-effort path, preferring the project root if found, so new
-        // files get created alongside the desktop project as intended.
-        if (projectRoot != null) {
-            dbPath = projectRoot.resolve("idorendmaker-desktop").resolve(filename);
-            absolutePath = dbPath.toAbsolutePath().toString();
-        } else {
-            dbPath = Paths.get(currentDir, developmentRelativeDir, filename).normalize();
-            absolutePath = dbPath.toAbsolutePath().toString();
+        if (new File(absolutePath).exists()) {
+            log.info("Database found at best-effort path: {}", absolutePath);
+            return absolutePath;
         }
 
         // Ensure the parent directory exists so a fresh file can be created there.
         final File parent = new File(absolutePath).getParentFile();
         if (parent != null && !parent.exists()) {
             log.info("Creating development database directory: {}", parent.getAbsolutePath());
-            parent.mkdirs();
+            final boolean created = parent.mkdirs();
+            if (!created && !parent.exists()) {
+                log.warn("Failed to create development database directory: {}", parent.getAbsolutePath());
+            }
         }
 
         log.warn("Database not found, returning best-effort path: {}", absolutePath);
@@ -216,7 +199,10 @@ public class DatabasePathResolver {
         final File parentDir = new File(userDataDir);
         if (!parentDir.exists()) {
             log.info("Creating user data directory: {}", userDataDir);
-            parentDir.mkdirs();
+            final boolean created = parentDir.mkdirs();
+            if (!created && !parentDir.exists()) {
+                log.warn("Failed to create user data directory: {}", userDataDir);
+            }
         }
 
         return absolutePath;
@@ -269,7 +255,10 @@ public class DatabasePathResolver {
         final File parentDir = new File(Paths.get(baseDirectories[0], appFolderNames[0]).toString());
         if (!parentDir.exists()) {
             log.info("Creating app data directory: {}", parentDir.getAbsolutePath());
-            parentDir.mkdirs();
+            final boolean created = parentDir.mkdirs();
+            if (!created && !parentDir.exists()) {
+                log.warn("Failed to create app data directory: {}", parentDir.getAbsolutePath());
+            }
         }
 
         return defaultAbsolutePath;
