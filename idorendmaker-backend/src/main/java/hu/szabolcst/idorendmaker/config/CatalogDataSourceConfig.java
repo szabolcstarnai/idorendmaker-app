@@ -19,9 +19,11 @@ import org.springframework.transaction.PlatformTransactionManager;
  * JPA configuration for the catalog database (read-only at runtime, rewritten
  * only by the catalog update service).
  *
- * <p>Scans {@code hu.szabolcst.idorendmaker.repository.catalog} (which does not
- * exist yet in Phase 1) and {@code hu.szabolcst.idorendmaker.model.entity.catalog}
- * (also empty in Phase 1). Both packages will be populated in later phases.
+ * <p>Scans {@code hu.szabolcst.idorendmaker.repository.catalog} for repositories
+ * and {@code hu.szabolcst.idorendmaker.model.entity.catalog} for entities. Uses
+ * a fully-qualified bean name generator so the catalog repositories do not
+ * collide with the legacy {@code repository.*} simple-name beans that are still
+ * wired into the user EMF during this migration.
  */
 @Slf4j
 @Configuration

@@ -18,9 +18,9 @@ import lombok.Setter;
 public class CatalogMeta {
 
     @Id
-    @Column(name = "key")
-    private String key;
+    @Column(name = "meta_key")
+    private String metaKey;
 
-    @Column(name = "value")
-    private String value;
+    @Column(name = "meta_value")
+    private String metaValue;
 }

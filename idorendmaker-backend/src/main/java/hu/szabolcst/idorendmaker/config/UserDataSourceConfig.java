@@ -22,13 +22,14 @@ import org.springframework.transaction.PlatformTransactionManager;
  * datasource — Spring's Liquibase autoconfiguration targets it via the
  * {@link LiquibaseDataSource} qualifier bean below.
  *
- * <p>In Phase 1 the user entity manager still scans the existing flat
- * {@code hu.szabolcst.idorendmaker.model.entity} package because all entities
- * live there. Phase 3 will split entities into {@code .user} and {@code .catalog}
- * subpackages and this scan will be narrowed to {@code .user}.
+ * <p>The user entity manager scans the flat {@code model.entity} package
+ * recursively and uses a {@link PersistenceUnitPostProcessor} to strip out
+ * the {@code .catalog} subpackage so its entities bind only to the catalog
+ * EMF. A later phase will move user entities into a dedicated {@code .user}
+ * subpackage so the scan can be narrowed and the post-processor removed.
  *
  * <p>Repository scanning excludes anything under {@code repository.catalog.*}
- * so that future catalog repositories bind to the catalog EMF instead.
+ * so catalog repositories bind to the catalog EMF instead.
  */
 @Slf4j
 @Configuration
@@ -66,6 +67,8 @@ public class UserDataSourceConfig {
         // Scan the flat entity package recursively, then strip out anything under
         // the `.catalog` subpackage so the new catalog entities bind only to the
         // catalog EMF. This allows both EMFs to coexist during the migration.
+        // TODO: once user entities are moved into model.entity.user, narrow the
+        // scan to that subpackage and delete this post-processor.
         emf.setPackagesToScan("hu.szabolcst.idorendmaker.model.entity");
         emf.setPersistenceUnitPostProcessors((PersistenceUnitPostProcessor) pui -> {
             final String catalogPrefix = "hu.szabolcst.idorendmaker.model.entity.catalog.";
