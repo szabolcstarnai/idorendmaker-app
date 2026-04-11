@@ -109,11 +109,11 @@ databaseChangeLog:
               - column:
                   name: extraction_status
                   type: VARCHAR(32)
-                  defaultValue: session
+                  defaultValue: "session"
               - column:
                   name: status
                   type: VARCHAR(32)
-                  defaultValue: session
+                  defaultValue: "session"
               - column:
                   name: linked_at
                   type: TIMESTAMP
@@ -265,6 +265,8 @@ databaseChangeLog:
                   name: is_active
                   type: BOOLEAN
                   defaultValueBoolean: true
+                  constraints:
+                    nullable: false
               - column:
                   name: created_at
                   type: TIMESTAMP
