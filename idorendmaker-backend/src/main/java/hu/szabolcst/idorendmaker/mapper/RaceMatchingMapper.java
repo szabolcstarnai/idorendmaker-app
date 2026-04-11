@@ -13,8 +13,8 @@ import hu.szabolcst.idorendmaker.model.dto.matching.ProcessedVersenyszamDto;
 import hu.szabolcst.idorendmaker.model.dto.matching.RaceWithCompetitorDataDto;
 import hu.szabolcst.idorendmaker.model.entity.CompetitorEntry;
 import hu.szabolcst.idorendmaker.model.entity.PDFExtraction;
-import hu.szabolcst.idorendmaker.model.entity.Race;
 import hu.szabolcst.idorendmaker.model.entity.Schedule;
+import hu.szabolcst.idorendmaker.model.entity.catalog.Race;
 import java.util.List;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -48,9 +48,13 @@ public interface RaceMatchingMapper {
 
     ProcessedVersenyszamDto toProcessedVersenyszamDto(ProcessedVersenyszamDto paramProcessedVersenyszamDto);
 
-    @Mappings({@Mapping(target = "ageGroups", source = "ageGroups", qualifiedByName = {"mapRaceAgeGroups"}),
-        @Mapping(target = "entryCount", ignore = true), @Mapping(target = "competitorIds", ignore = true),
-        @Mapping(target = "topCompetitors", ignore = true), @Mapping(target = "pdfExtractionId", ignore = true)})
+    @Mappings({
+        @Mapping(target = "ageGroups", ignore = true),
+        @Mapping(target = "id", ignore = true),
+        @Mapping(target = "entryCount", ignore = true),
+        @Mapping(target = "competitorIds", ignore = true),
+        @Mapping(target = "topCompetitors", ignore = true),
+        @Mapping(target = "pdfExtractionId", ignore = true)})
     RaceWithCompetitorDataDto toRaceWithCompetitorDataDto(Race paramRace);
 
     @Named("mapScheduleNames")

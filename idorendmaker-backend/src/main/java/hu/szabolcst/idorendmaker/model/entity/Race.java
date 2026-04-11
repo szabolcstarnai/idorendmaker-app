@@ -66,9 +66,6 @@ public class Race {
     @OneToMany(mappedBy = "race", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RaceAgeGroup> ageGroups = new ArrayList<>();
 
-    @OneToMany(mappedBy = "race", fetch = FetchType.LAZY)
-    private List<RaceCompetitorAssociation> raceCompetitorAssociations = new ArrayList<>();
-
     public Race() {
         final LocalDateTime now = LocalDateTime.now();
         this.createdAt = now;

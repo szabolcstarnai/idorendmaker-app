@@ -19,7 +19,7 @@ public interface CompetitorEntryRepository extends JpaRepository<CompetitorEntry
         + "WHERE ce.pdfExtractionId = :pdfExtractionId AND ce.organization IS NOT NULL")
     List<String> findDistinctOrganizationsByPdfExtractionId(@Param("pdfExtractionId") Integer pdfExtractionId);
 
-    @Query("SELECT rca FROM RaceCompetitorAssociation rca LEFT JOIN FETCH rca.race "
+    @Query("SELECT rca FROM RaceCompetitorAssociation rca "
         + "WHERE rca.pdfExtractionId = :pdfExtractionId ORDER BY rca.id")
     List<RaceCompetitorAssociation> findAssociationsForPdfExtractionWithRace(
         @Param("pdfExtractionId") Integer pdfExtractionId);

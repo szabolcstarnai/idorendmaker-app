@@ -27,8 +27,8 @@ public class RaceCompetitorAssociation {
     @Column(name = "pdf_extraction_id", nullable = false)
     private Integer pdfExtractionId;
 
-    @Column(name = "race_id", nullable = false)
-    private Integer raceId;
+    @Column(name = "race_code", nullable = false)
+    private String raceCode;
 
     @Column(name = "competitor_id", nullable = false)
     private String competitorId;
@@ -45,10 +45,6 @@ public class RaceCompetitorAssociation {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "pdf_extraction_id", insertable = false, updatable = false)
     private PDFExtraction pdfExtraction;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "race_id", insertable = false, updatable = false)
-    private Race race;
 
     // Not a real FK: (pdf_extraction_id, competitor_id) is a composite text link,
     // not a numeric FK to competitor_entries.id. Populated manually by repository fetch queries.

@@ -17,48 +17,45 @@ import org.springframework.stereotype.Service;
 public interface CompetitorService {
 
     /**
-     * Analyze competitor schedules from a set of schedule races
-     * Equivalent to TypeScript: analyzeCompetitorSchedules(scheduleRaces: ScheduleRace[], pdfExtractionId?: number): Promise<CompetitorSchedule[]>
+     * Analyze competitor schedules from a set of schedule races.
+     * Equivalent to TypeScript: analyzeCompetitorSchedules(scheduleRaces, pdfExtractionId?)
      * Equivalent to IPC: 'competitor:analyzeSchedules'
-     * 
-     * Implements sophisticated "worst case scenario" logic for multiple heats:
-     * - Groups races by (race.id, level.levelType) to identify multiple heats
-     * - For each group with multiple heats, assumes competitor is in the heat that creates worst scheduling conflict
-     * - Ensures conservative safety margins while eliminating false positives
+     *
+     * <p>Implements sophisticated "worst case scenario" logic for multiple heats:
+     * groups by (raceCode, levelType), for each group with multiple heats assumes
+     * the competitor is in the heat that creates worst scheduling conflict.
      */
     List<CompetitorScheduleDto> analyzeCompetitorSchedules(List<ScheduleRaceDto> scheduleRaces, Integer pdfExtractionId);
 
     /**
-     * Check for competitor conflicts between two specific races
-     * Equivalent to TypeScript: checkCompetitorConflicts(race1Id: number, race2Id: number, pdfExtractionId?: number)
+     * Check for competitor conflicts between two specific races.
+     * Equivalent to TypeScript: checkCompetitorConflicts(race1Code, race2Code, pdfExtractionId?)
      * Equivalent to IPC: 'competitor:checkConflicts'
      */
-    CompetitorConflictResultDto checkCompetitorConflicts(Integer race1Id, Integer race2Id, Integer pdfExtractionId);
+    CompetitorConflictResultDto checkCompetitorConflicts(String race1Code, String race2Code, Integer pdfExtractionId);
 
     /**
-     * Get competitor summary for a race
-     * Equivalent to TypeScript: getRaceCompetitorSummary(raceId: number, pdfExtractionId?: number)
+     * Get competitor summary for a race.
+     * Equivalent to TypeScript: getRaceCompetitorSummary(raceCode, pdfExtractionId?)
      * Equivalent to IPC: 'competitor:getRaceSummary'
      */
-    RaceCompetitorSummaryDto getRaceCompetitorSummary(Integer raceId, Integer pdfExtractionId);
+    RaceCompetitorSummaryDto getRaceCompetitorSummary(String raceCode, Integer pdfExtractionId);
 
     /**
-     * Get competitor summaries for multiple races in a single call (batch operation)
-     * Optimized for performance when multiple race summaries are needed
-     * Returns a Map where keys are race IDs and values are competitor summaries
+     * Get competitor summaries for multiple races in a single call (batch).
+     * Optimized for performance when multiple race summaries are needed.
+     * Returns a map keyed by race code.
      */
-    Map<Integer, RaceCompetitorSummaryDto> getBatchRaceCompetitorSummary(List<Integer> raceIds, Integer pdfExtractionId);
+    Map<String, RaceCompetitorSummaryDto> getBatchRaceCompetitorSummary(List<String> raceCodes, Integer pdfExtractionId);
 
     /**
-     * Get competitors at high risk (tight schedules)
-     * Equivalent to TypeScript: getHighRiskCompetitors(pdfExtractionId: number): Promise<CompetitorSchedule[]>
+     * Get competitors at high risk (tight schedules).
      * Equivalent to IPC: 'competitor:getHighRiskCompetitors'
      */
     List<CompetitorScheduleDto> getHighRiskCompetitors(Integer pdfExtractionId);
 
     /**
-     * Get competitor entry statistics for a PDF extraction
-     * Equivalent to TypeScript: getCompetitorStats(pdfExtractionId: number)
+     * Get competitor entry statistics for a PDF extraction.
      * Equivalent to IPC: 'competitor:getStats'
      */
     CompetitorStatsDto getCompetitorStats(Integer pdfExtractionId);

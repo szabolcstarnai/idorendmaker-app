@@ -35,106 +35,100 @@ public class CompetitorController {
     /**
      * Analyze competitor schedules from a set of schedule races
      * Equivalent to IPC: 'competitor:analyzeSchedules'
-     * TypeScript: analyzeCompetitorSchedules(scheduleRaces: ScheduleRace[], pdfExtractionId?: number): Promise<CompetitorSchedule[]>
      */
     @PostMapping("/analyze")
     public ResponseEntity<List<CompetitorScheduleDto>> analyzeCompetitorSchedules(
             @RequestBody final AnalyzeScheduleRequest request) {
-        log.debug("POST /api/competitors/analyze - Analyzing {} schedule races with PDF extraction id: {}", 
+        log.debug("POST /api/competitors/analyze - Analyzing {} schedule races with PDF extraction id: {}",
                  request.getScheduleRaces().size(), request.getPdfExtractionId());
-        
+
         final List<CompetitorScheduleDto> analysis = competitorService.analyzeCompetitorSchedules(
                 request.getScheduleRaces(), request.getPdfExtractionId());
-        
+
         log.debug("Analyzed competitor schedules, found {} competitor entries", analysis.size());
         return ResponseEntity.ok(analysis);
     }
 
     /**
-     * Check for competitor conflicts between two specific races
+     * Check for competitor conflicts between two specific races.
      * Equivalent to IPC: 'competitor:checkConflicts'
-     * TypeScript: checkCompetitorConflicts(race1Id: number, race2Id: number, pdfExtractionId?: number)
      */
     @GetMapping("/conflicts")
     public ResponseEntity<CompetitorConflictResultDto> checkCompetitorConflicts(
-            @RequestParam("race1Id") final Integer race1Id,
-            @RequestParam("race2Id") final Integer race2Id,
+            @RequestParam("race1Code") final String race1Code,
+            @RequestParam("race2Code") final String race2Code,
             @RequestParam(value = "pdfExtractionId", required = false) final Integer pdfExtractionId) {
-        log.debug("GET /api/competitors/conflicts?race1Id={}&race2Id={}&pdfExtractionId={} - Checking competitor conflicts", 
-                 race1Id, race2Id, pdfExtractionId);
-        
+        log.debug("GET /api/competitors/conflicts?race1Code={}&race2Code={}&pdfExtractionId={} - Checking competitor conflicts",
+                 race1Code, race2Code, pdfExtractionId);
+
         final CompetitorConflictResultDto conflicts = competitorService.checkCompetitorConflicts(
-                race1Id, race2Id, pdfExtractionId);
-        
-        log.debug("Found conflict result - hasConflicts: {}, conflicting competitors: {}", 
+                race1Code, race2Code, pdfExtractionId);
+
+        log.debug("Found conflict result - hasConflicts: {}, conflicting competitors: {}",
                  conflicts.getHasConflicts(), conflicts.getConflictingCompetitors().size());
         return ResponseEntity.ok(conflicts);
     }
 
     /**
-     * Get competitor summary for a race
+     * Get competitor summary for a race.
      * Equivalent to IPC: 'competitor:getRaceSummary'
-     * TypeScript: getRaceCompetitorSummary(raceId: number, pdfExtractionId?: number)
      */
-    @GetMapping("/races/{raceId}/summary")
+    @GetMapping("/races/{raceCode}/summary")
     public ResponseEntity<RaceCompetitorSummaryDto> getRaceCompetitorSummary(
-            @PathVariable final Integer raceId,
+            @PathVariable final String raceCode,
             @RequestParam(value = "pdfExtractionId", required = false) final Integer pdfExtractionId) {
         log.debug("GET /api/competitors/races/{}/summary?pdfExtractionId={} - Getting race competitor summary",
-                 raceId, pdfExtractionId);
+                 raceCode, pdfExtractionId);
 
-        final RaceCompetitorSummaryDto summary = competitorService.getRaceCompetitorSummary(raceId, pdfExtractionId);
+        final RaceCompetitorSummaryDto summary = competitorService.getRaceCompetitorSummary(raceCode, pdfExtractionId);
 
         log.debug("Found race summary - competitor count: {}", summary.getEntryCount());
         return ResponseEntity.ok(summary);
     }
 
     /**
-     * Get competitor summaries for multiple races in a single call (batch operation)
-     * Optimized for performance when multiple race summaries are needed
+     * Get competitor summaries for multiple races in a single call (batch operation).
      */
     @PostMapping("/races/batch-summary")
-    public ResponseEntity<Map<Integer, RaceCompetitorSummaryDto>> getBatchRaceCompetitorSummary(
+    public ResponseEntity<Map<String, RaceCompetitorSummaryDto>> getBatchRaceCompetitorSummary(
             @RequestBody final BatchSummaryRequest request) {
         log.debug("POST /api/competitors/races/batch-summary - Getting batch race competitor summaries for {} races with PDF extraction id: {}",
-                 request.getRaceIds().size(), request.getPdfExtractionId());
+                 request.getRaceCodes().size(), request.getPdfExtractionId());
 
-        final Map<Integer, RaceCompetitorSummaryDto> summaries = competitorService.getBatchRaceCompetitorSummary(
-                request.getRaceIds(), request.getPdfExtractionId());
+        final Map<String, RaceCompetitorSummaryDto> summaries = competitorService.getBatchRaceCompetitorSummary(
+                request.getRaceCodes(), request.getPdfExtractionId());
 
         log.debug("Retrieved batch summaries for {} races", summaries.size());
         return ResponseEntity.ok(summaries);
     }
 
     /**
-     * Get competitors at high risk (tight schedules)
+     * Get competitors at high risk (tight schedules).
      * Equivalent to IPC: 'competitor:getHighRiskCompetitors'
-     * TypeScript: getHighRiskCompetitors(pdfExtractionId: number): Promise<CompetitorSchedule[]>
      */
     @GetMapping("/high-risk")
     public ResponseEntity<List<CompetitorScheduleDto>> getHighRiskCompetitors(
             @RequestParam("pdfExtractionId") final Integer pdfExtractionId) {
         log.debug("GET /api/competitors/high-risk?pdfExtractionId={} - Getting high risk competitors", pdfExtractionId);
-        
+
         final List<CompetitorScheduleDto> highRiskCompetitors = competitorService.getHighRiskCompetitors(pdfExtractionId);
-        
+
         log.debug("Found {} high risk competitors", highRiskCompetitors.size());
         return ResponseEntity.ok(highRiskCompetitors);
     }
 
     /**
-     * Get competitor entry statistics for a PDF extraction
+     * Get competitor entry statistics for a PDF extraction.
      * Equivalent to IPC: 'competitor:getStats'
-     * TypeScript: getCompetitorStats(pdfExtractionId: number)
      */
     @GetMapping("/stats")
     public ResponseEntity<CompetitorStatsDto> getCompetitorStats(
             @RequestParam("pdfExtractionId") final Integer pdfExtractionId) {
         log.debug("GET /api/competitors/stats?pdfExtractionId={} - Getting competitor statistics", pdfExtractionId);
-        
+
         final CompetitorStatsDto stats = competitorService.getCompetitorStats(pdfExtractionId);
-        
-        log.debug("Competitor stats - total competitors: {}, total entries: {}", 
+
+        log.debug("Competitor stats - total competitors: {}, total entries: {}",
                  stats.getTotalCompetitors(), stats.getTotalEntries());
         return ResponseEntity.ok(stats);
     }
@@ -148,7 +142,7 @@ public class CompetitorController {
 
     @Data
     public static class BatchSummaryRequest {
-        private List<Integer> raceIds;
+        private List<String> raceCodes;
         private Integer pdfExtractionId;
     }
 }

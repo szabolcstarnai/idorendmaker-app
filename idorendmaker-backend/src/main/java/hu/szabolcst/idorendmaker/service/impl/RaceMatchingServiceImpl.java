@@ -14,13 +14,14 @@ import hu.szabolcst.idorendmaker.model.dto.matching.ProcessedVersenyszamDto;
 import hu.szabolcst.idorendmaker.model.dto.matching.RaceWithCompetitorDataDto;
 import hu.szabolcst.idorendmaker.model.entity.CompetitorEntry;
 import hu.szabolcst.idorendmaker.model.entity.PDFExtraction;
-import hu.szabolcst.idorendmaker.model.entity.Race;
 import hu.szabolcst.idorendmaker.model.entity.RaceCompetitorAssociation;
+import hu.szabolcst.idorendmaker.model.entity.catalog.Race;
 import hu.szabolcst.idorendmaker.repository.CompetitorEntryRepository;
 import hu.szabolcst.idorendmaker.repository.PDFExtractionRepository;
 import hu.szabolcst.idorendmaker.repository.RaceCompetitorAssociationRepository;
-import hu.szabolcst.idorendmaker.repository.RaceRepository;
+import hu.szabolcst.idorendmaker.service.RaceCatalogLookupService;
 import hu.szabolcst.idorendmaker.service.RaceMatchingService;
+import hu.szabolcst.idorendmaker.service.RaceCatalogLookupService.RaceDisplayData;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -49,7 +50,7 @@ public class RaceMatchingServiceImpl implements RaceMatchingService {
     private final PDFExtractionRepository pdfExtractionRepository;
     private final CompetitorEntryRepository competitorEntryRepository;
     private final RaceCompetitorAssociationRepository raceCompetitorAssociationRepository;
-    private final RaceRepository raceRepository;
+    private final RaceCatalogLookupService raceCatalogLookupService;
     private final RaceMatchingMapper raceMatchingMapper;
 
     @Override
@@ -134,42 +135,48 @@ public class RaceMatchingServiceImpl implements RaceMatchingService {
             final List<RaceCompetitorAssociation> raceAssociations = raceCompetitorAssociationRepository
                 .findAllByPdfExtractionId(pdfExtractionId);
 
-            // Group by race ID to aggregate competitor data
-            final Map<Integer, List<RaceCompetitorAssociation>> raceMap = raceAssociations.stream()
-                .collect(Collectors.groupingBy(RaceCompetitorAssociation::getRaceId));
+            // Enrich transient competitor entries so getCompetitorEntry() is non-null below.
+            enrichAssociationsInPlace(raceAssociations, pdfExtractionId);
+
+            // Group by race code to aggregate competitor data
+            final Map<String, List<RaceCompetitorAssociation>> raceMap = raceAssociations.stream()
+                .collect(Collectors.groupingBy(RaceCompetitorAssociation::getRaceCode));
 
             // Transform to RaceWithCompetitorData format
             final List<RaceWithCompetitorDataDto> filteredRaces = new ArrayList<>();
-            
-            for (final Map.Entry<Integer, List<RaceCompetitorAssociation>> entry : raceMap.entrySet()) {
-                final Integer raceId = entry.getKey();
+
+            for (final Map.Entry<String, List<RaceCompetitorAssociation>> entry : raceMap.entrySet()) {
+                final String raceCode = entry.getKey();
                 final List<RaceCompetitorAssociation> associations = entry.getValue();
-                
-                // Get the race entity
-                final Optional<Race> raceOpt = raceRepository.findByIdWithAgeGroupsAndBoatClassData(raceId);
-                if (raceOpt.isEmpty()) continue;
-                
-                final Race race = raceOpt.get();
-                
+
+                // Resolve display data from the catalog datasource
+                final RaceDisplayData display = raceCatalogLookupService.loadRaceDisplayData(raceCode);
+                if (display == null) {
+                    log.warn("Skipping race {} in filtered races: not found in catalog", raceCode);
+                    continue;
+                }
+
                 // Create competitor data
                 final List<String> competitorIds = associations.stream()
                     .map(RaceCompetitorAssociation::getCompetitorId)
                     .distinct()
                     .collect(Collectors.toList());
-                
+
                 final List<String> topCompetitors = associations.stream()
-                    .map(assoc -> assoc.getCompetitorEntry().getCompetitorName())
+                    .map(assoc -> assoc.getCompetitorEntry() != null
+                        ? assoc.getCompetitorEntry().getCompetitorName() : null)
+                    .filter(name -> name != null)
                     .distinct()
                     .limit(3)
                     .collect(Collectors.toList());
 
-                // Create DTO
-                final RaceWithCompetitorDataDto dto = raceMatchingMapper.toRaceWithCompetitorDataDto(race);
+                // Create DTO from the catalog race
+                final RaceWithCompetitorDataDto dto = raceMatchingMapper.toRaceWithCompetitorDataDto(display.race());
                 dto.setEntryCount(competitorIds.size());
                 dto.setCompetitorIds(competitorIds);
                 dto.setTopCompetitors(topCompetitors);
                 dto.setPdfExtractionId(pdfExtractionId);
-                
+
                 filteredRaces.add(dto);
             }
 
@@ -178,7 +185,7 @@ public class RaceMatchingServiceImpl implements RaceMatchingService {
 
             log.info("Retrieved {} filtered races for PDF extraction {}", filteredRaces.size(), pdfExtractionId);
             return filteredRaces;
-            
+
         } catch (final Exception error) {
             log.error("Error getting filtered races", error);
             return Collections.emptyList();
@@ -192,29 +199,41 @@ public class RaceMatchingServiceImpl implements RaceMatchingService {
             final List<CompetitorEntry> competitors = competitorEntryRepository
                 .findAllWithRaceAssociationsByPdfExtractionId(pdfExtractionId);
 
+            // Pre-load all referenced race names from the catalog in one batch call.
+            final Set<String> raceCodes = new HashSet<>();
+            for (final CompetitorEntry competitor : competitors) {
+                for (final RaceCompetitorAssociation assoc : competitor.getRaceCompetitorAssociations()) {
+                    if (assoc.getRaceCode() != null) {
+                        raceCodes.add(assoc.getRaceCode());
+                    }
+                }
+            }
+            final Map<String, Race> raceByCode = raceCatalogLookupService.findRacesByCodes(raceCodes);
+
             final Map<String, CompetitorDataDto> competitorMap = new HashMap<>();
-            
+
             for (final CompetitorEntry competitor : competitors) {
                 final CompetitorDataDto dto = raceMatchingMapper.toCompetitorDataDto(competitor);
-                
+
                 // Map race associations
                 final List<CompetitorRaceInfoDto> races = competitor.getRaceCompetitorAssociations().stream()
                     .map(assoc -> {
                         final CompetitorRaceInfoDto raceDto = new CompetitorRaceInfoDto();
-                        raceDto.setRaceId(assoc.getRaceId());
-                        raceDto.setRaceName(assoc.getRace().getName());
+                        raceDto.setRaceCode(assoc.getRaceCode());
+                        final Race race = raceByCode.get(assoc.getRaceCode());
+                        raceDto.setRaceName(race != null ? race.getName() : null);
                         raceDto.setPdfRaceName(assoc.getPdfRaceName());
                         return raceDto;
                     })
                     .collect(Collectors.toList());
-                
+
                 dto.setRaces(races);
                 competitorMap.put(competitor.getCompetitorId(), dto);
             }
 
             log.info("Retrieved competitor data for {} competitors", competitorMap.size());
             return competitorMap;
-            
+
         } catch (final Exception error) {
             log.error("Error getting competitor data", error);
             return Collections.emptyMap();
@@ -233,11 +252,11 @@ public class RaceMatchingServiceImpl implements RaceMatchingService {
             final PDFExtraction extraction = extractionOpt.get();
 
             // Get count of unique races that have matches
-            final List<Integer> matchedRaceIds = raceCompetitorAssociationRepository
-                .findDistinctRaceIdsByPdfExtractionId(pdfExtractionId);
-            
+            final List<String> matchedRaceCodes = raceCompetitorAssociationRepository
+                .findDistinctRaceCodesByPdfExtractionId(pdfExtractionId);
+
             final PDFExtractionStatsDto dto = raceMatchingMapper.toPDFExtractionStatsDto(extraction);
-            dto.setMatchedRaces(matchedRaceIds.size());
+            dto.setMatchedRaces(matchedRaceCodes.size());
             
             return dto;
             
@@ -402,10 +421,10 @@ public class RaceMatchingServiceImpl implements RaceMatchingService {
     @Override
     @Transactional
     public void matchRacesToDatabase(final List<ExtractedRaceDto> extractedRaces, final Integer pdfExtractionId) {
-        // Get all database races for matching
-        final List<Race> dbRaces = raceRepository.findAll();
-        
-        log.info("Matching {} extracted races against {} database races", 
+        // Get all catalog races for matching (read on the catalog datasource).
+        final List<Race> dbRaces = raceCatalogLookupService.findAllRaces();
+
+        log.info("Matching {} extracted races against {} catalog races",
                 extractedRaces.size(), dbRaces.size());
 
         for (final ExtractedRaceDto extractedRace : extractedRaces) {
@@ -418,19 +437,19 @@ public class RaceMatchingServiceImpl implements RaceMatchingService {
             if (exactMatch.isPresent()) {
                 final Race race = exactMatch.get();
                 log.info("Exact match found: \"{}\" → \"{}\"", extractedRace.getName(), race.getName());
-                
+
                 // Store race-competitor associations for this match
                 for (final ExtractedCompetitorDto competitor : extractedRace.getCompetitors()) {
                     final RaceCompetitorAssociation association = new RaceCompetitorAssociation();
                     association.setPdfExtractionId(pdfExtractionId);
-                    association.setRaceId(race.getId());
+                    association.setRaceCode(race.getCode());
                     association.setCompetitorId(competitor.getId());
                     association.setPdfRaceName(extractedRace.getName());
                     association.setMatchConfidence(1.0F); // Exact match
                     raceCompetitorAssociationRepository.save(association);
                 }
 
-                extractedRace.setMatchedDatabaseRaceId(race.getId());
+                extractedRace.setMatchedDatabaseRaceCode(race.getCode());
                 extractedRace.setMatchConfidence(1.0);
             } else {
                 log.info("No match found for race: \"{}\"", extractedRace.getName());
@@ -550,28 +569,36 @@ public class RaceMatchingServiceImpl implements RaceMatchingService {
             final List<RaceCompetitorAssociation> associations = raceCompetitorAssociationRepository
                 .findAllByPdfExtractionId(pdfExtractionId);
 
-            // Group by race to rebuild the extracted races structure
-            final Map<Integer, List<RaceCompetitorAssociation>> raceMap = associations.stream()
-                .collect(Collectors.groupingBy(RaceCompetitorAssociation::getRaceId));
+            // Enrich so assoc.getCompetitorEntry() is populated for name/org/birth-year access.
+            enrichAssociationsInPlace(associations, pdfExtractionId);
+
+            // Group by race code to rebuild the extracted races structure
+            final Map<String, List<RaceCompetitorAssociation>> raceMap = associations.stream()
+                .collect(Collectors.groupingBy(RaceCompetitorAssociation::getRaceCode));
 
             // Convert back to ExtractedRace format
             final List<ExtractedRaceDto> extractedRaces = new ArrayList<>();
-            
-            for (final Map.Entry<Integer, List<RaceCompetitorAssociation>> entry : raceMap.entrySet()) {
-                final Integer raceId = entry.getKey();
+
+            for (final Map.Entry<String, List<RaceCompetitorAssociation>> entry : raceMap.entrySet()) {
+                final String raceCode = entry.getKey();
                 final List<RaceCompetitorAssociation> raceAssociations = entry.getValue();
-                
+
                 if (raceAssociations.isEmpty()) continue;
-                
+
                 final RaceCompetitorAssociation firstAssoc = raceAssociations.getFirst();
-                
+
                 final List<ExtractedCompetitorDto> competitors = raceAssociations.stream()
                     .map(assoc -> {
                         final ExtractedCompetitorDto dto = new ExtractedCompetitorDto();
-                        dto.setId(assoc.getCompetitorEntry().getCompetitorId());
-                        dto.setName(assoc.getCompetitorEntry().getCompetitorName());
-                        dto.setOrganization(assoc.getCompetitorEntry().getOrganization());
-                        dto.setBirthYear(assoc.getCompetitorEntry().getBirthYear());
+                        final CompetitorEntry ce = assoc.getCompetitorEntry();
+                        if (ce != null) {
+                            dto.setId(ce.getCompetitorId());
+                            dto.setName(ce.getCompetitorName());
+                            dto.setOrganization(ce.getOrganization());
+                            dto.setBirthYear(ce.getBirthYear());
+                        } else {
+                            dto.setId(assoc.getCompetitorId());
+                        }
                         dto.setRaceEntries(List.of(assoc.getPdfRaceName()));
                         return dto;
                     })
@@ -581,18 +608,43 @@ public class RaceMatchingServiceImpl implements RaceMatchingService {
                 raceDto.setId(firstAssoc.getPdfRaceName());
                 raceDto.setName(firstAssoc.getPdfRaceName());
                 raceDto.setCompetitors(competitors);
-                raceDto.setMatchedDatabaseRaceId(raceId);
+                raceDto.setMatchedDatabaseRaceCode(raceCode);
                 raceDto.setMatchConfidence(Double.valueOf(firstAssoc.getMatchConfidence()));
-                
+
                 extractedRaces.add(raceDto);
             }
 
             log.info("Loaded {} existing races from extraction {}", extractedRaces.size(), pdfExtractionId);
             return extractedRaces;
-            
+
         } catch (final Exception error) {
             log.error("Error loading existing extraction data", error);
             return Collections.emptyList();
+        }
+    }
+
+    /**
+     * Populates the transient {@code competitorEntry} on each given
+     * association by fetching competitor entries for the PDF extraction.
+     * Existing non-null values are left alone.
+     */
+    private void enrichAssociationsInPlace(
+            final List<RaceCompetitorAssociation> associations,
+            final Integer pdfExtractionId) {
+        if (associations == null || associations.isEmpty()) {
+            return;
+        }
+        final List<CompetitorEntry> entries = competitorEntryRepository.findAllByPdfExtractionId(pdfExtractionId);
+        final Map<String, CompetitorEntry> byCompetitorId = new HashMap<>();
+        for (final CompetitorEntry ce : entries) {
+            if (ce.getCompetitorId() != null) {
+                byCompetitorId.put(ce.getCompetitorId(), ce);
+            }
+        }
+        for (final RaceCompetitorAssociation rca : associations) {
+            if (rca.getCompetitorEntry() == null) {
+                rca.setCompetitorEntry(byCompetitorId.get(rca.getCompetitorId()));
+            }
         }
     }
 }

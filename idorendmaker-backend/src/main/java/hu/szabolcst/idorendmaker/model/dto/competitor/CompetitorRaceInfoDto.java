@@ -5,7 +5,7 @@ import lombok.Data;
 @Data
 public class CompetitorRaceInfoDto {
 
-    private Integer raceId;
+    private String raceCode;
     private String raceName;
     private String pdfRaceName;
 

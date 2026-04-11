@@ -13,37 +13,37 @@ public interface RaceCompetitorAssociationRepository extends JpaRepository<RaceC
 
     long countByPdfExtractionId(Integer pdfExtractionId);
 
-    @Query("SELECT DISTINCT rca.raceId FROM RaceCompetitorAssociation rca "
+    @Query("SELECT DISTINCT rca.raceCode FROM RaceCompetitorAssociation rca "
         + "WHERE rca.pdfExtractionId = :pdfExtractionId")
-    List<Integer> findDistinctRaceIdsByPdfExtractionId(@Param("pdfExtractionId") Integer pdfExtractionId);
+    List<String> findDistinctRaceCodesByPdfExtractionId(@Param("pdfExtractionId") Integer pdfExtractionId);
 
     List<RaceCompetitorAssociation> findAllByPdfExtractionId(Integer pdfExtractionId);
 
     @Query("SELECT rca FROM RaceCompetitorAssociation rca "
-        + "WHERE rca.pdfExtractionId = :pdfExtractionId AND rca.raceId = :raceId "
+        + "WHERE rca.pdfExtractionId = :pdfExtractionId AND rca.raceCode = :raceCode "
         + "ORDER BY rca.id")
-    List<RaceCompetitorAssociation> findByPdfExtractionIdAndRaceIdRaw(
+    List<RaceCompetitorAssociation> findByPdfExtractionIdAndRaceCodeRaw(
         @Param("pdfExtractionId") Integer pdfExtractionId,
-        @Param("raceId") Integer raceId);
+        @Param("raceCode") String raceCode);
 
     @Query("SELECT rca FROM RaceCompetitorAssociation rca "
-        + "WHERE rca.pdfExtractionId = :pdfExtractionId AND rca.raceId IN :raceIds "
-        + "ORDER BY rca.raceId, rca.id")
-    List<RaceCompetitorAssociation> findByPdfExtractionIdAndRaceIdsRaw(
+        + "WHERE rca.pdfExtractionId = :pdfExtractionId AND rca.raceCode IN :raceCodes "
+        + "ORDER BY rca.raceCode, rca.id")
+    List<RaceCompetitorAssociation> findByPdfExtractionIdAndRaceCodesRaw(
         @Param("pdfExtractionId") Integer pdfExtractionId,
-        @Param("raceIds") List<Integer> raceIds);
+        @Param("raceCodes") List<String> raceCodes);
 
     @Query("SELECT rca FROM RaceCompetitorAssociation rca "
         + "WHERE rca.pdfExtractionId = :pdfExtractionId "
-        + "AND rca.raceId = :raceAId "
+        + "AND rca.raceCode = :raceACode "
         + "AND rca.competitorId IN ("
         + "    SELECT rca2.competitorId FROM RaceCompetitorAssociation rca2 "
-        + "    WHERE rca2.pdfExtractionId = :pdfExtractionId AND rca2.raceId = :raceBId"
+        + "    WHERE rca2.pdfExtractionId = :pdfExtractionId AND rca2.raceCode = :raceBCode"
         + ") ORDER BY rca.id")
     List<RaceCompetitorAssociation> findConflictingCompetitorsBetweenRacesRaw(
         @Param("pdfExtractionId") Integer pdfExtractionId,
-        @Param("raceAId") Integer raceAId,
-        @Param("raceBId") Integer raceBId);
+        @Param("raceACode") String raceACode,
+        @Param("raceBCode") String raceBCode);
 
     @Query("SELECT ce FROM CompetitorEntry ce "
         + "WHERE ce.pdfExtractionId = :pdfExtractionId AND ce.competitorId IN :competitorIds")
@@ -51,27 +51,27 @@ public interface RaceCompetitorAssociationRepository extends JpaRepository<RaceC
         @Param("pdfExtractionId") Integer pdfExtractionId,
         @Param("competitorIds") List<String> competitorIds);
 
-    default List<RaceCompetitorAssociation> findByPdfExtractionIdAndRaceIdWithCompetitor(
-        final Integer pdfExtractionId, final Integer raceId) {
-        final List<RaceCompetitorAssociation> associations = findByPdfExtractionIdAndRaceIdRaw(pdfExtractionId, raceId);
+    default List<RaceCompetitorAssociation> findByPdfExtractionIdAndRaceCodeWithCompetitor(
+        final Integer pdfExtractionId, final String raceCode) {
+        final List<RaceCompetitorAssociation> associations = findByPdfExtractionIdAndRaceCodeRaw(pdfExtractionId, raceCode);
         enrichWithCompetitorEntries(associations, pdfExtractionId);
         return associations;
     }
 
-    default List<RaceCompetitorAssociation> findByPdfExtractionIdAndRaceIdsWithCompetitor(
-        final Integer pdfExtractionId, final List<Integer> raceIds) {
-        if (raceIds == null || raceIds.isEmpty()) {
+    default List<RaceCompetitorAssociation> findByPdfExtractionIdAndRaceCodesWithCompetitor(
+        final Integer pdfExtractionId, final List<String> raceCodes) {
+        if (raceCodes == null || raceCodes.isEmpty()) {
             return new java.util.ArrayList<>();
         }
-        final List<RaceCompetitorAssociation> associations = findByPdfExtractionIdAndRaceIdsRaw(pdfExtractionId, raceIds);
+        final List<RaceCompetitorAssociation> associations = findByPdfExtractionIdAndRaceCodesRaw(pdfExtractionId, raceCodes);
         enrichWithCompetitorEntries(associations, pdfExtractionId);
         return associations;
     }
 
-    default List<RaceCompetitorAssociation> findConflictingCompetitorsBetweenRaces(
-        final Integer pdfExtractionId, final Integer raceAId, final Integer raceBId) {
+    default List<RaceCompetitorAssociation> findConflictingCompetitorsBetweenRaceCodes(
+        final Integer pdfExtractionId, final String raceACode, final String raceBCode) {
         final List<RaceCompetitorAssociation> associations =
-            findConflictingCompetitorsBetweenRacesRaw(pdfExtractionId, raceAId, raceBId);
+            findConflictingCompetitorsBetweenRacesRaw(pdfExtractionId, raceACode, raceBCode);
         enrichWithCompetitorEntries(associations, pdfExtractionId);
         return associations;
     }

@@ -9,7 +9,7 @@ public class ExtractedRaceDto {
     private String id;
     private String name;
     private List<ExtractedCompetitorDto> competitors;
-    private Integer matchedDatabaseRaceId;
+    private String matchedDatabaseRaceCode;
     private Double matchConfidence;
 
 }

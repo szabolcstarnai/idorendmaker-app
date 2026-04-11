@@ -11,15 +11,15 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CompetitorRacePairDetailsDto {
 
-    private Integer race1Id;
+    private String race1Code;
     private String levelType1;
-    private Integer level1Id;
+    private String level1Code;
     private String race1Name;
     private String race1StartTime;
 
-    private Integer race2Id;
+    private String race2Code;
     private String levelType2;
-    private Integer level2Id;
+    private String level2Code;
     private String race2Name;
     private String race2StartTime;
 

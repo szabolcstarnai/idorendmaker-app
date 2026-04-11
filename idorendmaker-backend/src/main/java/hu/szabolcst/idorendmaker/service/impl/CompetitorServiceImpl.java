@@ -52,7 +52,7 @@ public class CompetitorServiceImpl implements CompetitorService {
 				// Find races this competitor is entered in from the current schedule
 				final List<ScheduleRaceDto> allCompetitorRaces = scheduleRaces.stream()
 						.filter(scheduleRace -> competitor.getRaceCompetitorAssociations().stream()
-								.anyMatch(assoc -> Objects.equals(assoc.getRaceId(), scheduleRace.getRace().getId())))
+								.anyMatch(assoc -> Objects.equals(assoc.getRaceCode(), scheduleRace.getRaceCode())))
 						.toList();
 
                 if (allCompetitorRaces.isEmpty()) {
@@ -122,7 +122,7 @@ public class CompetitorServiceImpl implements CompetitorService {
 
 	@Override
 	@Transactional
-	public CompetitorConflictResultDto checkCompetitorConflicts(final Integer race1Id, final Integer race2Id,
+	public CompetitorConflictResultDto checkCompetitorConflicts(final String race1Code, final String race2Code,
 			final Integer pdfExtractionId) {
 		if (pdfExtractionId == null) {
 			return competitorMapper.toCompetitorConflictResultDto(false, List.of(), 0);
@@ -131,7 +131,7 @@ public class CompetitorServiceImpl implements CompetitorService {
 		try {
 			// Find competitors entered in both races
 			final List<RaceCompetitorAssociation> conflictingAssociations = raceCompetitorAssociationRepository
-					.findConflictingCompetitorsBetweenRaces(pdfExtractionId, race1Id, race2Id);
+					.findConflictingCompetitorsBetweenRaceCodes(pdfExtractionId, race1Code, race2Code);
 
 			final List<String> conflictingCompetitors =
 					competitorMapper.extractCompetitorNames(conflictingAssociations);
@@ -149,14 +149,14 @@ public class CompetitorServiceImpl implements CompetitorService {
 
 	@Override
 	@Transactional
-	public RaceCompetitorSummaryDto getRaceCompetitorSummary(final Integer raceId, final Integer pdfExtractionId) {
+	public RaceCompetitorSummaryDto getRaceCompetitorSummary(final String raceCode, final Integer pdfExtractionId) {
 		if (pdfExtractionId == null) {
 			return competitorMapper.toRaceCompetitorSummaryDto(0, List.of(), List.of());
 		}
 
 		try {
 			final List<RaceCompetitorAssociation> associations = raceCompetitorAssociationRepository
-					.findByPdfExtractionIdAndRaceIdWithCompetitor(pdfExtractionId, raceId);
+					.findByPdfExtractionIdAndRaceCodeWithCompetitor(pdfExtractionId, raceCode);
 
 			final List<String> topCompetitors = associations.stream()
 					.limit(3)
@@ -182,27 +182,29 @@ public class CompetitorServiceImpl implements CompetitorService {
 
 	@Override
 	@Transactional
-	public Map<Integer, RaceCompetitorSummaryDto> getBatchRaceCompetitorSummary(final List<Integer> raceIds, final Integer pdfExtractionId) {
-		final Map<Integer, RaceCompetitorSummaryDto> result = new HashMap<>();
+	public Map<String, RaceCompetitorSummaryDto> getBatchRaceCompetitorSummary(final List<String> raceCodes, final Integer pdfExtractionId) {
+		final Map<String, RaceCompetitorSummaryDto> result = new HashMap<>();
 
-		if (pdfExtractionId == null || raceIds == null || raceIds.isEmpty()) {
-			// Return empty summaries for all requested race IDs
-			raceIds.forEach(raceId -> result.put(raceId, competitorMapper.toRaceCompetitorSummaryDto(0, List.of(), List.of())));
+		if (pdfExtractionId == null || raceCodes == null || raceCodes.isEmpty()) {
+			// Return empty summaries for all requested race codes
+			if (raceCodes != null) {
+				raceCodes.forEach(raceCode -> result.put(raceCode, competitorMapper.toRaceCompetitorSummaryDto(0, List.of(), List.of())));
+			}
 			return result;
 		}
 
 		try {
 			// Get all associations for all races in a single query
 			final List<RaceCompetitorAssociation> allAssociations = raceCompetitorAssociationRepository
-					.findByPdfExtractionIdAndRaceIdsWithCompetitor(pdfExtractionId, raceIds);
+					.findByPdfExtractionIdAndRaceCodesWithCompetitor(pdfExtractionId, raceCodes);
 
-			// Group associations by race ID
-			final Map<Integer, List<RaceCompetitorAssociation>> associationsByRace = allAssociations.stream()
-					.collect(Collectors.groupingBy(RaceCompetitorAssociation::getRaceId));
+			// Group associations by race code
+			final Map<String, List<RaceCompetitorAssociation>> associationsByRace = allAssociations.stream()
+					.collect(Collectors.groupingBy(RaceCompetitorAssociation::getRaceCode));
 
 			// Process each race
-			for (final Integer raceId : raceIds) {
-				final List<RaceCompetitorAssociation> associations = associationsByRace.getOrDefault(raceId, List.of());
+			for (final String raceCode : raceCodes) {
+				final List<RaceCompetitorAssociation> associations = associationsByRace.getOrDefault(raceCode, List.of());
 
 				final List<String> topCompetitors = associations.stream()
 						.limit(3)
@@ -221,14 +223,14 @@ public class CompetitorServiceImpl implements CompetitorService {
 						organizations
 				);
 
-				result.put(raceId, summary);
+				result.put(raceCode, summary);
 			}
 
 			return result;
 		} catch (final Exception error) {
 			log.error("Error getting batch race competitor summaries", error);
-			// Return empty summaries for all requested race IDs in case of error
-			raceIds.forEach(raceId -> result.put(raceId, competitorMapper.toRaceCompetitorSummaryDto(0, List.of(), List.of())));
+			// Return empty summaries for all requested race codes in case of error
+			raceCodes.forEach(raceCode -> result.put(raceCode, competitorMapper.toRaceCompetitorSummaryDto(0, List.of(), List.of())));
 			return result;
 		}
 	}
@@ -253,9 +255,9 @@ public class CompetitorServiceImpl implements CompetitorService {
 			final long totalEntries = raceCompetitorAssociationRepository.countByPdfExtractionId(pdfExtractionId);
 
 			// Unique races with entries
-			final List<Integer> raceIds =
-					raceCompetitorAssociationRepository.findDistinctRaceIdsByPdfExtractionId(pdfExtractionId);
-			final int racesWithEntries = raceIds.size();
+			final List<String> raceCodes =
+					raceCompetitorAssociationRepository.findDistinctRaceCodesByPdfExtractionId(pdfExtractionId);
+			final int racesWithEntries = raceCodes.size();
 
 			// Organizations represented
 			final List<String> organizations =
@@ -286,7 +288,7 @@ public class CompetitorServiceImpl implements CompetitorService {
 		final Map<String, List<ScheduleRaceDto>> groups = new HashMap<>();
 
 		for (final ScheduleRaceDto scheduleRace : scheduleRaces) {
-			final String key = scheduleRace.getRace().getId() + "-" + scheduleRace.getLevel().getLevelType();
+			final String key = scheduleRace.getRaceCode() + "-" + scheduleRace.getLevelType();
 			groups.computeIfAbsent(key, k -> new ArrayList<>()).add(scheduleRace);
 		}
 
@@ -334,17 +336,15 @@ public class CompetitorServiceImpl implements CompetitorService {
 			}
 
             final CompetitorRacePairDetailsDto racePairDetail = CompetitorRacePairDetailsDto.builder()
-                .race1Id(currentRace.getRace().getId())
-                .levelType1(currentRace.getLevel().getLevelType())
-                .level1Id(currentRace.getLevel().getId())
-                .race1Name(currentRace.getRace().getName() + " " + currentRace.getLevel().getName())
+                .race1Code(currentRace.getRaceCode())
+                .levelType1(currentRace.getLevelType())
+                .level1Code(currentRace.getLevelCode())
+                .race1Name(buildRaceDisplayName(currentRace))
                 .race1StartTime(currentRace.getStartTime())
-                .race2Id(nextMeaningfulRace != null ? nextMeaningfulRace.getRace().getId() : null)
-                .levelType2(nextMeaningfulRace != null ? nextMeaningfulRace.getLevel().getLevelType() : null)
-                .level2Id(nextMeaningfulRace != null ? nextMeaningfulRace.getLevel().getId() : null)
-                .race2Name(
-                    nextMeaningfulRace != null ? nextMeaningfulRace.getRace().getName() + " " + nextMeaningfulRace.getLevel().getName()
-                        : null)
+                .race2Code(nextMeaningfulRace != null ? nextMeaningfulRace.getRaceCode() : null)
+                .levelType2(nextMeaningfulRace != null ? nextMeaningfulRace.getLevelType() : null)
+                .level2Code(nextMeaningfulRace != null ? nextMeaningfulRace.getLevelCode() : null)
+                .race2Name(nextMeaningfulRace != null ? buildRaceDisplayName(nextMeaningfulRace) : null)
                 .race2StartTime(nextMeaningfulRace != null ? nextMeaningfulRace.getStartTime() : null)
                 .estimatedDuration(5)
                 .intervalToNext(intervalToNext)
@@ -355,9 +355,9 @@ public class CompetitorServiceImpl implements CompetitorService {
 		}
 
         return raceDetails.stream()
-            .filter(dto -> dto.getRace2Id() != null)
+            .filter(dto -> dto.getRace2Code() != null)
             .collect(Collectors.groupingBy(dto ->
-                dto.getRace1Id().toString() + "-" + dto.getLevelType1() + ";" + dto.getRace2Id() + "-" + dto.getLevelType2()))
+                dto.getRace1Code() + "-" + dto.getLevelType1() + ";" + dto.getRace2Code() + "-" + dto.getLevelType2()))
             .values().stream()
             .map(competitorRaceDetailsDtos -> competitorRaceDetailsDtos.stream()
                 .min(Comparator.comparing(CompetitorRacePairDetailsDto::getIntervalToNext)))
@@ -367,13 +367,32 @@ public class CompetitorServiceImpl implements CompetitorService {
 	}
 
 	/**
+	 * Build a display name for a ScheduleRaceDto from its snapshot fields.
+	 * Falls back gracefully when either name is missing.
+	 */
+	private String buildRaceDisplayName(final ScheduleRaceDto race) {
+		final String raceName = race.getRaceName();
+		final String levelName = race.getLevelName();
+		if (raceName == null && levelName == null) {
+			return race.getRaceCode();
+		}
+		if (levelName == null || levelName.isBlank()) {
+			return raceName;
+		}
+		if (raceName == null || raceName.isBlank()) {
+			return levelName;
+		}
+		return raceName + " " + levelName;
+	}
+
+	/**
 	 * Check if two races have different race-leveltype combinations
 	 * Returns true if they represent meaningful conflict scenarios
 	 * Returns false if they're the same race-leveltype (e.g., Előfutam I vs Előfutam II of same race)
 	 */
 	private boolean isDifferentRaceLevelType(final ScheduleRaceDto race1, final ScheduleRaceDto race2) {
-		final String race1Key = race1.getRace().getId() + "-" + race1.getLevel().getLevelType();
-		final String race2Key = race2.getRace().getId() + "-" + race2.getLevel().getLevelType();
+		final String race1Key = race1.getRaceCode() + "-" + race1.getLevelType();
+		final String race2Key = race2.getRaceCode() + "-" + race2.getLevelType();
 		return !race1Key.equals(race2Key);
 	}
 
