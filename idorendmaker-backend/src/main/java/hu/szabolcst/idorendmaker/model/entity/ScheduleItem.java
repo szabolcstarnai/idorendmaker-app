@@ -29,11 +29,35 @@ public class ScheduleItem {
     @Column(name = "section_id")
     private Integer sectionId;
 
-    @Column(name = "race_id", nullable = false)
-    private Integer raceId;
+    @Column(name = "race_code", nullable = false)
+    private String raceCode;
 
-    @Column(name = "level_id")
-    private Integer levelId;
+    @Column(name = "level_code")
+    private String levelCode;
+
+    @Column(name = "race_name", nullable = false)
+    private String raceName;
+
+    @Column(name = "race_discipline", nullable = false)
+    private String raceDiscipline;
+
+    @Column(name = "race_boat_class_name", nullable = false)
+    private String raceBoatClassName;
+
+    @Column(name = "race_gender", nullable = false)
+    private String raceGender;
+
+    @Column(name = "race_distance", nullable = false)
+    private String raceDistance;
+
+    @Column(name = "race_age_groups_display")
+    private String raceAgeGroupsDisplay;
+
+    @Column(name = "level_name")
+    private String levelName;
+
+    @Column(name = "level_type")
+    private String levelType;
 
     @Column(name = "order_index")
     private Integer orderIndex;
@@ -54,14 +78,6 @@ public class ScheduleItem {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "section_id", insertable = false, updatable = false)
     private ScheduleSection section;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "race_id", insertable = false, updatable = false)
-    private Race race;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "level_id", insertable = false, updatable = false)
-    private Level level;
 
     public ScheduleItem() {
         this.createdAt = LocalDateTime.now();

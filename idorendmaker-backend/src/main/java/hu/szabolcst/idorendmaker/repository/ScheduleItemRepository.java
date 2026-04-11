@@ -10,27 +10,13 @@ import org.springframework.data.repository.query.Param;
 
 public interface ScheduleItemRepository extends JpaRepository<ScheduleItem, Integer> {
 
-    @EntityGraph(attributePaths = {
-        "race",
-        "race.ageGroups",
-        "race.ageGroups.ageGroup",
-        "race.boatClassData",
-        "level"
-    })
-    @Query("SELECT DISTINCT si FROM ScheduleItem si "
+    @Query("SELECT si FROM ScheduleItem si "
         + "WHERE si.scheduleId = :scheduleId "
         + "ORDER BY si.orderIndex ASC")
     List<ScheduleItem> findAllByScheduleIdWithRaceAndLevel(@Param("scheduleId") Integer scheduleId);
 
-    @EntityGraph(attributePaths = {
-        "race",
-        "race.ageGroups",
-        "race.ageGroups.ageGroup",
-        "race.boatClassData",
-        "level",
-        "section"
-    })
-    @Query("SELECT DISTINCT si FROM ScheduleItem si "
+    @EntityGraph(attributePaths = {"section"})
+    @Query("SELECT si FROM ScheduleItem si "
         + "WHERE si.sectionId = :sectionId "
         + "ORDER BY si.orderIndex ASC")
     List<ScheduleItem> findAllBySectionIdWithRaceAndLevelAndSection(@Param("sectionId") Integer sectionId);
@@ -43,13 +29,7 @@ public interface ScheduleItemRepository extends JpaRepository<ScheduleItem, Inte
     @Query("DELETE FROM ScheduleItem si WHERE si.sectionId = :sectionId")
     void deleteAllBySectionId(@Param("sectionId") Integer sectionId);
 
-    @EntityGraph(attributePaths = {
-        "race",
-        "race.ageGroups",
-        "race.ageGroups.ageGroup",
-        "level"
-    })
-    @Query("SELECT DISTINCT si FROM ScheduleItem si "
+    @Query("SELECT si FROM ScheduleItem si "
         + "WHERE si.scheduleId = :scheduleId "
         + "ORDER BY si.orderIndex ASC")
     List<ScheduleItem> findAllByScheduleIdOrderByOrderIndexAsc(@Param("scheduleId") Integer scheduleId);

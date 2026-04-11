@@ -22,7 +22,7 @@ import org.mapstruct.Mapping;
 import org.mapstruct.Mappings;
 import org.mapstruct.Named;
 
-@Mapper(uses = {RaceMapper.class, LevelMapper.class})
+@Mapper
 public interface ScheduleMapper {
 
     @Named("mapSectionsWithItems")
@@ -103,12 +103,10 @@ public interface ScheduleMapper {
 
     ScheduleSectionDto toDto(ScheduleSection paramScheduleSection);
 
-    @Mappings({@Mapping(target = "calculatedStartTime", ignore = true), @Mapping(target = "race", source = "race"),
-        @Mapping(target = "level", source = "level"), @Mapping(target = "section", source = "section")})
+    @Mappings({@Mapping(target = "calculatedStartTime", ignore = true), @Mapping(target = "section", source = "section")})
     ScheduleItemWithRaceAndSectionDto toScheduleItemWithRaceAndSectionDto(ScheduleItem paramScheduleItem);
 
-    @Mappings({@Mapping(target = "calculatedStartTime", ignore = true), @Mapping(target = "race", source = "race"),
-        @Mapping(target = "level", source = "level")})
+    @Mapping(target = "calculatedStartTime", ignore = true)
     ScheduleItemWithRaceDto toScheduleItemWithRaceDto(ScheduleItem paramScheduleItem);
 
     @Mapping(target = "sections", source = "sections", qualifiedByName = {"mapSectionsWithItems"})
@@ -126,8 +124,11 @@ public interface ScheduleMapper {
     ScheduleSection toScheduleSection(CreateScheduleSectionDataDto paramCreateScheduleSectionDataDto, Integer scheduleId);
 
     @Mappings({@Mapping(target = "id", ignore = true), @Mapping(target = "createdAt", ignore = true),
-        @Mapping(target = "schedule", ignore = true), @Mapping(target = "section", ignore = true), @Mapping(target = "race", ignore = true),
-        @Mapping(target = "level", ignore = true)})
+        @Mapping(target = "schedule", ignore = true), @Mapping(target = "section", ignore = true),
+        @Mapping(target = "raceName", ignore = true), @Mapping(target = "raceDiscipline", ignore = true),
+        @Mapping(target = "raceBoatClassName", ignore = true), @Mapping(target = "raceGender", ignore = true),
+        @Mapping(target = "raceDistance", ignore = true), @Mapping(target = "raceAgeGroupsDisplay", ignore = true),
+        @Mapping(target = "levelName", ignore = true), @Mapping(target = "levelType", ignore = true)})
     ScheduleItem toScheduleItem(CreateScheduleItemDataDto paramCreateScheduleItemDataDto, Integer scheduleId, Integer sectionId);
 
 }

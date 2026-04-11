@@ -67,9 +67,6 @@ public class Race {
     private List<RaceAgeGroup> ageGroups = new ArrayList<>();
 
     @OneToMany(mappedBy = "race", fetch = FetchType.LAZY)
-    private List<ScheduleItem> scheduleItems = new ArrayList<>();
-
-    @OneToMany(mappedBy = "race", fetch = FetchType.LAZY)
     private List<RaceCompetitorAssociation> raceCompetitorAssociations = new ArrayList<>();
 
     public Race() {

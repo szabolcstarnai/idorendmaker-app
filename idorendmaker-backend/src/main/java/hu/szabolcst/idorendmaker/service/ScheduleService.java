@@ -42,8 +42,9 @@ public interface ScheduleService {
      * Equivalent to TypeScript: createScheduleItem(...)
      * Equivalent to IPC: 'db:createScheduleItem'
      */
-    Integer createScheduleItem(Integer scheduleId, Integer sectionId, Integer raceId, 
-                              Integer levelId, Integer orderIndex, Integer intervalMinutes, String notes);
+    Integer createScheduleItem(Integer scheduleId, Integer sectionId,
+                               String raceCode, String levelCode,
+                               Integer orderIndex, Integer intervalMinutes, String notes);
 
     /**
      * Save schedule with sections and items (transaction)

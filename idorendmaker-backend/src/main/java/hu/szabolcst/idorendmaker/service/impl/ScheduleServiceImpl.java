@@ -17,6 +17,7 @@ import hu.szabolcst.idorendmaker.repository.PDFExtractionRepository;
 import hu.szabolcst.idorendmaker.repository.ScheduleItemRepository;
 import hu.szabolcst.idorendmaker.repository.ScheduleRepository;
 import hu.szabolcst.idorendmaker.repository.ScheduleSectionRepository;
+import hu.szabolcst.idorendmaker.service.ScheduleItemSnapshotPopulator;
 import hu.szabolcst.idorendmaker.service.ScheduleService;
 import hu.szabolcst.idorendmaker.utils.ScheduleTimeCalculator;
 import java.time.LocalDateTime;
@@ -39,6 +40,7 @@ public class ScheduleServiceImpl implements ScheduleService {
     private final ScheduleItemRepository scheduleItemRepository;
     private final PDFExtractionRepository pdfExtractionRepository;
     private final ScheduleMapper scheduleMapper;
+    private final ScheduleItemSnapshotPopulator scheduleItemSnapshotPopulator;
 
     @Override
     @Transactional
@@ -104,24 +106,23 @@ public class ScheduleServiceImpl implements ScheduleService {
 
     @Override
     @Transactional
-    public Integer createScheduleItem(final Integer scheduleId, final Integer sectionId, final Integer raceId,
-                                     final Integer levelId, final Integer orderIndex, final Integer intervalMinutes, final String notes) {
-        log.debug("Creating schedule item for schedule {} in section {} with race {} and level {}", 
-                 scheduleId, sectionId, raceId, levelId);
-                 
+    public Integer createScheduleItem(final Integer scheduleId, final Integer sectionId, final String raceCode,
+                                     final String levelCode, final Integer orderIndex, final Integer intervalMinutes, final String notes) {
+        log.debug("Creating schedule item for schedule {} in section {} with race {} and level {}",
+                 scheduleId, sectionId, raceCode, levelCode);
+
         final ScheduleItem item = new ScheduleItem();
         item.setScheduleId(scheduleId);
         item.setSectionId(sectionId);
-        item.setRaceId(raceId);
-        item.setLevelId(levelId);
         item.setOrderIndex(orderIndex);
         item.setIntervalMinutes(intervalMinutes != null ? intervalMinutes : 0);
         item.setNotes(notes);
+        scheduleItemSnapshotPopulator.populate(item, raceCode, levelCode);
         // createdAt is set automatically by @PrePersist
-        
+
         final ScheduleItem saved = scheduleItemRepository.save(item);
         log.info("Created schedule item with id: {}", saved.getId());
-        
+
         return saved.getId();
     }
 
@@ -165,16 +166,15 @@ public class ScheduleServiceImpl implements ScheduleService {
                     final ScheduleItem item = new ScheduleItem();
                     item.setScheduleId(savedSchedule.getId());
                     item.setSectionId(savedSection.getId());
-                    item.setRaceId(itemData.getRaceId());
-                    item.setLevelId(itemData.getLevelId());
                     item.setOrderIndex(itemData.getOrderIndex());
                     item.setIntervalMinutes(itemData.getIntervalMinutes());
                     item.setNotes(itemData.getNotes());
+                    scheduleItemSnapshotPopulator.populate(item, itemData.getRaceCode(), itemData.getLevelCode());
                     scheduleItemRepository.save(item);
                 }
             }
         }
-        
+
         log.info("Saved schedule {} with {} sections", savedSchedule.getId(), sectionsData.size());
         return savedSchedule.getId();
     }
@@ -228,16 +228,15 @@ public class ScheduleServiceImpl implements ScheduleService {
                     final ScheduleItem item = new ScheduleItem();
                     item.setScheduleId(scheduleId);
                     item.setSectionId(savedSection.getId());
-                    item.setRaceId(itemData.getRaceId());
-                    item.setLevelId(itemData.getLevelId());
                     item.setOrderIndex(itemData.getOrderIndex());
                     item.setIntervalMinutes(itemData.getIntervalMinutes());
                     item.setNotes(itemData.getNotes());
+                    scheduleItemSnapshotPopulator.populate(item, itemData.getRaceCode(), itemData.getLevelCode());
                     scheduleItemRepository.save(item);
                 }
             }
         }
-        
+
         log.info("Updated schedule {} with {} sections", scheduleId, sectionsData.size());
         return scheduleId;
     }
@@ -441,9 +440,9 @@ public class ScheduleServiceImpl implements ScheduleService {
         final List<ScheduleItem> allItems = scheduleItemRepository.findAllByScheduleIdOrderByOrderIndexAsc(scheduleId);
         final int totalRaces = allItems.size();
 
-        // Calculate unique race types (distinct race IDs)
+        // Calculate unique race types (distinct race codes)
         final long uniqueRaceTypes = allItems.stream()
-                .mapToInt(ScheduleItem::getRaceId)
+                .map(ScheduleItem::getRaceCode)
                 .distinct()
                 .count();
 

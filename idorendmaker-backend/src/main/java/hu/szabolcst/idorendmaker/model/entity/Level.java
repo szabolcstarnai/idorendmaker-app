@@ -2,15 +2,11 @@ package hu.szabolcst.idorendmaker.model.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -38,9 +34,6 @@ public class Level {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
-
-    @OneToMany(mappedBy = "level", fetch = FetchType.LAZY)
-    private List<ScheduleItem> scheduleItems = new ArrayList<>();
 
     public Level() {
         this.createdAt = LocalDateTime.now();

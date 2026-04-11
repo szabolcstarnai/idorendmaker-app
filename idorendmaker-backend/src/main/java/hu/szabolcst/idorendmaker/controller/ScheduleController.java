@@ -93,7 +93,7 @@ public class ScheduleController {
         log.debug("POST /api/schedules/{}/sections/{}/items - Creating schedule item", id, sectionId);
         
         final Integer itemId = scheduleService.createScheduleItem(
-                id, sectionId, request.getRaceId(), request.getLevelId(),
+                id, sectionId, request.getRaceCode(), request.getLevelCode(),
                 request.getOrderIndex(), request.getIntervalMinutes(), request.getNotes());
         
         log.info("Created schedule item with id: {}", itemId);
@@ -276,8 +276,8 @@ public class ScheduleController {
     @Data
     public static class CreateScheduleItemRequest {
 
-        private Integer raceId;
-        private Integer levelId;
+        private String raceCode;
+        private String levelCode;
         private Integer orderIndex;
         private Integer intervalMinutes;
         private String notes;

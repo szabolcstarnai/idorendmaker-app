@@ -5,8 +5,8 @@ import lombok.Data;
 @Data
 public class CreateScheduleItemDataDto {
 
-    private Integer raceId;
-    private Integer levelId;
+    private String raceCode;
+    private String levelCode;
     private Integer orderIndex;
     private Integer intervalMinutes;
     private String notes;
