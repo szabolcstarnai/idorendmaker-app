@@ -45,8 +45,11 @@ public class ScheduleItemSnapshotPopulator {
 
         log.debug("Populating snapshot for ScheduleItem with raceCode={} levelCode={}", raceCode, levelCode);
 
+        // Treat blank levelCode as absent so callers don't have to normalize.
+        final String normalizedLevelCode = (levelCode == null || levelCode.isBlank()) ? null : levelCode;
+
         item.setRaceCode(raceCode);
-        item.setLevelCode(levelCode);
+        item.setLevelCode(normalizedLevelCode);
 
         final Race race = raceRepository.findById(raceCode)
             .orElseThrow(() -> new IllegalArgumentException("Unknown race code: " + raceCode));
@@ -80,9 +83,9 @@ public class ScheduleItemSnapshotPopulator {
             item.setRaceAgeGroupsDisplay(joined.isEmpty() ? null : joined);
         }
 
-        if (levelCode != null) {
-            final Level level = levelRepository.findById(levelCode)
-                .orElseThrow(() -> new IllegalArgumentException("Unknown level code: " + levelCode));
+        if (normalizedLevelCode != null) {
+            final Level level = levelRepository.findById(normalizedLevelCode)
+                .orElseThrow(() -> new IllegalArgumentException("Unknown level code: " + normalizedLevelCode));
             item.setLevelName(level.getName());
             item.setLevelType(level.getLevelType());
         } else {
