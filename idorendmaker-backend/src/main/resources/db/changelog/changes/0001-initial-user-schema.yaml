@@ -1,0 +1,490 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0001-initial-user-schema
+      author: idorendmaker
+      comment: >-
+        Initial user.db schema. Creates all 10 user tables from scratch. No
+        catalog tables (races/boat_classes/age_groups/levels live in
+        catalog.db and MUST NOT be created here). Race and level references
+        are stored as stable string catalog codes with snapshot columns on
+        schedule_items for display stability.
+      changes:
+        # ------------------------------------------------------------------
+        # 1. schedules
+        # ------------------------------------------------------------------
+        - createTable:
+            tableName: schedules
+            columns:
+              - column:
+                  name: id
+                  type: INTEGER
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: pdf_extraction_id
+                  type: INTEGER
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+
+        # ------------------------------------------------------------------
+        # 2. schedule_sections
+        # ------------------------------------------------------------------
+        - createTable:
+            tableName: schedule_sections
+            columns:
+              - column:
+                  name: id
+                  type: INTEGER
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: schedule_id
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_schedule_sections_schedule
+                    references: schedules(id)
+              - column:
+                  name: section_type
+                  type: VARCHAR(64)
+              - column:
+                  name: start_time
+                  type: VARCHAR(32)
+              - column:
+                  name: day_number
+                  type: INTEGER
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+        - createIndex:
+            indexName: idx_schedule_sections_schedule_id
+            tableName: schedule_sections
+            columns:
+              - column:
+                  name: schedule_id
+
+        # ------------------------------------------------------------------
+        # 3. pdf_extractions
+        # ------------------------------------------------------------------
+        - createTable:
+            tableName: pdf_extractions
+            columns:
+              - column:
+                  name: id
+                  type: INTEGER
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: filename
+                  type: VARCHAR(512)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: file_hash
+                  type: VARCHAR(128)
+              - column:
+                  name: total_races
+                  type: INTEGER
+              - column:
+                  name: total_competitors
+                  type: INTEGER
+              - column:
+                  name: total_entries
+                  type: INTEGER
+              - column:
+                  name: extraction_status
+                  type: VARCHAR(32)
+                  defaultValue: session
+              - column:
+                  name: status
+                  type: VARCHAR(32)
+                  defaultValue: session
+              - column:
+                  name: linked_at
+                  type: TIMESTAMP
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+              - column:
+                  name: expires_at
+                  type: TIMESTAMP
+
+        # ------------------------------------------------------------------
+        # 4. schedule_items  (MODIFIED: no race_id/level_id, string codes + snapshot)
+        # ------------------------------------------------------------------
+        - createTable:
+            tableName: schedule_items
+            columns:
+              - column:
+                  name: id
+                  type: INTEGER
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: schedule_id
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_schedule_items_schedule
+                    references: schedules(id)
+              - column:
+                  name: section_id
+                  type: INTEGER
+                  constraints:
+                    foreignKeyName: fk_schedule_items_section
+                    references: schedule_sections(id)
+              - column:
+                  name: race_code
+                  type: VARCHAR(128)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: level_code
+                  type: VARCHAR(64)
+              - column:
+                  name: race_name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: race_discipline
+                  type: VARCHAR(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: race_boat_class_name
+                  type: VARCHAR(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: race_gender
+                  type: VARCHAR(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: race_distance
+                  type: VARCHAR(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: race_age_groups_display
+                  type: VARCHAR(255)
+              - column:
+                  name: level_name
+                  type: VARCHAR(64)
+              - column:
+                  name: level_type
+                  type: VARCHAR(32)
+              - column:
+                  name: order_index
+                  type: INTEGER
+              - column:
+                  name: interval_minutes
+                  type: INTEGER
+              - column:
+                  name: notes
+                  type: VARCHAR(1024)
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+        - createIndex:
+            indexName: idx_schedule_items_schedule_id
+            tableName: schedule_items
+            columns:
+              - column:
+                  name: schedule_id
+        - createIndex:
+            indexName: idx_schedule_items_section_id
+            tableName: schedule_items
+            columns:
+              - column:
+                  name: section_id
+        - createIndex:
+            indexName: idx_schedule_items_order_index
+            tableName: schedule_items
+            columns:
+              - column:
+                  name: order_index
+        - createIndex:
+            indexName: idx_schedule_items_race_code
+            tableName: schedule_items
+            columns:
+              - column:
+                  name: race_code
+        - createIndex:
+            indexName: idx_schedule_items_race_level
+            tableName: schedule_items
+            columns:
+              - column:
+                  name: race_code
+              - column:
+                  name: level_code
+
+        # ------------------------------------------------------------------
+        # 5. rules
+        # ------------------------------------------------------------------
+        - createTable:
+            tableName: rules
+            columns:
+              - column:
+                  name: id
+                  type: INTEGER
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: VARCHAR(1024)
+              - column:
+                  name: min_interval_minutes
+                  type: INTEGER
+              - column:
+                  name: is_active
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+
+        # ------------------------------------------------------------------
+        # 6. rule_conditions
+        # ------------------------------------------------------------------
+        - createTable:
+            tableName: rule_conditions
+            columns:
+              - column:
+                  name: id
+                  type: INTEGER
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: rule_id
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_rule_conditions_rule
+                    references: rules(id)
+              - column:
+                  name: condition_set
+                  type: VARCHAR(64)
+              - column:
+                  name: field
+                  type: VARCHAR(64)
+              - column:
+                  name: operator
+                  type: VARCHAR(32)
+              - column:
+                  name: value
+                  type: VARCHAR(255)
+        - createIndex:
+            indexName: idx_rule_conditions_rule_id
+            tableName: rule_conditions
+            columns:
+              - column:
+                  name: rule_id
+
+        # ------------------------------------------------------------------
+        # 7. rule_matchings
+        # ------------------------------------------------------------------
+        - createTable:
+            tableName: rule_matchings
+            columns:
+              - column:
+                  name: id
+                  type: INTEGER
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: rule_id
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_rule_matchings_rule
+                    references: rules(id)
+              - column:
+                  name: field
+                  type: VARCHAR(64)
+        - createIndex:
+            indexName: idx_rule_matchings_rule_id
+            tableName: rule_matchings
+            columns:
+              - column:
+                  name: rule_id
+
+        # ------------------------------------------------------------------
+        # 8. dismissed_rule_violations
+        # ------------------------------------------------------------------
+        - createTable:
+            tableName: dismissed_rule_violations
+            columns:
+              - column:
+                  name: id
+                  type: INTEGER
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: schedule_id
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_dismissed_rule_violations_schedule
+                    references: schedules(id)
+              - column:
+                  name: violation_hash
+                  type: VARCHAR(128)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: dismissed_at
+                  type: TIMESTAMP
+        - createIndex:
+            indexName: idx_dismissed_rule_violations_schedule_id
+            tableName: dismissed_rule_violations
+            columns:
+              - column:
+                  name: schedule_id
+
+        # ------------------------------------------------------------------
+        # 9. competitor_entries
+        # ------------------------------------------------------------------
+        - createTable:
+            tableName: competitor_entries
+            columns:
+              - column:
+                  name: id
+                  type: INTEGER
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: pdf_extraction_id
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_competitor_entries_pdf_extraction
+                    references: pdf_extractions(id)
+              - column:
+                  name: competitor_id
+                  type: VARCHAR(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: competitor_name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: organization
+                  type: VARCHAR(255)
+              - column:
+                  name: birth_year
+                  type: INTEGER
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+        - createIndex:
+            indexName: idx_competitor_entries_pdf_extraction_id
+            tableName: competitor_entries
+            columns:
+              - column:
+                  name: pdf_extraction_id
+        - createIndex:
+            indexName: idx_competitor_entries_competitor_id
+            tableName: competitor_entries
+            columns:
+              - column:
+                  name: competitor_id
+
+        # ------------------------------------------------------------------
+        # 10. race_competitor_associations  (MODIFIED: race_id -> race_code)
+        # ------------------------------------------------------------------
+        - createTable:
+            tableName: race_competitor_associations
+            columns:
+              - column:
+                  name: id
+                  type: INTEGER
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: pdf_extraction_id
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_race_competitor_associations_pdf_extraction
+                    references: pdf_extractions(id)
+              - column:
+                  name: race_code
+                  type: VARCHAR(128)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: competitor_id
+                  type: VARCHAR(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: pdf_race_name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: match_confidence
+                  type: FLOAT
+                  defaultValueNumeric: 1.0
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+        - createIndex:
+            indexName: idx_race_competitor_associations_pdf_extraction_id
+            tableName: race_competitor_associations
+            columns:
+              - column:
+                  name: pdf_extraction_id
+        - createIndex:
+            indexName: idx_race_competitor_associations_race_code
+            tableName: race_competitor_associations
+            columns:
+              - column:
+                  name: race_code
+        - createIndex:
+            indexName: idx_race_competitor_associations_competitor_id
+            tableName: race_competitor_associations
+            columns:
+              - column:
+                  name: competitor_id
