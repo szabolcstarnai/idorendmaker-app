@@ -13,6 +13,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+import org.springframework.orm.jpa.persistenceunit.PersistenceUnitPostProcessor;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.transaction.PlatformTransactionManager;
 
@@ -62,8 +63,14 @@ public class UserDataSourceConfig {
         final LocalContainerEntityManagerFactoryBean emf = new LocalContainerEntityManagerFactoryBean();
         emf.setDataSource(userDataSource());
         emf.setPersistenceUnitName("user");
-        // Phase 1: still scan the flat entity package. Phase 3 narrows to `.user`.
+        // Scan the flat entity package recursively, then strip out anything under
+        // the `.catalog` subpackage so the new catalog entities bind only to the
+        // catalog EMF. This allows both EMFs to coexist during the migration.
         emf.setPackagesToScan("hu.szabolcst.idorendmaker.model.entity");
+        emf.setPersistenceUnitPostProcessors((PersistenceUnitPostProcessor) pui -> {
+            final String catalogPrefix = "hu.szabolcst.idorendmaker.model.entity.catalog.";
+            pui.getManagedClassNames().removeIf(className -> className.startsWith(catalogPrefix));
+        });
 
         final HibernateJpaVendorAdapter vendorAdapter = new HibernateJpaVendorAdapter();
         vendorAdapter.setDatabasePlatform("org.hibernate.community.dialect.SQLiteDialect");
