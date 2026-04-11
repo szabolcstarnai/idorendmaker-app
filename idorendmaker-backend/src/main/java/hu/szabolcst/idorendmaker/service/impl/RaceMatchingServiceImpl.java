@@ -132,11 +132,9 @@ public class RaceMatchingServiceImpl implements RaceMatchingService {
     public List<RaceWithCompetitorDataDto> getFilteredRaces(final Integer pdfExtractionId) {
         try {
             // Get races that have competitor associations from this PDF extraction
+            // (with transient competitor entries populated for downstream getCompetitorEntry() reads).
             final List<RaceCompetitorAssociation> raceAssociations = raceCompetitorAssociationRepository
-                .findAllByPdfExtractionId(pdfExtractionId);
-
-            // Enrich transient competitor entries so getCompetitorEntry() is non-null below.
-            enrichAssociationsInPlace(raceAssociations, pdfExtractionId);
+                .findAllByPdfExtractionIdWithCompetitor(pdfExtractionId);
 
             // Group by race code to aggregate competitor data
             final Map<String, List<RaceCompetitorAssociation>> raceMap = raceAssociations.stream()
@@ -566,11 +564,9 @@ public class RaceMatchingServiceImpl implements RaceMatchingService {
     private List<ExtractedRaceDto> loadExistingExtractionData(final Integer pdfExtractionId) {
         try {
             // Get all race associations for this extraction
+            // (with transient competitor entries populated for name/org/birth-year access).
             final List<RaceCompetitorAssociation> associations = raceCompetitorAssociationRepository
-                .findAllByPdfExtractionId(pdfExtractionId);
-
-            // Enrich so assoc.getCompetitorEntry() is populated for name/org/birth-year access.
-            enrichAssociationsInPlace(associations, pdfExtractionId);
+                .findAllByPdfExtractionIdWithCompetitor(pdfExtractionId);
 
             // Group by race code to rebuild the extracted races structure
             final Map<String, List<RaceCompetitorAssociation>> raceMap = associations.stream()
@@ -623,28 +619,4 @@ public class RaceMatchingServiceImpl implements RaceMatchingService {
         }
     }
 
-    /**
-     * Populates the transient {@code competitorEntry} on each given
-     * association by fetching competitor entries for the PDF extraction.
-     * Existing non-null values are left alone.
-     */
-    private void enrichAssociationsInPlace(
-            final List<RaceCompetitorAssociation> associations,
-            final Integer pdfExtractionId) {
-        if (associations == null || associations.isEmpty()) {
-            return;
-        }
-        final List<CompetitorEntry> entries = competitorEntryRepository.findAllByPdfExtractionId(pdfExtractionId);
-        final Map<String, CompetitorEntry> byCompetitorId = new HashMap<>();
-        for (final CompetitorEntry ce : entries) {
-            if (ce.getCompetitorId() != null) {
-                byCompetitorId.put(ce.getCompetitorId(), ce);
-            }
-        }
-        for (final RaceCompetitorAssociation rca : associations) {
-            if (rca.getCompetitorEntry() == null) {
-                rca.setCompetitorEntry(byCompetitorId.get(rca.getCompetitorId()));
-            }
-        }
-    }
 }

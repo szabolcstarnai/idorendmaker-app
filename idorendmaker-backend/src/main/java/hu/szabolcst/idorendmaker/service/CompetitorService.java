@@ -21,9 +21,12 @@ public interface CompetitorService {
      * Equivalent to TypeScript: analyzeCompetitorSchedules(scheduleRaces, pdfExtractionId?)
      * Equivalent to IPC: 'competitor:analyzeSchedules'
      *
-     * <p>Implements sophisticated "worst case scenario" logic for multiple heats:
-     * groups by (raceCode, levelType), for each group with multiple heats assumes
-     * the competitor is in the heat that creates worst scheduling conflict.
+     * <p>For each competitor, includes every race they appear in and computes
+     * gaps between chronologically consecutive races that differ by
+     * (raceCode, levelType). Gaps between repeated heats of the same
+     * race-leveltype pair (e.g. Előfutam I vs. Előfutam II of the same race)
+     * are skipped. Recovery time below configured thresholds classifies the
+     * pair as {@code warning} or {@code critical}.
      */
     List<CompetitorScheduleDto> analyzeCompetitorSchedules(List<ScheduleRaceDto> scheduleRaces, Integer pdfExtractionId);
 

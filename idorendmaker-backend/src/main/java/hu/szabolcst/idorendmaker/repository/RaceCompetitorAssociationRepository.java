@@ -19,6 +19,12 @@ public interface RaceCompetitorAssociationRepository extends JpaRepository<RaceC
 
     List<RaceCompetitorAssociation> findAllByPdfExtractionId(Integer pdfExtractionId);
 
+    default List<RaceCompetitorAssociation> findAllByPdfExtractionIdWithCompetitor(final Integer pdfExtractionId) {
+        final List<RaceCompetitorAssociation> associations = findAllByPdfExtractionId(pdfExtractionId);
+        enrichWithCompetitorEntries(associations, pdfExtractionId);
+        return associations;
+    }
+
     @Query("SELECT rca FROM RaceCompetitorAssociation rca "
         + "WHERE rca.pdfExtractionId = :pdfExtractionId AND rca.raceCode = :raceCode "
         + "ORDER BY rca.id")

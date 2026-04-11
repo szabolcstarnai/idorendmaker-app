@@ -11,8 +11,6 @@ import hu.szabolcst.idorendmaker.repository.catalog.RaceRepository;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -57,23 +55,22 @@ public class RaceCatalogLookupService {
     }
 
     /**
-     * Bulk load races by code. Returns a map keyed by race code. Missing
-     * codes are absent from the returned map.
+     * Bulk load races by code in a single {@code IN (...)} query. Returns a
+     * map keyed by race code. Missing codes are absent from the returned map.
      */
     @Transactional(readOnly = true, transactionManager = "catalogTransactionManager")
     public Map<String, Race> findRacesByCodes(final Collection<String> raceCodes) {
         if (raceCodes == null || raceCodes.isEmpty()) {
             return Collections.emptyMap();
         }
-        final Set<String> distinct = new HashSet<>(raceCodes);
-        final Map<String, Race> result = new HashMap<>();
-        for (final String code : distinct) {
-            if (code == null) {
-                continue;
-            }
-            raceRepository.findById(code).ifPresent(r -> result.put(code, r));
+        final Set<String> distinct = raceCodes.stream()
+            .filter(c -> c != null)
+            .collect(Collectors.toSet());
+        if (distinct.isEmpty()) {
+            return Collections.emptyMap();
         }
-        return result;
+        return raceRepository.findAllByCodeIn(distinct).stream()
+            .collect(Collectors.toMap(Race::getCode, r -> r, (a, b) -> a));
     }
 
     /**

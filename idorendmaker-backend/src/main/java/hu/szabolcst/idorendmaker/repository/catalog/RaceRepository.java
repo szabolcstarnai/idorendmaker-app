@@ -18,6 +18,8 @@ public interface RaceRepository extends Repository<Race, String> {
 
     List<Race> findAllByBoatClassCode(String boatClassCode);
 
+    List<Race> findAllByCodeIn(java.util.Collection<String> codes);
+
     /**
      * All races, ordered deterministically. The legacy query ordered by
      * {@code occurrence DESC, name ASC}; the new catalog Race has no

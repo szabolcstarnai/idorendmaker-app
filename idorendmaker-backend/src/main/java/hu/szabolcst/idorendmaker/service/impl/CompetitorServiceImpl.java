@@ -158,12 +158,17 @@ public class CompetitorServiceImpl implements CompetitorService {
 			final List<RaceCompetitorAssociation> associations = raceCompetitorAssociationRepository
 					.findByPdfExtractionIdAndRaceCodeWithCompetitor(pdfExtractionId, raceCode);
 
-			final List<String> topCompetitors = associations.stream()
+			// Orphaned associations (competitor row deleted) have a null transient entry; skip them.
+			final List<RaceCompetitorAssociation> withCompetitor = associations.stream()
+					.filter(assoc -> assoc.getCompetitorEntry() != null)
+					.toList();
+
+			final List<String> topCompetitors = withCompetitor.stream()
 					.limit(3)
 					.map(assoc -> assoc.getCompetitorEntry().getCompetitorName())
 					.toList();
 
-			final List<String> organizations = associations.stream()
+			final List<String> organizations = withCompetitor.stream()
 					.map(assoc -> assoc.getCompetitorEntry().getOrganization())
 					.filter(Objects::nonNull)
 					.distinct()
@@ -206,12 +211,17 @@ public class CompetitorServiceImpl implements CompetitorService {
 			for (final String raceCode : raceCodes) {
 				final List<RaceCompetitorAssociation> associations = associationsByRace.getOrDefault(raceCode, List.of());
 
-				final List<String> topCompetitors = associations.stream()
+				// Orphaned associations (competitor row deleted) have a null transient entry; skip them.
+				final List<RaceCompetitorAssociation> withCompetitor = associations.stream()
+						.filter(assoc -> assoc.getCompetitorEntry() != null)
+						.toList();
+
+				final List<String> topCompetitors = withCompetitor.stream()
 						.limit(3)
 						.map(assoc -> assoc.getCompetitorEntry().getCompetitorName())
 						.toList();
 
-				final List<String> organizations = associations.stream()
+				final List<String> organizations = withCompetitor.stream()
 						.map(assoc -> assoc.getCompetitorEntry().getOrganization())
 						.filter(Objects::nonNull)
 						.distinct()
@@ -277,23 +287,6 @@ public class CompetitorServiceImpl implements CompetitorService {
 	}
 
 	// Helper methods
-
-	/**
-	 * Group ScheduleRaces by race and level type to handle multiple heats
-	 * NOTE: This method is now unused in the new algorithm but kept for potential future use
-	 */
-	@SuppressWarnings("unused")
-	private Map<String, List<ScheduleRaceDto>> groupScheduleRacesByRaceAndLevel(
-			final List<ScheduleRaceDto> scheduleRaces) {
-		final Map<String, List<ScheduleRaceDto>> groups = new HashMap<>();
-
-		for (final ScheduleRaceDto scheduleRace : scheduleRaces) {
-			final String key = scheduleRace.getRaceCode() + "-" + scheduleRace.getLevelType();
-			groups.computeIfAbsent(key, k -> new ArrayList<>()).add(scheduleRace);
-		}
-
-		return groups;
-	}
 
 	/**
 	 * Analyze gaps between all meaningful race pairs for a competitor
@@ -394,32 +387,6 @@ public class CompetitorServiceImpl implements CompetitorService {
 		final String race1Key = race1.getRaceCode() + "-" + race1.getLevelType();
 		final String race2Key = race2.getRaceCode() + "-" + race2.getLevelType();
 		return !race1Key.equals(race2Key);
-	}
-
-	/**
-	 * Find the closest race before the given race
-	 * NOTE: This method is now unused in the new algorithm but kept for potential future use
-	 */
-	@SuppressWarnings("unused")
-	private ScheduleRaceDto findClosestRaceBefore(final ScheduleRaceDto targetRace,
-			final List<ScheduleRaceDto> otherRaces) {
-		return otherRaces.stream()
-				.filter(race -> race.getStartTime().compareTo(targetRace.getStartTime()) < 0)
-				.max(Comparator.comparing(ScheduleRaceDto::getStartTime))
-				.orElse(null);
-	}
-
-	/**
-	 * Find the closest race after the given race
-	 * NOTE: This method is now unused in the new algorithm but kept for potential future use
-	 */
-	@SuppressWarnings("unused")
-	private ScheduleRaceDto findClosestRaceAfter(final ScheduleRaceDto targetRace,
-			final List<ScheduleRaceDto> otherRaces) {
-		return otherRaces.stream()
-				.filter(race -> race.getStartTime().compareTo(targetRace.getStartTime()) > 0)
-				.min(Comparator.comparing(ScheduleRaceDto::getStartTime))
-				.orElse(null);
 	}
 
 	/**
