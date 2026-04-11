@@ -5,8 +5,10 @@ import hu.szabolcst.idorendmaker.model.dto.race.RaceWithAgeGroupsAndBoatClassDto
 import hu.szabolcst.idorendmaker.model.entity.catalog.AgeGroup;
 import hu.szabolcst.idorendmaker.model.entity.catalog.Race;
 import hu.szabolcst.idorendmaker.model.entity.catalog.RaceAgeGroup;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -44,17 +46,13 @@ public interface RaceMapper {
 
     AgeGroupDto toAgeGroupDto(AgeGroup paramAgeGroup);
 
-    default List<AgeGroupDto> toAgeGroupDtoList(final List<AgeGroup> ageGroups) {
-        if (ageGroups == null) {
-            return null;
-        }
-        return ageGroups.stream().map(this::toAgeGroupDto).toList();
-    }
-
     /**
      * Stitch a race DTO together with its age groups, resolved via the
      * supplied {@code ageGroupsByCode} lookup map. Unknown age-group codes
-     * are skipped silently.
+     * are skipped silently. Resolved age groups are sorted by
+     * {@code sortOrder ASC NULLS LAST, name ASC} so the DTO output is
+     * deterministic regardless of the order the {@code raceAgeGroups}
+     * join-table list arrives in.
      */
     default RaceWithAgeGroupsAndBoatClassDto toRaceWithAgeGroupsDto(
             final Race paramRace,
@@ -71,7 +69,10 @@ public interface RaceMapper {
         dto.setAgeGroups(
             raceAgeGroups.stream()
                 .map(rag -> ageGroupsByCode.get(rag.getAgeGroupCode()))
-                .filter(ag -> ag != null)
+                .filter(Objects::nonNull)
+                .sorted(Comparator
+                    .comparing(AgeGroup::getSortOrder, Comparator.nullsLast(Comparator.naturalOrder()))
+                    .thenComparing(AgeGroup::getName, Comparator.nullsLast(Comparator.naturalOrder())))
                 .map(this::toAgeGroupDto)
                 .toList()
         );
@@ -88,6 +89,7 @@ public interface RaceMapper {
     // depend on these methods will be rewritten in Phase 4b.
     // ------------------------------------------------------------------
 
+    // TODO(Phase 4b): delete this legacy overload together with ScheduleMapper/RaceMatchingMapper rewrites.
     @Named("mapRaceAgeGroups")
     default List<AgeGroupDto> mapRaceAgeGroupsToAgeGroupDtos(
             final List<hu.szabolcst.idorendmaker.model.entity.RaceAgeGroup> raceAgeGroups) {
@@ -99,6 +101,7 @@ public interface RaceMapper {
             .toList();
     }
 
+    // TODO(Phase 4b): delete this legacy overload together with ScheduleMapper/RaceMatchingMapper rewrites.
     @Mapping(target = "ageGroups", source = "ageGroups", qualifiedByName = {"mapRaceAgeGroups"})
     @Mapping(target = "code", ignore = true)
     @Mapping(target = "boatClassCode", ignore = true)
@@ -106,6 +109,7 @@ public interface RaceMapper {
     RaceWithAgeGroupsAndBoatClassDto toRaceWithAgeGroupsDto(
         hu.szabolcst.idorendmaker.model.entity.Race paramRace);
 
+    // TODO(Phase 4b): delete this legacy overload together with ScheduleMapper/RaceMatchingMapper rewrites.
     @Mapping(target = "code", ignore = true)
     @Mapping(target = "sortOrder", ignore = true)
     AgeGroupDto toAgeGroupDto(hu.szabolcst.idorendmaker.model.entity.AgeGroup paramAgeGroup);

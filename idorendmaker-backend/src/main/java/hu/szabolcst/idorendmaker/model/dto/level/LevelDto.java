@@ -15,6 +15,7 @@ public class LevelDto {
      *
      * @deprecated will be removed in Phase 4b.
      */
+    // TODO(Phase 4b): remove this deprecated Integer id field once user services use string codes.
     @Deprecated
     private Integer id;
     private String name;

@@ -23,6 +23,7 @@ public interface LevelMapper {
     @Mapping(target = "id", ignore = true)
     LevelDto toDto(Level paramLevel);
 
+    // TODO(Phase 4b): delete this legacy overload together with the ScheduleMapper rewrite.
     @Mapping(target = "code", ignore = true)
     LevelDto toDto(hu.szabolcst.idorendmaker.model.entity.Level paramLevel);
 }
