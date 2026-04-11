@@ -7,29 +7,22 @@ import java.util.Optional;
 public interface LevelService {
 
 	/**
-	 * Get all levels ordered by sort order
-	 * Equivalent to TypeScript: getAllLevels(): Promise<Level[]>
+	 * Get all levels ordered by sort order.
 	 */
 	List<LevelDto> getAllLevels();
 
 	/**
-	 * Get the default level (Döntő I.)
-	 * Equivalent to TypeScript: getDefaultLevel(): Promise<Level>
-	 * Throws exception if default level not found
+	 * Get the default level (Döntő I.).
 	 */
 	LevelDto getDefaultLevel();
 
 	/**
-	 * Get level by ID
-	 * Equivalent to TypeScript: getLevelById(id: number): Promise<Level | null>
-	 * TODO: DEAD CODE - Not exposed via IPC, consider removal
+	 * Get level by catalog {@code code}.
 	 */
-	Optional<LevelDto> getLevelById(Integer id);
+	Optional<LevelDto> getLevelByCode(String code);
 
 	/**
-	 * Get levels by type
-	 * Equivalent to TypeScript: getLevelsByType(levelType: string): Promise<Level[]>
-	 * TODO: DEAD CODE - Not exposed via IPC, consider removal
+	 * Get levels by type.
 	 */
 	List<LevelDto> getLevelsByType(String levelType);
 

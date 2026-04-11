@@ -2,7 +2,7 @@ package hu.szabolcst.idorendmaker.service.impl;
 
 import hu.szabolcst.idorendmaker.mapper.BoatClassMapper;
 import hu.szabolcst.idorendmaker.model.dto.boatclass.BoatClassDto;
-import hu.szabolcst.idorendmaker.repository.BoatClassRepository;
+import hu.szabolcst.idorendmaker.repository.catalog.BoatClassRepository;
 import hu.szabolcst.idorendmaker.service.BoatClassService;
 import java.util.List;
 import java.util.Optional;
@@ -18,7 +18,7 @@ public class BoatClassServiceImpl implements BoatClassService {
     private final BoatClassMapper boatClassMapper;
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true, transactionManager = "catalogTransactionManager")
     public List<BoatClassDto> getAllBoatClasses() {
         return boatClassRepository.findAllByOrderByNameAsc().stream()
             .map(boatClassMapper::toDto)
@@ -26,27 +26,26 @@ public class BoatClassServiceImpl implements BoatClassService {
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true, transactionManager = "catalogTransactionManager")
     public List<String> getDistinctBoatTypes() {
-        return boatClassRepository.findDistinctBoatTypes();
+        return boatClassRepository.findDistinctBoatTypeCodes();
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true, transactionManager = "catalogTransactionManager")
     public List<String> getDistinctSeatCountTexts() {
         return boatClassRepository.findDistinctSeatCountTexts();
     }
 
     @Override
-    @Transactional
-    public Optional<BoatClassDto> getBoatClassById(final Integer id) {
-        return boatClassRepository.findById(id).map(boatClassMapper::toDto);
+    @Transactional(readOnly = true, transactionManager = "catalogTransactionManager")
+    public Optional<BoatClassDto> getBoatClassByCode(final String code) {
+        return boatClassRepository.findById(code).map(boatClassMapper::toDto);
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true, transactionManager = "catalogTransactionManager")
     public Optional<BoatClassDto> getBoatClassByName(final String name) {
-        return Optional.ofNullable(boatClassRepository.findByName(name))
-            .map(boatClassMapper::toDto);
+        return boatClassRepository.findByName(name).map(boatClassMapper::toDto);
     }
 }

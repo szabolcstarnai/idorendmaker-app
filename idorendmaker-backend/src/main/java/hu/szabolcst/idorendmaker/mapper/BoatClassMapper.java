@@ -1,7 +1,7 @@
 package hu.szabolcst.idorendmaker.mapper;
 
 import hu.szabolcst.idorendmaker.model.dto.boatclass.BoatClassDto;
-import hu.szabolcst.idorendmaker.model.entity.BoatClass;
+import hu.szabolcst.idorendmaker.model.entity.catalog.BoatClass;
 import org.mapstruct.Mapper;
 
 @Mapper

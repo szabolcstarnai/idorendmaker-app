@@ -14,8 +14,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * REST Controller for BoatClass operations
- * Provides endpoints for enhanced rule system with boat class metadata
+ * REST Controller for BoatClass operations against the read-only catalog
+ * datasource. Path variables are the catalog's string {@code code} values.
  */
 @Slf4j
 @RestController
@@ -26,8 +26,7 @@ public class BoatClassController {
     private final BoatClassService boatClassService;
 
     /**
-     * Get all boat classes ordered by name
-     * Used for frontend dropdown population and rule system
+     * Get all boat classes ordered by name.
      */
     @GetMapping
     public ResponseEntity<List<BoatClassDto>> getAllBoatClasses() {
@@ -40,22 +39,21 @@ public class BoatClassController {
     }
 
     /**
-     * Get distinct boat types for rule condition dropdown
-     * Returns unique boat types like "Kajak", "Minikajak", "Kenu"
+     * Get distinct boat type codes for rule condition dropdowns. Display
+     * names are resolved separately via the boat-types catalog endpoint.
      */
     @GetMapping("/types")
     public ResponseEntity<List<String>> getDistinctBoatTypes() {
-        log.debug("GET /api/boat-classes/types - Getting distinct boat types");
+        log.debug("GET /api/boat-classes/types - Getting distinct boat type codes");
 
         final List<String> boatTypes = boatClassService.getDistinctBoatTypes();
 
-        log.debug("Found {} distinct boat types", boatTypes.size());
+        log.debug("Found {} distinct boat type codes", boatTypes.size());
         return ResponseEntity.ok(boatTypes);
     }
 
     /**
-     * Get distinct seat counts for rule condition dropdown
-     * Returns seat count texts like "1", "2", "4", "csapat"
+     * Get distinct seat counts for rule condition dropdown.
      */
     @GetMapping("/seat-counts")
     public ResponseEntity<List<String>> getDistinctSeatCounts() {
@@ -68,25 +66,25 @@ public class BoatClassController {
     }
 
     /**
-     * Get boat class by ID
+     * Get boat class by catalog code.
      */
-    @GetMapping("/{id}")
-    public ResponseEntity<BoatClassDto> getBoatClassById(@PathVariable final Integer id) {
-        log.debug("GET /api/boat-classes/{} - Getting boat class by id", id);
+    @GetMapping("/{code}")
+    public ResponseEntity<BoatClassDto> getBoatClassByCode(@PathVariable final String code) {
+        log.debug("GET /api/boat-classes/{} - Getting boat class by code", code);
 
-        final Optional<BoatClassDto> boatClass = boatClassService.getBoatClassById(id);
+        final Optional<BoatClassDto> boatClass = boatClassService.getBoatClassByCode(code);
 
         if (boatClass.isPresent()) {
             log.debug("Found boat class: {}", boatClass.get().getName());
             return ResponseEntity.ok(boatClass.get());
         } else {
-            log.debug("Boat class not found with id: {}", id);
+            log.debug("Boat class not found with code: {}", code);
             return ResponseEntity.notFound().build();
         }
     }
 
     /**
-     * Get boat class by name
+     * Get boat class by name.
      */
     @GetMapping(params = "name")
     public ResponseEntity<BoatClassDto> getBoatClassByName(@RequestParam("name") final String name) {

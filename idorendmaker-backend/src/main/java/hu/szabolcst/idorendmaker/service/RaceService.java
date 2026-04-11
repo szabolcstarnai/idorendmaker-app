@@ -10,32 +10,23 @@ import org.springframework.stereotype.Service;
 public interface RaceService {
 
 	/**
-	 * Get all races with their age groups, ordered by occurrence and name
-	 * Equivalent to TypeScript: getAllRaces(): Promise<RaceWithAgeGroups[]>
+	 * Get all races with their age groups, ordered by {@code sortOrder} then {@code name}.
 	 */
 	List<RaceWithAgeGroupsAndBoatClassDto> getAllRaces();
 
 	/**
-	 * Search races by term across multiple fields including age groups
-	 * Equivalent to TypeScript: searchRaces(searchTerm: string): Promise<RaceWithAgeGroups[]>
+	 * Search races by term across the scalar fields (name / discipline /
+	 * gender / distance / boatClassCode).
 	 */
 	List<RaceWithAgeGroupsAndBoatClassDto> searchRaces(String searchTerm);
 
 	/**
-	 * Update race visibility (hidden status)
-	 * Equivalent to TypeScript: updateRaceHidden(raceId: number, hidden: boolean): Promise<boolean>
-	 */
-	boolean updateRaceHidden(Integer raceId, boolean hidden);
-
-	/**
-	 * Get all age groups ordered by name
-	 * Equivalent to TypeScript: getAllAgeGroups(): Promise<{id: number, name: string, createdAt: Date}[]>
+	 * Get all age groups ordered by name.
 	 */
 	List<AgeGroupDto> getAllAgeGroups();
 
 	/**
-	 * Get statistics about the database
-	 * Equivalent to TypeScript: getStats(): Promise<{races: number, ageGroups: number, schedules: number}>
+	 * Get statistics about the database.
 	 */
 	DatabaseStatsDto getStats();
 

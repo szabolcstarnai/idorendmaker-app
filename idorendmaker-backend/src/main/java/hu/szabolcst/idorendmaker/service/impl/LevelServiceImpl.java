@@ -2,7 +2,7 @@ package hu.szabolcst.idorendmaker.service.impl;
 
 import hu.szabolcst.idorendmaker.mapper.LevelMapper;
 import hu.szabolcst.idorendmaker.model.dto.level.LevelDto;
-import hu.szabolcst.idorendmaker.repository.LevelRepository;
+import hu.szabolcst.idorendmaker.repository.catalog.LevelRepository;
 import hu.szabolcst.idorendmaker.service.LevelService;
 import java.util.List;
 import java.util.Optional;
@@ -18,27 +18,27 @@ public class LevelServiceImpl implements LevelService {
 	private final LevelMapper levelMapper;
 
 	@Override
-	@Transactional
+	@Transactional(readOnly = true, transactionManager = "catalogTransactionManager")
 	public List<LevelDto> getAllLevels() {
 		return levelRepository.findAllByOrderBySortOrderAsc().stream().map(levelMapper::toDto).toList();
 	}
 
 	@Override
-	@Transactional
+	@Transactional(readOnly = true, transactionManager = "catalogTransactionManager")
 	public LevelDto getDefaultLevel() {
-		return levelMapper.toDto(levelRepository.findFirstByIsDefaultTrue());
+		return levelRepository.findFirstByIsDefaultTrue().map(levelMapper::toDto).orElse(null);
 	}
 
 	@Override
-	@Transactional
-	public Optional<LevelDto> getLevelById(final Integer id) {
-		return levelRepository.findById(id).map(levelMapper::toDto);
+	@Transactional(readOnly = true, transactionManager = "catalogTransactionManager")
+	public Optional<LevelDto> getLevelByCode(final String code) {
+		return levelRepository.findById(code).map(levelMapper::toDto);
 	}
 
 	@Override
-	@Transactional
+	@Transactional(readOnly = true, transactionManager = "catalogTransactionManager")
 	public List<LevelDto> getLevelsByType(final String levelType) {
-		return levelRepository.findAllByLevelTypeOrderBySortOrder(levelType).stream().map(levelMapper::toDto).toList();
+		return levelRepository.findAllByLevelTypeOrderBySortOrderAsc(levelType).stream().map(levelMapper::toDto).toList();
 	}
 
 }

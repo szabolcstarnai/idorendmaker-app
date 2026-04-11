@@ -14,8 +14,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * REST Controller for Level operations
- * Maps TypeScript IPC handlers to HTTP endpoints
+ * REST Controller for Level operations against the read-only catalog
+ * datasource. Path variables are the catalog's string {@code code} values.
  */
 @Slf4j
 @RestController
@@ -26,68 +26,62 @@ public class LevelController {
     private final LevelService levelService;
 
     /**
-     * Get all levels ordered by sort order
-     * Equivalent to IPC: 'db:getAllLevels'
-     * TypeScript: getAllLevels(): Promise<Level[]>
+     * Get all levels ordered by sort order.
      */
     @GetMapping
     public ResponseEntity<List<LevelDto>> getAllLevels() {
         log.debug("GET /api/levels - Getting all levels");
-        
+
         final List<LevelDto> levels = levelService.getAllLevels();
-        
+
         log.debug("Found {} levels", levels.size());
         return ResponseEntity.ok(levels);
     }
 
     /**
-     * Get the default level (Döntő I.)
-     * Equivalent to IPC: 'db:getDefaultLevel'  
-     * TypeScript: getDefaultLevel(): Promise<Level>
+     * Get the default level.
      */
     @GetMapping("/default")
     public ResponseEntity<LevelDto> getDefaultLevel() {
         log.debug("GET /api/levels/default - Getting default level");
-        
+
         final LevelDto defaultLevel = levelService.getDefaultLevel();
-        
+
+        if (defaultLevel == null) {
+            log.debug("No default level found");
+            return ResponseEntity.notFound().build();
+        }
         log.debug("Found default level: {}", defaultLevel.getName());
         return ResponseEntity.ok(defaultLevel);
     }
 
     /**
-     * Get level by ID
-     * Equivalent to IPC: 'db:getLevelById'
-     * TypeScript: getLevelById(id: number): Promise<Level | null>
-     * Note: Marked as dead code in service but included for completeness
+     * Get level by catalog code.
      */
-    @GetMapping("/{id}")
-    public ResponseEntity<LevelDto> getLevelById(@PathVariable final Integer id) {
-        log.debug("GET /api/levels/{} - Getting level by id", id);
-        
-        final Optional<LevelDto> level = levelService.getLevelById(id);
-        
+    @GetMapping("/{code}")
+    public ResponseEntity<LevelDto> getLevelByCode(@PathVariable final String code) {
+        log.debug("GET /api/levels/{} - Getting level by code", code);
+
+        final Optional<LevelDto> level = levelService.getLevelByCode(code);
+
         if (level.isPresent()) {
             log.debug("Found level: {}", level.get().getName());
             return ResponseEntity.ok(level.get());
         } else {
-            log.debug("Level not found with id: {}", id);
+            log.debug("Level not found with code: {}", code);
             return ResponseEntity.notFound().build();
         }
     }
 
     /**
-     * Get levels by type
-     * Equivalent to IPC: 'db:getLevelsByType' 
-     * TypeScript: getLevelsByType(levelType: string): Promise<Level[]>
-     * Note: Marked as dead code in service but included for completeness
+     * Get levels by type.
      */
     @GetMapping(params = "type")
     public ResponseEntity<List<LevelDto>> getLevelsByType(@RequestParam("type") final String levelType) {
         log.debug("GET /api/levels?type={} - Getting levels by type", levelType);
-        
+
         final List<LevelDto> levels = levelService.getLevelsByType(levelType);
-        
+
         log.debug("Found {} levels for type: {}", levels.size(), levelType);
         return ResponseEntity.ok(levels);
     }

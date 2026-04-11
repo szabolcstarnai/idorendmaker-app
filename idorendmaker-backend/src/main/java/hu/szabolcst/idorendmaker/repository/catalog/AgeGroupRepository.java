@@ -9,4 +9,8 @@ public interface AgeGroupRepository extends Repository<AgeGroup, String> {
     Optional<AgeGroup> findById(String code);
 
     List<AgeGroup> findAll();
+
+    long count();
+
+    List<AgeGroup> findAllByOrderByNameAsc();
 }

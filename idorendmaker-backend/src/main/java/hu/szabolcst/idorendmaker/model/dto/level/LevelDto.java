@@ -1,18 +1,25 @@
 package hu.szabolcst.idorendmaker.model.dto.level;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import java.time.LocalDateTime;
 import lombok.Data;
 
 @Data
 public class LevelDto {
 
+    private String code;
+    /**
+     * Legacy integer id. Retained only so Phase 4b user services
+     * ({@code CompetitorServiceImpl}, {@code ScheduleMapper}) keep
+     * compiling until they're rewritten to the string-code contract.
+     * Populated only by the legacy entity path; the catalog path leaves
+     * this null. The REST API contract is {@code code}.
+     *
+     * @deprecated will be removed in Phase 4b.
+     */
+    @Deprecated
     private Integer id;
     private String name;
     private String levelType;
     private Integer sortOrder;
     private Boolean isDefault;
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
-    private LocalDateTime createdAt;
 
 }

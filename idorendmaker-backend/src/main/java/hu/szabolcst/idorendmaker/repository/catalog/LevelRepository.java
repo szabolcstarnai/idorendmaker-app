@@ -11,4 +11,10 @@ public interface LevelRepository extends Repository<Level, String> {
     List<Level> findAll();
 
     List<Level> findAllByLevelType(String levelType);
+
+    List<Level> findAllByOrderBySortOrderAsc();
+
+    Optional<Level> findFirstByIsDefaultTrue();
+
+    List<Level> findAllByLevelTypeOrderBySortOrderAsc(String levelType);
 }
