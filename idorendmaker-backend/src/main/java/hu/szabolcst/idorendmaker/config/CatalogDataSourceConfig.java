@@ -8,7 +8,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
-import org.springframework.context.annotation.FullyQualifiedAnnotationBeanNameGenerator;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
@@ -20,10 +19,7 @@ import org.springframework.transaction.PlatformTransactionManager;
  * only by the catalog update service).
  *
  * <p>Scans {@code hu.szabolcst.idorendmaker.repository.catalog} for repositories
- * and {@code hu.szabolcst.idorendmaker.model.entity.catalog} for entities. Uses
- * a fully-qualified bean name generator so the catalog repositories do not
- * collide with the legacy {@code repository.*} simple-name beans that are still
- * wired into the user EMF during this migration.
+ * and {@code hu.szabolcst.idorendmaker.model.entity.catalog} for entities.
  */
 @Slf4j
 @Configuration
@@ -31,12 +27,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 @EnableJpaRepositories(
     basePackages = "hu.szabolcst.idorendmaker.repository.catalog",
     entityManagerFactoryRef = "catalogEntityManagerFactory",
-    transactionManagerRef = "catalogTransactionManager",
-    // Use fully-qualified bean names on the catalog side so the new catalog
-    // repositories (e.g. repository.catalog.AgeGroupRepository) do not clash
-    // with the legacy simple-name-derived beans from repository.AgeGroupRepository
-    // that are still wired into the user EMF during this migration phase.
-    nameGenerator = FullyQualifiedAnnotationBeanNameGenerator.class
+    transactionManagerRef = "catalogTransactionManager"
 )
 public class CatalogDataSourceConfig {
 
