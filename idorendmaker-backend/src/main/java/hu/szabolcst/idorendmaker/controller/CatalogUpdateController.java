@@ -2,12 +2,6 @@ package hu.szabolcst.idorendmaker.controller;
 
 import hu.szabolcst.idorendmaker.service.CatalogUpdateService;
 import hu.szabolcst.idorendmaker.service.CatalogUpdateService.UpdateResult;
-import hu.szabolcst.idorendmaker.service.DatabasePathResolver;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.Statement;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +22,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class CatalogUpdateController {
 
     private final CatalogUpdateService catalogUpdateService;
-    private final DatabasePathResolver pathResolver;
 
     /**
      * Returns the catalog metadata rows: schema_version, catalog_version,
@@ -38,24 +31,11 @@ public class CatalogUpdateController {
     public ResponseEntity<Map<String, Object>> getCatalogVersion() {
         log.debug("GET /api/catalog/version");
 
-        final Map<String, Object> result = new LinkedHashMap<>();
-        final String catalogPath = pathResolver.resolveCatalogDbPath();
-        final String jdbcUrl = "jdbc:sqlite:" + catalogPath;
+        final Map<String, Object> result = catalogUpdateService.getCatalogVersionInfo();
 
-        try (Connection conn = DriverManager.getConnection(jdbcUrl);
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SELECT meta_key, meta_value FROM catalog_meta")) {
-
-            while (rs.next()) {
-                result.put(rs.getString("meta_key"), rs.getString("meta_value"));
-            }
-        } catch (final Exception ex) {
-            log.error("Failed to read catalog metadata", ex);
-            return ResponseEntity.internalServerError()
-                .body(Map.of("error", "Failed to read catalog metadata: " + ex.getMessage()));
+        if (result.containsKey("error")) {
+            return ResponseEntity.internalServerError().body(result);
         }
-
-        result.put("restart_required", catalogUpdateService.isRestartRequired());
         return ResponseEntity.ok(result);
     }
 
