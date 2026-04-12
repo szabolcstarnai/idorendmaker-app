@@ -2,18 +2,26 @@ package hu.szabolcst.idorendmaker.service;
 
 import jakarta.annotation.PostConstruct;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.Statement;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
 /**
  * Ensures that the catalog database file exists on disk before the catalog
- * datasource attempts to connect. In Phase 1 the seeded file is intentionally
- * empty — Phase 6 will add copying a bundled seed from the classpath and
- * performing updates from a remote source.
+ * datasource attempts to connect. On first launch (or when the file is missing
+ * / empty), copies the bundled seed from {@code classpath:db/seed-catalog.db}.
+ * After bootstrap, validates that the on-disk catalog's schema version matches
+ * the version this application build expects.
  *
  * <p>The catalog datasource bean declares {@code @DependsOn("catalogBootstrapService")}
  * so that Spring initializes this component before the HikariCP pool opens its
@@ -31,7 +39,12 @@ public class CatalogBootstrapService {
      */
     public static final String BEAN_NAME = "catalogBootstrapService";
 
+    private static final String SEED_CLASSPATH = "db/seed-catalog.db";
+
     private final DatabasePathResolver pathResolver;
+
+    @Value("${app.catalog.expected-schema-version:1}")
+    private int expectedSchemaVersion;
 
     @PostConstruct
     public void ensureCatalogDatabaseExists() {
@@ -40,9 +53,17 @@ public class CatalogBootstrapService {
 
         if (catalogFile.exists() && catalogFile.length() > 0) {
             log.info("catalog.db already exists at {}", catalogPath);
-            return;
+        } else {
+            copySeedCatalog(catalogFile, catalogPath);
         }
 
+        verifySchemaVersion(catalogPath);
+    }
+
+    /**
+     * Copies the bundled seed catalog from the classpath to disk.
+     */
+    private void copySeedCatalog(final File catalogFile, final String catalogPath) {
         final File parent = catalogFile.getParentFile();
         if (parent != null && !parent.exists()) {
             log.info("Creating catalog directory: {}", parent.getAbsolutePath());
@@ -51,19 +72,66 @@ public class CatalogBootstrapService {
             }
         }
 
+        final ClassPathResource seedResource = new ClassPathResource(SEED_CLASSPATH);
+        if (!seedResource.exists()) {
+            throw new IllegalStateException(
+                "Seed catalog not found on classpath: " + SEED_CLASSPATH
+                    + ". The application cannot start without a seed catalog.");
+        }
+
+        try (InputStream in = seedResource.getInputStream()) {
+            Files.copy(in, catalogFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            log.info("Copied seed catalog.db from classpath to {}", catalogPath);
+        } catch (final IOException ex) {
+            throw new IllegalStateException(
+                "Failed to copy seed catalog.db to " + catalogPath, ex);
+        }
+    }
+
+    /**
+     * Reads the {@code schema_version} row from {@code catalog_meta} using raw
+     * JDBC (the catalog EntityManagerFactory is not yet available at this point)
+     * and compares it against the application's expected schema version.
+     */
+    private void verifySchemaVersion(final String catalogPath) {
         final String jdbcUrl = "jdbc:sqlite:" + catalogPath;
-        log.info("Seeding empty catalog.db via JDBC at {}", catalogPath);
 
         try (Connection conn = DriverManager.getConnection(jdbcUrl);
-             Statement stmt = conn.createStatement()) {
-            // Opening the connection causes xerial to create the file on disk.
-            // Set WAL so the freshly-created file matches the PRAGMAs the
-            // datasource will apply on every subsequent connection.
-            stmt.execute("PRAGMA journal_mode=WAL");
-            log.info("Seeded empty catalog.db at {}", catalogPath);
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(
+                 "SELECT meta_value FROM catalog_meta WHERE meta_key = 'schema_version'")) {
+
+            if (!rs.next()) {
+                throw new IllegalStateException(
+                    "Catalog database at " + catalogPath
+                        + " has no 'schema_version' row in catalog_meta. "
+                        + "The catalog file may be corrupt or from an incompatible version.");
+            }
+
+            final int actualVersion;
+            try {
+                actualVersion = Integer.parseInt(rs.getString("meta_value"));
+            } catch (final NumberFormatException ex) {
+                throw new IllegalStateException(
+                    "Catalog schema_version is not a valid integer: "
+                        + rs.getString("meta_value"), ex);
+            }
+
+            if (actualVersion != expectedSchemaVersion) {
+                throw new IllegalStateException(
+                    "Catalog schema version " + actualVersion
+                        + " does not match expected version " + expectedSchemaVersion
+                        + ". Please update the application or the catalog.");
+            }
+
+            log.info("Catalog schema version verified: {}", actualVersion);
+
+        } catch (final IllegalStateException ex) {
+            // Re-throw our own exceptions as-is.
+            throw ex;
         } catch (final Exception ex) {
-            log.error("Failed to seed empty catalog.db at {}: {}", catalogPath, ex.getMessage(), ex);
-            throw new IllegalStateException("Unable to create catalog.db at " + catalogPath, ex);
+            throw new IllegalStateException(
+                "Failed to verify catalog schema version at " + catalogPath, ex);
         }
     }
 }
