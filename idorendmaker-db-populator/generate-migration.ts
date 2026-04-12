@@ -1,6 +1,17 @@
 #!/usr/bin/env tsx
 
 /**
+ * @deprecated This script is DEPRECATED and NOT updated for the current string-code schema.
+ *
+ * It generates SQL targeting the old integer-ID schema (races.id, age_groups.id,
+ * boat_classes.id, race_age_groups.race_id/age_group_id) and will produce BROKEN
+ * SQL against the current catalog schema which uses string codes as primary keys.
+ *
+ * DO NOT USE. The `generate-migration` npm script has been removed.
+ * If you need to migrate catalog data, regenerate the seed database using
+ * `npm run populate:seed` and let the backend handle the diff.
+ *
+ * Original description:
  * Migration Generator - Excel Diff to SQL Migration
  *
  * This script compares two Excel files (old and new versions) and generates
@@ -76,6 +87,11 @@ class MigrationGenerator {
 
   async run() {
     try {
+      console.warn("WARNING: generate-migration.ts is DEPRECATED.");
+      console.warn("It targets the old integer-ID schema and will produce broken SQL");
+      console.warn("against the current string-code catalog schema.");
+      console.warn("Use 'npm run populate:seed' to regenerate the catalog instead.\n");
+
       console.log("🚀 Starting migration generation...");
       console.log(`📂 Old Excel: ${this.oldExcelPath}`);
       console.log(`📂 New Excel: ${this.newExcelPath}`);

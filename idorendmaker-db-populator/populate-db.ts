@@ -109,7 +109,7 @@ interface RawRaceData {
   "Versenyszám nem": string;
   "Versenyszám évfolyamok": string;
   "Versenyszám táv": string;
-  Előfordulás: number;
+  Előfordulás: string;
 }
 
 interface NormalizedRaceData {
@@ -328,7 +328,8 @@ class CatalogPopulator {
       const ageGroups = (row["Versenyszám évfolyamok"] || "")
         .split(";")
         .map((s) => s.trim())
-        .filter((s) => s.length > 0);
+        .filter((s) => s.length > 0)
+        .filter((s, i, arr) => arr.indexOf(s) === i);
 
       if (ageGroups.length === 0) {
         console.warn(`  WARN: no age groups for "${row["Versenyszám neve"]}"`);
@@ -473,6 +474,7 @@ class CatalogPopulator {
 
       // Build a set of valid boat class codes for validation
       const validBoatClassCodes = new Set(boatClasses.map((bc) => slugify(bc.name)));
+      const unresolvedBoatClasses: Array<{ raceName: string; boatClass: string; boatClassCode: string }> = [];
 
       const insertRaceAgeGroup = this.db.prepare(
         "INSERT INTO race_age_groups (race_code, age_group_code) VALUES (?, ?)"
@@ -483,7 +485,7 @@ class CatalogPopulator {
         const boatClassCode = slugify(race.boatClass);
 
         if (!validBoatClassCodes.has(boatClassCode)) {
-          console.warn(`  WARN: boat class "${race.boatClass}" (code: ${boatClassCode}) not found for race "${race.name}"`);
+          unresolvedBoatClasses.push({ raceName: race.name, boatClass: race.boatClass, boatClassCode });
         }
 
         insertRace.run(
@@ -502,9 +504,19 @@ class CatalogPopulator {
           insertRaceAgeGroup.run(raceCode, slugify(ag));
         }
       });
+
+      return unresolvedBoatClasses;
     });
 
-    txn();
+    const unresolved = txn();
+
+    if (unresolved.length > 0) {
+      console.error(`\n  ERROR: ${unresolved.length} race(s) reference boat classes not found in boat_classes table:`);
+      for (const u of unresolved) {
+        console.error(`    - Race "${u.raceName}" -> boat class "${u.boatClass}" (code: ${u.boatClassCode})`);
+      }
+      throw new Error(`Unresolved boat class references: ${unresolved.length} race(s) affected. Fix the boat class metadata file.`);
+    }
   }
 
   // -------------------------------------------------------------------------

@@ -5,8 +5,7 @@
   "main": "populate-db.ts",
   "scripts": {
     "populate": "tsx populate-db.ts",
-    "populate:seed": "tsx populate-db.ts --output=../idorendmaker-backend/src/main/resources/db/seed-catalog.db",
-    "generate-migration": "tsx generate-migration.ts"
+    "populate:seed": "tsx populate-db.ts --output=../idorendmaker-backend/src/main/resources/db/seed-catalog.db"
   },
   "keywords": [
     "database",
