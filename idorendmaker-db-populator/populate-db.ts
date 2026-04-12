@@ -1,18 +1,106 @@
 #!/usr/bin/env tsx
 
 /**
- * Service Tunnel App - Database Population Script
+ * Catalog Database Populator
  *
- * This script reads the Excel file containing all possible race data
- * and populates the SQLite database with normalized data structure.
+ * Reads race data from Excel + boat class metadata and produces a catalog.db
+ * file with the new string-code-based schema (7 tables).
  *
- * Usage: npm run populate-db
+ * Usage:
+ *   npm run populate              # outputs to ./catalog.db
+ *   npm run populate:seed         # outputs to backend seed location
  */
 
 import Database from "better-sqlite3";
 import ExcelJS from "exceljs";
 import * as path from "path";
 import * as fs from "fs";
+
+// ---------------------------------------------------------------------------
+// Schema DDL
+// ---------------------------------------------------------------------------
+
+const CATALOG_DDL = `
+CREATE TABLE catalog_meta (
+    meta_key TEXT PRIMARY KEY,
+    meta_value TEXT
+);
+
+CREATE TABLE boat_types (
+    code TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    sort_order INTEGER
+);
+
+CREATE TABLE boat_classes (
+    code TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    boat_type_code TEXT,
+    seat_count INTEGER,
+    seat_count_text TEXT
+);
+
+CREATE TABLE age_groups (
+    code TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    sort_order INTEGER
+);
+
+CREATE TABLE levels (
+    code TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    level_type TEXT,
+    sort_order INTEGER,
+    is_default INTEGER
+);
+
+CREATE TABLE races (
+    code TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    discipline TEXT NOT NULL,
+    boat_class_code TEXT NOT NULL,
+    gender TEXT NOT NULL,
+    distance TEXT NOT NULL,
+    hidden INTEGER NOT NULL,
+    sort_order INTEGER
+);
+
+CREATE TABLE race_age_groups (
+    race_code TEXT NOT NULL,
+    age_group_code TEXT NOT NULL,
+    PRIMARY KEY (race_code, age_group_code)
+);
+`;
+
+// ---------------------------------------------------------------------------
+// Slugification
+// ---------------------------------------------------------------------------
+
+const HU_MAP: Record<string, string> = {
+  "á": "a", "é": "e", "í": "i", "ó": "o", "ö": "o", "ő": "o",
+  "ú": "u", "ü": "u", "ű": "u",
+  "Á": "a", "É": "e", "Í": "i", "Ó": "o", "Ö": "o", "Ő": "o",
+  "Ú": "u", "Ü": "u", "Ű": "u",
+};
+
+function slugify(input: string): string {
+  let s = input.toLowerCase();
+  // Transliterate Hungarian characters
+  s = s.replace(/[áéíóöőúüűÁÉÍÓÖŐÚÜŰ]/g, (ch) => HU_MAP[ch] ?? ch);
+  // Remove parentheses and dots
+  s = s.replace(/[().]/g, "");
+  // Replace spaces / non-alphanumeric with hyphens
+  s = s.replace(/[^a-z0-9-]/g, "-");
+  // Collapse consecutive hyphens
+  s = s.replace(/-+/g, "-");
+  // Trim leading/trailing hyphens
+  s = s.replace(/^-|-$/g, "");
+  return s;
+}
+
+// ---------------------------------------------------------------------------
+// Data interfaces
+// ---------------------------------------------------------------------------
 
 interface RawRaceData {
   "Versenyszám neve": string;
@@ -26,653 +114,452 @@ interface RawRaceData {
 
 interface NormalizedRaceData {
   name: string;
-  discipline:
-    | "Kajak"
-    | "Kenu"
-    | "SUP"
-    | "Kajakpóló"
-    | "Parakenu"
-    | "Sárkányhajó"
-    | "Szlalom"
-    | "Tengeri kajak";
-  boatClass: string; // Changed to camelCase
-  gender: "Férfi" | "Női" | "Vegyes";
+  discipline: string;
+  boatClass: string;
+  gender: string;
   distance: string;
   occurrence: number;
-  ageGroups: string[]; // Changed to camelCase
+  ageGroups: string[];
 }
 
 interface BoatClassData {
-  name: string; // e.g., "Kajak egyes"
-  boatType: string; // e.g., "Kajak"
-  seatCount: number | null; // e.g., 1, 2, 4, 20, null for "csapat"
-  seatCountText: string; // e.g., "1", "2", "4", "20", "csapat"
+  name: string;
+  boatType: string;
+  seatCount: number | null;
+  seatCountText: string;
 }
 
-class DatabasePopulator {
+// ---------------------------------------------------------------------------
+// Levels data (hardcoded)
+// ---------------------------------------------------------------------------
+
+const LEVELS_DATA: Array<{
+  name: string;
+  levelType: string;
+  sortOrder: number;
+  isDefault?: boolean;
+}> = [
+  // Elofutamok I-XVI
+  { name: "I. Előfutam", levelType: "előfutam", sortOrder: 1 },
+  { name: "II. Előfutam", levelType: "előfutam", sortOrder: 2 },
+  { name: "III. Előfutam", levelType: "előfutam", sortOrder: 3 },
+  { name: "IV. Előfutam", levelType: "előfutam", sortOrder: 4 },
+  { name: "V. Előfutam", levelType: "előfutam", sortOrder: 5 },
+  { name: "VI. Előfutam", levelType: "előfutam", sortOrder: 6 },
+  { name: "VII. Előfutam", levelType: "előfutam", sortOrder: 7 },
+  { name: "VIII. Előfutam", levelType: "előfutam", sortOrder: 8 },
+  { name: "IX. Előfutam", levelType: "előfutam", sortOrder: 9 },
+  { name: "X. Előfutam", levelType: "előfutam", sortOrder: 10 },
+  { name: "XI. Előfutam", levelType: "előfutam", sortOrder: 11 },
+  { name: "XII. Előfutam", levelType: "előfutam", sortOrder: 12 },
+  { name: "XIII. Előfutam", levelType: "előfutam", sortOrder: 13 },
+  { name: "XIV. Előfutam", levelType: "előfutam", sortOrder: 14 },
+  { name: "XV. Előfutam", levelType: "előfutam", sortOrder: 15 },
+  { name: "XVI. Előfutam", levelType: "előfutam", sortOrder: 16 },
+
+  // Kozepfutamok I-X
+  { name: "I. Középfutam", levelType: "középfutam", sortOrder: 101 },
+  { name: "II. Középfutam", levelType: "középfutam", sortOrder: 102 },
+  { name: "III. Középfutam", levelType: "középfutam", sortOrder: 103 },
+  { name: "IV. Középfutam", levelType: "középfutam", sortOrder: 104 },
+  { name: "V. Középfutam", levelType: "középfutam", sortOrder: 105 },
+  { name: "VI. Középfutam", levelType: "középfutam", sortOrder: 106 },
+  { name: "VII. Középfutam", levelType: "középfutam", sortOrder: 107 },
+  { name: "VIII. Középfutam", levelType: "középfutam", sortOrder: 108 },
+  { name: "IX. Középfutam", levelType: "középfutam", sortOrder: 109 },
+  { name: "X. Középfutam", levelType: "középfutam", sortOrder: 110 },
+
+  // Letter Dontok A-J
+  { name: "A Döntő", levelType: "döntő", sortOrder: 201 },
+  { name: "B Döntő", levelType: "döntő", sortOrder: 202 },
+  { name: "C Döntő", levelType: "döntő", sortOrder: 203 },
+  { name: "D Döntő", levelType: "döntő", sortOrder: 204 },
+  { name: "E Döntő", levelType: "döntő", sortOrder: 205 },
+  { name: "F Döntő", levelType: "döntő", sortOrder: 206 },
+  { name: "G Döntő", levelType: "döntő", sortOrder: 207 },
+  { name: "H Döntő", levelType: "döntő", sortOrder: 208 },
+  { name: "I Döntő", levelType: "döntő", sortOrder: 209 },
+  { name: "J Döntő", levelType: "döntő", sortOrder: 210 },
+
+  // Roman numeral Dontok I-VIII
+  { name: "Döntő I.", levelType: "döntő", sortOrder: 211, isDefault: true },
+  { name: "Döntő II.", levelType: "döntő", sortOrder: 212 },
+  { name: "Döntő III.", levelType: "döntő", sortOrder: 213 },
+  { name: "Döntő IV.", levelType: "döntő", sortOrder: 214 },
+  { name: "Döntő V.", levelType: "döntő", sortOrder: 215 },
+  { name: "Döntő VI.", levelType: "döntő", sortOrder: 216 },
+  { name: "Döntő VII.", levelType: "döntő", sortOrder: 217 },
+  { name: "Döntő VIII.", levelType: "döntő", sortOrder: 218 },
+];
+
+// ---------------------------------------------------------------------------
+// Populator
+// ---------------------------------------------------------------------------
+
+class CatalogPopulator {
   private db: Database.Database;
   private excelPath: string;
   private boatClassPath: string;
   private dbPath: string;
 
   constructor(outputPath?: string) {
-    // Database path - configurable with fallback to current behavior
-    this.dbPath = outputPath || path.join(process.cwd(), "idorendmaker.db");
-    this.db = new Database(this.dbPath);
-
-    // Excel file path - always relative to current working directory
-    this.excelPath = path.join(
-      process.cwd(),
-      "../documents",
-      "versenyszamok.xlsx"
-    );
-
-    // Boat class metadata file path
+    this.dbPath = outputPath || path.join(process.cwd(), "catalog.db");
+    this.excelPath = path.join(process.cwd(), "../documents", "versenyszamok.xlsx");
     this.boatClassPath = path.join(
       process.cwd(),
       "../documents",
       "Hajoosztaly_Hajoosztaly-tipus_Hajoosztaly-ulesszam.txt"
     );
 
-    // Enable foreign keys
+    // Delete existing db file so we always start fresh
+    if (fs.existsSync(this.dbPath)) {
+      fs.unlinkSync(this.dbPath);
+    }
+
+    // Ensure parent directory exists
+    const parentDir = path.dirname(this.dbPath);
+    if (!fs.existsSync(parentDir)) {
+      fs.mkdirSync(parentDir, { recursive: true });
+    }
+
+    this.db = new Database(this.dbPath);
     this.db.pragma("foreign_keys = ON");
+    this.db.pragma("journal_mode = DELETE");
   }
 
   async run() {
     try {
-      console.log("🚀 Starting database population...");
-      console.log(`📂 Database output path: ${this.dbPath}`);
-      console.log(`📊 Excel source path: ${this.excelPath}`);
+      console.log("Starting catalog database population...");
+      console.log(`  Database output: ${this.dbPath}`);
+      console.log(`  Excel source:    ${this.excelPath}`);
 
-      // Step 1: Check if Excel file exists
-      this.checkExcelFile();
+      // Validate source files
+      if (!fs.existsSync(this.excelPath)) {
+        throw new Error(`Excel file not found: ${this.excelPath}`);
+      }
+      if (!fs.existsSync(this.boatClassPath)) {
+        throw new Error(`Boat class file not found: ${this.boatClassPath}`);
+      }
 
-      // Step 2: Initialize database with new schema
-      this.initializeDatabase();
+      // 1. Create schema
+      this.db.exec(CATALOG_DDL);
+      console.log("  Schema created (7 tables)");
 
-      // Step 3: Read and parse Excel data
-      const rawData = await this.readExcelFile();
-      console.log(`📊 Found ${rawData.length} races in Excel file`);
-
-      // Step 4: Normalize data
-      const normalizedData = this.normalizeData(rawData);
-      console.log(`✅ Normalized ${normalizedData.length} races`);
-
-      // Step 5: Read and populate boat classes
+      // 2. Read source data
+      const rawRaces = await this.readExcelFile();
+      const normalizedRaces = this.normalizeRaces(rawRaces);
       const boatClassData = this.readBoatClassFile();
-      this.populateBoatClasses(boatClassData);
-      console.log(`✅ Populated ${boatClassData.length} boat classes`);
 
-      // Step 6: Populate database with race data
-      await this.populateDatabase(normalizedData);
+      console.log(`  Excel: ${normalizedRaces.length} races parsed`);
+      console.log(`  Boat classes: ${boatClassData.length} entries parsed`);
 
-      // Step 6.5: Link races to boat_classes (populate boat_class_id)
-      this.linkRacesToBoatClasses();
+      // 3. Populate all tables in a single transaction
+      this.populateAll(normalizedRaces, boatClassData);
 
-      // Step 7: Populate levels table
-      this.populateLevels();
+      // 4. Verify
+      this.verify();
 
-      // Step 8: Verify results
-      this.verifyResults();
-
-      console.log("🎉 Database population completed successfully!");
+      console.log("Catalog database created successfully.");
     } catch (error) {
-      console.error("❌ Error during database population:", error);
+      console.error("ERROR:", error);
       process.exit(1);
     } finally {
       this.db.close();
     }
   }
 
-  private checkExcelFile() {
-    if (!fs.existsSync(this.excelPath)) {
-      throw new Error(`Excel file not found at: ${this.excelPath}`);
-    }
-    console.log(`📁 Excel file found: ${this.excelPath}`);
-  }
-
-  private initializeDatabase() {
-    console.log("🔧 Initializing database schema...");
-
-    // Read and execute the current unified schema
-    const schemaPath = path.join(
-      process.cwd(), "..", "idorendmaker-desktop",
-      "shared",
-      "database",
-      "schema.sql"
-    );
-
-    if (!fs.existsSync(schemaPath)) {
-      throw new Error(`Schema file not found at: ${schemaPath}`);
-    }
-
-    const schema = fs.readFileSync(schemaPath, "utf-8");
-    this.db.exec(schema);
-    console.log(
-      "✅ Database schema initialized from shared/database/schema.sql"
-    );
-  }
+  // -------------------------------------------------------------------------
+  // Excel reading
+  // -------------------------------------------------------------------------
 
   private async readExcelFile(): Promise<RawRaceData[]> {
-    console.log("📖 Reading Excel file...");
-
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.readFile(this.excelPath);
 
     const worksheet = workbook.worksheets[0];
-    if (!worksheet) {
-      throw new Error("No worksheet found in Excel file");
-    }
+    if (!worksheet) throw new Error("No worksheet found in Excel file");
 
-    // Convert worksheet to JSON-like data
-    const data: RawRaceData[] = [];
-    const headerRow = worksheet.getRow(1);
     const headers: string[] = [];
-
-    // Extract headers
-    headerRow.eachCell((cell, colNumber) => {
-      headers[colNumber - 1] = cell.value?.toString() || "";
+    worksheet.getRow(1).eachCell((cell, col) => {
+      headers[col - 1] = cell.value?.toString() || "";
     });
 
-    // Extract data rows
-    worksheet.eachRow((row, rowNumber) => {
-      if (rowNumber > 1) {
-        // Skip header row
-        const rowData: any = {};
-        row.eachCell((cell, colNumber) => {
-          const header = headers[colNumber - 1];
-          if (header) {
-            rowData[header] = cell.value?.toString() || "";
-          }
-        });
-        data.push(rowData as RawRaceData);
-      }
+    const data: RawRaceData[] = [];
+    worksheet.eachRow((row, rowNum) => {
+      if (rowNum <= 1) return;
+      const rowData: any = {};
+      row.eachCell((cell, col) => {
+        const header = headers[col - 1];
+        if (header) rowData[header] = cell.value?.toString() || "";
+      });
+      data.push(rowData as RawRaceData);
     });
 
-    if (data.length === 0) {
-      throw new Error("No data found in Excel file");
-    }
-
-    console.log(`✅ Successfully read ${data.length} rows from Excel`);
+    if (data.length === 0) throw new Error("No data in Excel file");
     return data;
   }
 
-  private normalizeData(rawData: RawRaceData[]): NormalizedRaceData[] {
-    console.log("🔄 Normalizing race data...");
+  // -------------------------------------------------------------------------
+  // Normalize races
+  // -------------------------------------------------------------------------
 
-    const normalizedData: NormalizedRaceData[] = [];
-
-    for (const row of rawData) {
-      try {
-        // Parse discipline
-        const discipline = row["Versenyszám szakág"]?.trim();
-        const allowedDisciplines = [
-          "Kajak",
-          "Kenu",
-          "SUP",
-          "Kajakpóló",
-          "Parakenu",
-          "Sárkányhajó",
-          "Szlalom",
-          "Tengeri kajak",
-        ];
-        if (!allowedDisciplines.includes(discipline)) {
-          console.warn(
-            `⚠️ Unknown discipline: ${discipline} for race: ${row["Versenyszám neve"]}`
-          );
-          continue;
-        }
-
-        // Parse gender
-        const genderRaw = row["Versenyszám nem"]?.trim().toLowerCase();
-        let gender: "Férfi" | "Női" | "Vegyes";
-        if (genderRaw.includes("férfi")) {
-          gender = "Férfi";
-        } else if (genderRaw.includes("női")) {
-          gender = "Női";
-        } else {
-          gender = "Vegyes";
-        }
-
-        // Parse age groups (split on ';' and trim)
-        const ageGroupsRaw = row["Versenyszám évfolyamok"]?.trim() || "";
-        const ageGroups = ageGroupsRaw
-          .split(";")
-          .map((group) => group.trim())
-          .filter((group) => group.length > 0);
-
-        if (ageGroups.length === 0) {
-          console.warn(
-            `⚠️ No age groups found for race: ${row["Versenyszám neve"]}`
-          );
-          continue;
-        }
-
-        // Parse occurrence with fallback to 0
-        const occurrence = parseInt(String(row["Előfordulás"])) || 0;
-
-        const normalizedRace: NormalizedRaceData = {
-          name: row["Versenyszám neve"]?.trim() || "",
-          discipline: discipline as "Kajak" | "Kenu",
-          boatClass: row["Hajóosztály"]?.trim() || "", // Use camelCase
-          gender,
-          distance: row["Versenyszám táv"]?.trim() || "",
-          occurrence,
-          ageGroups, // Use camelCase
-        };
-
-        // Validate required fields
-        if (
-          !normalizedRace.name ||
-          !normalizedRace.boatClass ||
-          !normalizedRace.distance
-        ) {
-          console.warn(
-            `⚠️ Missing required fields for race: ${row["Versenyszám neve"]}`
-          );
-          continue;
-        }
-
-        normalizedData.push(normalizedRace);
-      } catch (error) {
-        console.error(
-          `❌ Error processing race: ${row["Versenyszám neve"]}`,
-          error
-        );
-      }
-    }
-
-    console.log(`✅ Successfully normalized ${normalizedData.length} races`);
-    return normalizedData;
-  }
-
-  private async populateDatabase(normalizedData: NormalizedRaceData[]) {
-    console.log("💾 Populating database...");
-
-    // Prepare statements for batch operations
-    const insertAgeGroupStmt = this.db.prepare(`
-      INSERT OR IGNORE INTO age_groups (name) VALUES (?)
-    `);
-
-    const getAgeGroupIdStmt = this.db.prepare(`
-      SELECT id FROM age_groups WHERE name = ?
-    `);
-
-    const insertRaceStmt = this.db.prepare(`
-      INSERT INTO races (name, discipline, boat_class, gender, distance, occurrence, hidden)
-      VALUES (?, ?, ?, ?, ?, ?, 0)
-    `);
-
-    const insertRaceAgeGroupStmt = this.db.prepare(`
-      INSERT OR IGNORE INTO race_age_groups (race_id, age_group_id)
-      VALUES (?, ?)
-    `);
-
-    // Use transaction for performance and consistency
-    const transaction = this.db.transaction(() => {
-      let raceCount = 0;
-      let ageGroupCount = 0;
-      const uniqueAgeGroups = new Set<string>();
-
-      for (const race of normalizedData) {
-        try {
-          // Insert race
-          const raceResult = insertRaceStmt.run(
-            race.name,
-            race.discipline,
-            race.boatClass, // Use camelCase
-            race.gender,
-            race.distance,
-            race.occurrence
-          );
-
-          const raceId = raceResult.lastInsertRowid as number;
-          raceCount++;
-
-          // Process age groups for this race
-          for (const ageGroupName of race.ageGroups) {
-            // Use camelCase
-            // Insert age group (ignore if exists)
-            insertAgeGroupStmt.run(ageGroupName);
-            uniqueAgeGroups.add(ageGroupName);
-
-            // Get age group ID
-            const ageGroupRow = getAgeGroupIdStmt.get(ageGroupName) as {
-              id: number;
-            };
-            if (!ageGroupRow) {
-              throw new Error(
-                `Failed to get age group ID for: ${ageGroupName}`
-              );
-            }
-
-            // Link race to age group
-            insertRaceAgeGroupStmt.run(raceId, ageGroupRow.id);
-          }
-
-          if (raceCount % 100 === 0) {
-            console.log(`📝 Processed ${raceCount} races...`);
-          }
-        } catch (error) {
-          console.error(`❌ Error inserting race: ${race.name}`, error);
-        }
-      }
-
-      ageGroupCount = uniqueAgeGroups.size;
-      console.log(
-        `✅ Inserted ${raceCount} races and ${ageGroupCount} unique age groups`
-      );
-    });
-
-    transaction();
-  }
-
-  private populateLevels() {
-    console.log("🏆 Populating levels table...");
-
-    // Futamszint data from documents/Futamszint.txt
-    const levelsData = [
-      // Előfutamok (Preliminaries) - Competition starts here
-      { name: "I. Előfutam", levelType: "előfutam", sortOrder: 1 },
-      { name: "II. Előfutam", levelType: "előfutam", sortOrder: 2 },
-      { name: "III. Előfutam", levelType: "előfutam", sortOrder: 3 },
-      { name: "IV. Előfutam", levelType: "előfutam", sortOrder: 4 },
-      { name: "V. Előfutam", levelType: "előfutam", sortOrder: 5 },
-      { name: "VI. Előfutam", levelType: "előfutam", sortOrder: 6 },
-      { name: "VII. Előfutam", levelType: "előfutam", sortOrder: 7 },
-      { name: "VIII. Előfutam", levelType: "előfutam", sortOrder: 8 },
-      { name: "IX. Előfutam", levelType: "előfutam", sortOrder: 9 },
-      { name: "X. Előfutam", levelType: "előfutam", sortOrder: 10 },
-      { name: "XI. Előfutam", levelType: "előfutam", sortOrder: 11 },
-      { name: "XII. Előfutam", levelType: "előfutam", sortOrder: 12 },
-      { name: "XIII. Előfutam", levelType: "előfutam", sortOrder: 13 },
-      { name: "XIV. Előfutam", levelType: "előfutam", sortOrder: 14 },
-      { name: "XV. Előfutam", levelType: "előfutam", sortOrder: 15 },
-      { name: "XVI. Előfutam", levelType: "előfutam", sortOrder: 16 },
-
-      // Középfutamok (Semifinals) - Middle progression
-      { name: "I. Középfutam", levelType: "középfutam", sortOrder: 101 },
-      { name: "II. Középfutam", levelType: "középfutam", sortOrder: 102 },
-      { name: "III. Középfutam", levelType: "középfutam", sortOrder: 103 },
-      { name: "IV. Középfutam", levelType: "középfutam", sortOrder: 104 },
-      { name: "V. Középfutam", levelType: "középfutam", sortOrder: 105 },
-      { name: "VI. Középfutam", levelType: "középfutam", sortOrder: 106 },
-      { name: "VII. Középfutam", levelType: "középfutam", sortOrder: 107 },
-      { name: "VIII. Középfutam", levelType: "középfutam", sortOrder: 108 },
-      { name: "IX. Középfutam", levelType: "középfutam", sortOrder: 109 },
-      { name: "X. Középfutam", levelType: "középfutam", sortOrder: 110 },
-
-      // Döntők (Finals) - Competition culmination
-      { name: "A Döntő", levelType: "döntő", sortOrder: 201 },
-      { name: "B Döntő", levelType: "döntő", sortOrder: 202 },
-      { name: "C Döntő", levelType: "döntő", sortOrder: 203 },
-      { name: "D Döntő", levelType: "döntő", sortOrder: 204 },
-      { name: "E Döntő", levelType: "döntő", sortOrder: 205 },
-      { name: "F Döntő", levelType: "döntő", sortOrder: 206 },
-      { name: "G Döntő", levelType: "döntő", sortOrder: 207 },
-      { name: "H Döntő", levelType: "döntő", sortOrder: 208 },
-      { name: "I Döntő", levelType: "döntő", sortOrder: 209 },
-      { name: "J Döntő", levelType: "döntő", sortOrder: 210 },
-
-      // Döntő római számokkal (Finals with Roman numerals)
-      { name: "Döntő I.", levelType: "döntő", sortOrder: 211, isDefault: true }, // Default level for simplified mode
-      { name: "Döntő II.", levelType: "döntő", sortOrder: 212 },
-      { name: "Döntő III.", levelType: "döntő", sortOrder: 213 },
-      { name: "Döntő IV.", levelType: "döntő", sortOrder: 214 },
-      { name: "Döntő V.", levelType: "döntő", sortOrder: 215 },
-      { name: "Döntő VI.", levelType: "döntő", sortOrder: 216 },
-      { name: "Döntő VII.", levelType: "döntő", sortOrder: 217 },
-      { name: "Döntő VIII.", levelType: "döntő", sortOrder: 218 },
+  private normalizeRaces(rawData: RawRaceData[]): NormalizedRaceData[] {
+    const allowedDisciplines = [
+      "Kajak", "Kenu", "SUP", "Kajakpóló",
+      "Parakenu", "Sárkányhajó", "Szlalom", "Tengeri kajak",
     ];
 
-    // Check if levels already exist
-    const existingLevels = this.db
-      .prepare("SELECT COUNT(*) as count FROM levels")
-      .get() as { count: number };
+    // First pass: parse all rows
+    const parsed: NormalizedRaceData[] = [];
 
-    if (existingLevels.count === 0) {
-      console.log("🏁 Inserting levels data...");
-
-      // Prepare statement for inserting levels
-      const insertLevelStmt = this.db.prepare(`
-        INSERT INTO levels (name, level_type, sort_order, is_default)
-        VALUES (?, ?, ?, ?)
-      `);
-
-      // Use transaction for performance
-      const transaction = this.db.transaction(() => {
-        for (const levelData of levelsData) {
-          insertLevelStmt.run(
-            levelData.name,
-            levelData.levelType,
-            levelData.sortOrder,
-            levelData.isDefault ? 1 : 0
-          );
-        }
-      });
-
-      transaction();
-      console.log(`✅ Successfully inserted ${levelsData.length} levels`);
-    } else {
-      console.log(
-        `✅ Levels table already populated with ${existingLevels.count} levels`
-      );
-    }
-  }
-
-  private linkRacesToBoatClasses() {
-    console.log("🔗 Linking races to boat_classes by name...");
-
-    // Use normalized comparison (trim + lower) and LIMIT 1 to avoid "subquery returns more than one row" errors.
-    const updateStmt = this.db.prepare(`
-      UPDATE races
-      SET boat_class_id = (
-        SELECT id FROM boat_classes
-        WHERE LOWER(TRIM(boat_classes.name)) = LOWER(TRIM(races.boat_class))
-        LIMIT 1
-      )
-      WHERE boat_class_id IS NULL
-    `);
-
-    const result = updateStmt.run();
-    console.log(
-      `✅ Linked ${result.changes} races to boat_classes (set boat_class_id)`
-    );
-
-    // Report any race boat_class names that did not find a match
-    const unmatched = this.db
-      .prepare(
-        `
-      SELECT DISTINCT r.boat_class AS boat_class_name
-      FROM races r
-      LEFT JOIN boat_classes bc
-        ON LOWER(TRIM(bc.name)) = LOWER(TRIM(r.boat_class))
-      WHERE bc.id IS NULL
-        AND r.boat_class IS NOT NULL
-        AND TRIM(r.boat_class) <> ''
-    `
-      )
-      .all() as { boat_class_name: string }[];
-
-    if (unmatched.length > 0) {
-      console.warn(
-        "⚠️ The following race.boat_class values did NOT match any boat_classes.name:"
-      );
-      for (const row of unmatched) {
-        console.warn(`   - ${row.boat_class_name}`);
+    for (const row of rawData) {
+      const discipline = row["Versenyszám szakág"]?.trim();
+      if (!allowedDisciplines.includes(discipline)) {
+        console.warn(`  WARN: unknown discipline "${discipline}" for "${row["Versenyszám neve"]}"`);
+        continue;
       }
-      console.warn(
-        "You may want to normalize these names in the source file or add corresponding boat_classes entries."
-      );
-    } else {
-      console.log("✅ All race boat_class values matched boat_classes.");
+
+      const genderRaw = (row["Versenyszám nem"] || "").trim().toLowerCase();
+      let gender: string;
+      if (genderRaw.includes("férfi")) gender = "Férfi";
+      else if (genderRaw.includes("női")) gender = "Női";
+      else gender = "Vegyes";
+
+      const ageGroups = (row["Versenyszám évfolyamok"] || "")
+        .split(";")
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+
+      if (ageGroups.length === 0) {
+        console.warn(`  WARN: no age groups for "${row["Versenyszám neve"]}"`);
+        continue;
+      }
+
+      const name = (row["Versenyszám neve"] || "").trim();
+      const boatClass = (row["Hajóosztály"] || "").trim();
+      const distance = (row["Versenyszám táv"] || "").trim();
+      const occurrence = parseInt(String(row["Előfordulás"])) || 0;
+
+      if (!name || !boatClass || !distance) {
+        console.warn(`  WARN: missing required fields for "${row["Versenyszám neve"]}"`);
+        continue;
+      }
+
+      parsed.push({ name, discipline, boatClass, gender, distance, occurrence, ageGroups });
     }
+
+    // Second pass: deduplicate by slugified name (merge occurrences and age groups)
+    const byCode = new Map<string, NormalizedRaceData>();
+    let dupeCount = 0;
+
+    for (const race of parsed) {
+      const code = slugify(race.name);
+      const existing = byCode.get(code);
+      if (existing) {
+        // Merge: sum occurrences, union age groups
+        existing.occurrence += race.occurrence;
+        for (const ag of race.ageGroups) {
+          if (!existing.ageGroups.includes(ag)) {
+            existing.ageGroups.push(ag);
+          }
+        }
+        dupeCount++;
+      } else {
+        byCode.set(code, { ...race, ageGroups: [...race.ageGroups] });
+      }
+    }
+
+    if (dupeCount > 0) {
+      console.log(`  Deduplicated: ${dupeCount} duplicate race entries merged`);
+    }
+
+    return [...byCode.values()];
   }
 
-  private verifyResults() {
-    console.log("🔍 Verifying database contents...");
-
-    const raceCountResult = this.db
-      .prepare("SELECT COUNT(*) as count FROM races")
-      .get() as { count: number };
-    const ageGroupCountResult = this.db
-      .prepare("SELECT COUNT(*) as count FROM age_groups")
-      .get() as { count: number };
-    const levelCountResult = this.db
-      .prepare("SELECT COUNT(*) as count FROM levels")
-      .get() as { count: number };
-    const linkCountResult = this.db
-      .prepare("SELECT COUNT(*) as count FROM race_age_groups")
-      .get() as { count: number };
-
-    console.log(`📊 Database contents:`);
-    console.log(`   - Races: ${raceCountResult.count}`);
-    console.log(`   - Age Groups: ${ageGroupCountResult.count}`);
-    console.log(`   - Levels: ${levelCountResult.count}`);
-    console.log(`   - Race-Age Group Links: ${linkCountResult.count}`);
-
-    // Show sample data
-    const sampleRaces = this.db
-      .prepare(
-        `
-      SELECT r.name, r.occurrence, GROUP_CONCAT(ag.name, '; ') as age_groups
-      FROM races r
-      JOIN race_age_groups rag ON r.id = rag.race_id
-      JOIN age_groups ag ON rag.age_group_id = ag.id
-      GROUP BY r.id, r.name, r.occurrence
-      ORDER BY r.occurrence DESC
-      LIMIT 3
-    `
-      )
-      .all();
-
-    console.log(`\n📋 Sample races with occurrence and age groups:`);
-    for (const race of sampleRaces) {
-      console.log(
-        `   - ${(race as any).name} (${(race as any).occurrence}x): ${(race as any).age_groups}`
-      );
-    }
-
-    // Show default level
-    const defaultLevel = this.db
-      .prepare("SELECT * FROM levels WHERE is_default = 1")
-      .get();
-    if (defaultLevel) {
-      console.log(
-        `\n🎯 Default level: ${(defaultLevel as any).name} (ID: ${(defaultLevel as any).id})`
-      );
-    }
-
-    // Show boat class statistics
-    const boatClassCountResult = this.db
-      .prepare("SELECT COUNT(*) as count FROM boat_classes")
-      .get() as { count: number };
-    console.log(`   - Boat Classes: ${boatClassCountResult.count}`);
-  }
+  // -------------------------------------------------------------------------
+  // Read boat class metadata file
+  // -------------------------------------------------------------------------
 
   private readBoatClassFile(): BoatClassData[] {
-    console.log("📖 Reading boat class metadata file...");
-
-    if (!fs.existsSync(this.boatClassPath)) {
-      throw new Error(`Boat class file not found at: ${this.boatClassPath}`);
-    }
-
-    const fileContent = fs.readFileSync(this.boatClassPath, "utf-8");
-    const lines = fileContent
-      .split("\n")
-      .filter((line) => line.trim().length > 0);
-
-    const boatClasses: BoatClassData[] = [];
+    const content = fs.readFileSync(this.boatClassPath, "utf-8");
+    const lines = content.split("\n").filter((l) => l.trim().length > 0);
+    const result: BoatClassData[] = [];
 
     for (const line of lines) {
       const parts = line.split("\t");
-      if (parts.length >= 3) {
-        const name = parts[0].trim();
-        const boatType = parts[1].trim();
-        const seatCountText = parts[2].trim();
+      if (parts.length < 3) continue;
 
-        // Parse seat count - handle "csapat" as special case
-        let seatCount: number | null = null;
-        if (seatCountText !== "csapat") {
-          const parsedSeatCount = parseInt(seatCountText);
-          if (!isNaN(parsedSeatCount)) {
-            seatCount = parsedSeatCount;
-          }
-        }
+      const name = parts[0].trim();
+      const boatType = parts[1].trim();
+      const seatCountText = parts[2].trim();
+      const seatCount = seatCountText === "csapat" ? null : parseInt(seatCountText) || null;
 
-        boatClasses.push({
-          name,
-          boatType,
-          seatCount,
-          seatCountText,
-        });
-      }
+      result.push({ name, boatType, seatCount, seatCountText });
     }
 
-    console.log(
-      `✅ Successfully read ${boatClasses.length} boat classes from file`
-    );
-    return boatClasses;
+    return result;
   }
 
-  private populateBoatClasses(boatClasses: BoatClassData[]) {
-    console.log("💾 Populating boat classes table...");
+  // -------------------------------------------------------------------------
+  // Populate all tables
+  // -------------------------------------------------------------------------
 
-    // Check if boat classes already exist
-    const existingCount = this.db
-      .prepare("SELECT COUNT(*) as count FROM boat_classes")
-      .get() as { count: number };
+  private populateAll(races: NormalizedRaceData[], boatClasses: BoatClassData[]) {
+    const txn = this.db.transaction(() => {
+      // --- catalog_meta ---
+      const insertMeta = this.db.prepare(
+        "INSERT INTO catalog_meta (meta_key, meta_value) VALUES (?, ?)"
+      );
+      insertMeta.run("schema_version", "1");
+      insertMeta.run("catalog_version", "2026.0");
+      insertMeta.run("generated_at", new Date().toISOString());
+      insertMeta.run("source", "seed");
 
-    if (existingCount.count === 0) {
-      console.log("🏁 Inserting boat class data...");
-
-      // Prepare statement for inserting boat classes
-      const insertBoatClassStmt = this.db.prepare(`
-        INSERT INTO boat_classes (name, boat_type, seat_count, seat_count_text, created_at)
-        VALUES (?, ?, ?, ?, datetime('now'))
-      `);
-
-      // Use transaction for performance
-      const transaction = this.db.transaction(() => {
-        for (const boatClass of boatClasses) {
-          insertBoatClassStmt.run(
-            boatClass.name,
-            boatClass.boatType,
-            boatClass.seatCount,
-            boatClass.seatCountText
-          );
-        }
+      // --- boat_types (extract unique from boat class data) ---
+      const boatTypeNames = [...new Set(boatClasses.map((bc) => bc.boatType))];
+      const insertBoatType = this.db.prepare(
+        "INSERT INTO boat_types (code, name, sort_order) VALUES (?, ?, ?)"
+      );
+      boatTypeNames.forEach((name, idx) => {
+        insertBoatType.run(slugify(name), name, idx + 1);
       });
 
-      transaction();
-      console.log(
-        `✅ Successfully inserted ${boatClasses.length} boat classes`
+      // --- boat_classes ---
+      const insertBoatClass = this.db.prepare(
+        "INSERT INTO boat_classes (code, name, boat_type_code, seat_count, seat_count_text) VALUES (?, ?, ?, ?, ?)"
       );
-    } else {
-      console.log(
-        `✅ Boat classes table already populated with ${existingCount.count} entries`
+      for (const bc of boatClasses) {
+        insertBoatClass.run(
+          slugify(bc.name),
+          bc.name,
+          slugify(bc.boatType),
+          bc.seatCount,
+          bc.seatCountText
+        );
+      }
+
+      // --- age_groups (extract unique from races) ---
+      const ageGroupNames = new Set<string>();
+      for (const race of races) {
+        for (const ag of race.ageGroups) ageGroupNames.add(ag);
+      }
+      const sortedAgeGroups = [...ageGroupNames].sort();
+      const insertAgeGroup = this.db.prepare(
+        "INSERT INTO age_groups (code, name, sort_order) VALUES (?, ?, ?)"
       );
+      sortedAgeGroups.forEach((name, idx) => {
+        insertAgeGroup.run(slugify(name), name, idx + 1);
+      });
+
+      // --- levels ---
+      const insertLevel = this.db.prepare(
+        "INSERT INTO levels (code, name, level_type, sort_order, is_default) VALUES (?, ?, ?, ?, ?)"
+      );
+      for (const lv of LEVELS_DATA) {
+        insertLevel.run(
+          slugify(lv.name),
+          lv.name,
+          lv.levelType,
+          lv.sortOrder,
+          lv.isDefault ? 1 : 0
+        );
+      }
+
+      // --- races (sort by occurrence DESC to assign sort_order) ---
+      const sortedRaces = [...races].sort((a, b) => b.occurrence - a.occurrence);
+      const insertRace = this.db.prepare(
+        "INSERT INTO races (code, name, discipline, boat_class_code, gender, distance, hidden, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+      );
+
+      // Build a set of valid boat class codes for validation
+      const validBoatClassCodes = new Set(boatClasses.map((bc) => slugify(bc.name)));
+
+      const insertRaceAgeGroup = this.db.prepare(
+        "INSERT INTO race_age_groups (race_code, age_group_code) VALUES (?, ?)"
+      );
+
+      sortedRaces.forEach((race, idx) => {
+        const raceCode = slugify(race.name);
+        const boatClassCode = slugify(race.boatClass);
+
+        if (!validBoatClassCodes.has(boatClassCode)) {
+          console.warn(`  WARN: boat class "${race.boatClass}" (code: ${boatClassCode}) not found for race "${race.name}"`);
+        }
+
+        insertRace.run(
+          raceCode,
+          race.name,
+          race.discipline,
+          boatClassCode,
+          race.gender,
+          race.distance,
+          0, // hidden
+          idx + 1 // sort_order: 1 = highest occurrence
+        );
+
+        // Link age groups
+        for (const ag of race.ageGroups) {
+          insertRaceAgeGroup.run(raceCode, slugify(ag));
+        }
+      });
+    });
+
+    txn();
+  }
+
+  // -------------------------------------------------------------------------
+  // Verify
+  // -------------------------------------------------------------------------
+
+  private verify() {
+    const count = (table: string) =>
+      (this.db.prepare(`SELECT COUNT(*) as c FROM ${table}`).get() as { c: number }).c;
+
+    console.log("  Verification:");
+    console.log(`    catalog_meta:    ${count("catalog_meta")} rows`);
+    console.log(`    boat_types:      ${count("boat_types")} rows`);
+    console.log(`    boat_classes:    ${count("boat_classes")} rows`);
+    console.log(`    age_groups:      ${count("age_groups")} rows`);
+    console.log(`    levels:          ${count("levels")} rows`);
+    console.log(`    races:           ${count("races")} rows`);
+    console.log(`    race_age_groups: ${count("race_age_groups")} rows`);
+
+    // Show default level
+    const defLevel = this.db
+      .prepare("SELECT code, name FROM levels WHERE is_default = 1")
+      .get() as { code: string; name: string } | undefined;
+    if (defLevel) {
+      console.log(`    Default level: ${defLevel.name} (${defLevel.code})`);
+    }
+
+    // Show top 3 races by sort_order
+    const topRaces = this.db
+      .prepare("SELECT code, name, sort_order FROM races ORDER BY sort_order LIMIT 3")
+      .all() as Array<{ code: string; name: string; sort_order: number }>;
+    console.log("    Top 3 races (most common):");
+    for (const r of topRaces) {
+      console.log(`      #${r.sort_order}: ${r.name} (${r.code})`);
     }
   }
 }
 
-// Run the populator if this script is executed directly
+// ---------------------------------------------------------------------------
+// Entry point
+// ---------------------------------------------------------------------------
+
 if (require.main === module) {
-  // Parse command line arguments for output path
   const args = process.argv.slice(2);
-  const outputPathArg = args.find((arg) => arg.startsWith("--output="));
-  const outputPath = outputPathArg ? outputPathArg.split("=")[1] : undefined;
+  const outputArg = args.find((a) => a.startsWith("--output="));
+  const outputPath = outputArg ? outputArg.split("=").slice(1).join("=") : undefined;
 
   if (outputPath) {
-    console.log(`🎯 Using custom output path: ${outputPath}`);
+    console.log(`Output: ${outputPath}`);
   } else {
-    console.log(
-      `🎯 Using default output path: ${path.join(process.cwd(), "idorendmaker.db")}`
-    );
+    console.log(`Output: ${path.join(process.cwd(), "catalog.db")}`);
   }
 
-  const populator = new DatabasePopulator(outputPath);
+  const populator = new CatalogPopulator(outputPath);
   populator.run();
 }
 
-export default DatabasePopulator;
+export default CatalogPopulator;
