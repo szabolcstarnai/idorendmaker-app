@@ -13,13 +13,13 @@ public interface ScheduleItemRepository extends JpaRepository<ScheduleItem, Inte
     @Query("SELECT si FROM ScheduleItem si "
         + "WHERE si.scheduleId = :scheduleId "
         + "ORDER BY si.orderIndex ASC")
-    List<ScheduleItem> findAllByScheduleIdWithRaceAndLevel(@Param("scheduleId") Integer scheduleId);
+    List<ScheduleItem> findAllByScheduleIdOrderByOrderIndex(@Param("scheduleId") Integer scheduleId);
 
     @EntityGraph(attributePaths = {"section"})
     @Query("SELECT si FROM ScheduleItem si "
         + "WHERE si.sectionId = :sectionId "
         + "ORDER BY si.orderIndex ASC")
-    List<ScheduleItem> findAllBySectionIdWithRaceAndLevelAndSection(@Param("sectionId") Integer sectionId);
+    List<ScheduleItem> findAllBySectionIdOrderByOrderIndexWithSection(@Param("sectionId") Integer sectionId);
 
     @Modifying
     @Query("DELETE FROM ScheduleItem si WHERE si.scheduleId = :scheduleId")
@@ -28,9 +28,4 @@ public interface ScheduleItemRepository extends JpaRepository<ScheduleItem, Inte
     @Modifying
     @Query("DELETE FROM ScheduleItem si WHERE si.sectionId = :sectionId")
     void deleteAllBySectionId(@Param("sectionId") Integer sectionId);
-
-    @Query("SELECT si FROM ScheduleItem si "
-        + "WHERE si.scheduleId = :scheduleId "
-        + "ORDER BY si.orderIndex ASC")
-    List<ScheduleItem> findAllByScheduleIdOrderByOrderIndexAsc(@Param("scheduleId") Integer scheduleId);
 }

@@ -15,6 +15,14 @@ import org.springframework.transaction.annotation.Transactional;
  * the catalog datasource. The snapshot is what survives future catalog edits
  * for already-saved schedules.
  *
+ * <p><strong>Overwrite semantics:</strong> every call to
+ * {@link #populate(ScheduleItem, String, String)} unconditionally overwrites
+ * all snapshot fields ({@code raceName}, {@code raceDiscipline},
+ * {@code raceGender}, {@code raceDistance}, {@code raceBoatClassName},
+ * {@code raceAgeGroupsDisplay}, {@code levelName}, {@code levelType}) with
+ * the current catalog values. There is no incremental merge; callers that
+ * want to preserve a previous snapshot should not call this method again.
+ *
  * <p>Race-side resolution (race name / discipline / gender / distance /
  * boat-class name / age-groups display) is delegated to
  * {@link RaceCatalogLookupService#loadRaceDisplayData(String)} so that every

@@ -72,7 +72,7 @@ public class ScheduleServiceImpl implements ScheduleService {
     public List<ScheduleItemWithRaceAndSectionDto> getScheduleItems(final Integer scheduleId) {
         log.debug("Getting schedule items for schedule id: {}", scheduleId);
         
-        final List<ScheduleItem> items = scheduleItemRepository.findAllByScheduleIdWithRaceAndLevel(scheduleId);
+        final List<ScheduleItem> items = scheduleItemRepository.findAllByScheduleIdOrderByOrderIndex(scheduleId);
         
         // Convert to DTOs and calculate start times
         final List<ScheduleItemWithRaceAndSectionDto> result = new ArrayList<>();
@@ -281,7 +281,7 @@ public class ScheduleServiceImpl implements ScheduleService {
         log.debug("Getting schedule items for section id: {}", sectionId);
         
         final List<ScheduleItem> items = scheduleItemRepository
-                .findAllBySectionIdWithRaceAndLevelAndSection(sectionId);
+                .findAllBySectionIdOrderByOrderIndexWithSection(sectionId);
         
         // Convert to DTOs with calculated start times
         if (items.isEmpty()) {
@@ -311,7 +311,7 @@ public class ScheduleServiceImpl implements ScheduleService {
         final Schedule schedule = scheduleOpt.get();
         
         // Step 2: Get schedule items separately with their races and age groups
-        final List<ScheduleItem> scheduleItems = scheduleItemRepository.findAllByScheduleIdWithRaceAndLevel(scheduleId);
+        final List<ScheduleItem> scheduleItems = scheduleItemRepository.findAllByScheduleIdOrderByOrderIndex(scheduleId);
         
         // Step 3: Manually populate items into their respective sections
         for (final ScheduleItem item : scheduleItems) {
@@ -437,7 +437,7 @@ public class ScheduleServiceImpl implements ScheduleService {
         final int totalSections = sections.size();
 
         // Get all schedule items for this schedule
-        final List<ScheduleItem> allItems = scheduleItemRepository.findAllByScheduleIdOrderByOrderIndexAsc(scheduleId);
+        final List<ScheduleItem> allItems = scheduleItemRepository.findAllByScheduleIdOrderByOrderIndex(scheduleId);
         final int totalRaces = allItems.size();
 
         // Calculate unique race types (distinct race codes)
