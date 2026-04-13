@@ -841,14 +841,37 @@ export class BackendAPIService {
   // =================== COMPETITOR SERVICE METHODS ===================
 
   /**
+   * Flatten a frontend ScheduleRace into the flat DTO shape expected by the backend.
+   */
+  private static mapScheduleRaceToDto(sr: ScheduleRace) {
+    return {
+      id: sr.id,
+      raceCode: sr.race.code,
+      levelCode: sr.level.code,
+      raceName: sr.race.name,
+      raceDiscipline: sr.race.discipline,
+      raceBoatClassName: sr.race.boatClassName || sr.race.boatClassCode,
+      raceGender: sr.race.gender,
+      raceDistance: sr.race.distance,
+      raceAgeGroupsDisplay: sr.race.ageGroups?.map(ag => ag.name).join(', ') || '',
+      levelName: sr.level.name,
+      levelType: sr.level.levelType,
+      day: sr.day,
+      startTime: sr.startTime,
+      order: sr.order,
+    };
+  }
+
+  /**
    * Analyze competitor schedules from a set of schedule races
    * Replaces: CompetitorService.analyzeCompetitorSchedules()
    * Endpoint: POST /api/competitors/analyze
    */
   static async analyzeCompetitorSchedules(scheduleRaces: ScheduleRace[], pdfExtractionId?: number): Promise<CompetitorSchedule[]> {
     try {
+      const scheduleDtos = scheduleRaces.map(sr => this.mapScheduleRaceToDto(sr));
       return await this.post<CompetitorSchedule[]>(`${BackendConfig.ENDPOINTS.COMPETITORS}/analyze`, {
-        scheduleRaces,
+        scheduleRaces: scheduleDtos,
         pdfExtractionId
       })
     } catch (error) {

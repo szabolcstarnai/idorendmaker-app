@@ -73,7 +73,7 @@ export class ConditionEvaluator {
       case 'ageGroups':
         // For age groups, we'll check if ANY of the race's age groups match
         // This returns a concatenated string for contains/equals operations
-        return race.ageGroups.map(ag => ag.name).join(', ')
+        return (race.ageGroups ?? []).map(ag => ag.name).join(', ')
       
       case 'level':
         return scheduleRace.level.name
@@ -120,8 +120,8 @@ export class MatchingEvaluator {
     
     if (field === 'ageGroups') {
       // For age groups, check if there's any overlap
-      const ageGroups1 = scheduleRace1.race.ageGroups.map(ag => ag.name)
-      const ageGroups2 = scheduleRace2.race.ageGroups.map(ag => ag.name)
+      const ageGroups1 = (scheduleRace1.race.ageGroups ?? []).map(ag => ag.name)
+      const ageGroups2 = (scheduleRace2.race.ageGroups ?? []).map(ag => ag.name)
       return ageGroups1.some(ag1 => ageGroups2.includes(ag1))
     }
     
@@ -298,7 +298,7 @@ export class RuleProcessor {
   ): string {
     const formatRaceNameWithLevel = (scheduleRace: ScheduleRace) => {
       // Include level information for clarity
-      const baseName = scheduleRace.race.name || `${scheduleRace.race.boatClassCode} ${scheduleRace.race.gender} ${scheduleRace.race.distance}`.trim();
+      const baseName = scheduleRace.race.name || `${scheduleRace.race.boatClassName || scheduleRace.race.boatClassCode} ${scheduleRace.race.gender} ${scheduleRace.race.distance}`.trim();
       return `${baseName} (${scheduleRace.level.name})`
     }
 

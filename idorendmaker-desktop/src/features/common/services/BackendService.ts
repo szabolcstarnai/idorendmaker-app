@@ -38,7 +38,7 @@ export class BackendService {
   private getJarCandidates() {
     const packaged = path.join(process.resourcesPath, 'idorendmaker-backend.jar');
     const dev = path.join(process.cwd(), '..', 'idorendmaker-backend', 'target', 'idorendmaker-backend.jar');
-    const devVersioned = path.join(process.cwd(), '..', 'idorendmaker-backend', 'target', 'idorendmaker-backend-1.1.0.jar');
+    const devVersioned = path.join(process.cwd(), '..', 'idorendmaker-backend', 'target', 'idorendmaker-backend-2.0.0.jar');
     return { packaged, dev, devVersioned };
   }
 
@@ -245,6 +245,7 @@ export class BackendService {
     }
 
     console.log('Stopping backend service...');
+    const pid = this.process.pid;
 
     return new Promise((resolve) => {
       if (!this.process) {
@@ -255,7 +256,7 @@ export class BackendService {
       const shutdownTimeout = setTimeout(() => {
         if (this.process && !this.process.killed) {
           console.log('Force killing backend service...');
-          this.process.kill('SIGKILL');
+          this.forceKillProcess(pid);
         }
       }, 5000);
 
@@ -267,8 +268,30 @@ export class BackendService {
         resolve();
       });
 
-      this.process.kill('SIGTERM');
+      // On Windows, SIGTERM doesn't kill Java processes reliably.
+      // Use taskkill to terminate the entire process tree.
+      if (process.platform === 'win32' && pid) {
+        this.forceKillProcess(pid);
+      } else {
+        this.process.kill('SIGTERM');
+      }
     });
+  }
+
+  private forceKillProcess(pid: number | undefined): void {
+    if (!pid) return;
+    try {
+      if (process.platform === 'win32') {
+        spawn('taskkill', ['/F', '/T', '/PID', pid.toString()], {
+          stdio: 'ignore',
+          windowsHide: true,
+        });
+      } else {
+        this.process?.kill('SIGKILL');
+      }
+    } catch (e) {
+      console.error('Error killing process:', e);
+    }
   }
 
   /**
@@ -300,8 +323,7 @@ export class BackendService {
    * Get the current base URL for API calls
    */
   getBaseUrl(): string {
-    return `http://localhost:8080/api`;
-    //return `${this.baseUrl}/api`;
+    return `${this.baseUrl}/api`;
   }
 
   /**

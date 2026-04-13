@@ -116,7 +116,7 @@ const RaceCard = React.memo(({ race, onRaceClick, onToggleHidden, showAddButton 
             {race.discipline}
           </Badge>
           <Badge variant="secondary" className="text-xs">
-            {race.boatClassCode}
+            {race.boatClassName || race.boatClassCode}
           </Badge>
           <Badge variant={getGenderVariant(race.gender)} className="text-xs">
             {race.gender}
@@ -137,7 +137,7 @@ const RaceCard = React.memo(({ race, onRaceClick, onToggleHidden, showAddButton 
           </div>
         )}
 
-        {race.ageGroups.length > 0 && (
+        {race.ageGroups?.length > 0 && (
           <div className="text-xs text-muted-foreground">
             {race.ageGroups.map(ag => ag.name).join(', ')}
           </div>
@@ -268,10 +268,10 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
       searchText: [
         raceStatus.race.name,
         raceStatus.race.discipline,
-        raceStatus.race.boatClassCode,
+        raceStatus.race.boatClassName || raceStatus.race.boatClassCode,
         raceStatus.race.gender,
         raceStatus.race.distance,
-        ...raceStatus.race.ageGroups.map(ag => ag.name)
+        ...(raceStatus.race.ageGroups ?? []).map(ag => ag.name)
       ].join(' ').toLowerCase()
     }));
   }, [raceWithLevelStatus]);
@@ -341,6 +341,7 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
           name: race.name,
           discipline: race.discipline,
           boatClassCode: race.boatClassCode,
+          boatClassName: race.boatClassName,
           gender: race.gender,
           distance: race.distance,
           sortOrder: race.sortOrder,

@@ -342,6 +342,7 @@ export class ExportService {
             name: item.raceName,
             discipline: item.raceDiscipline,
             boatClassCode: item.raceBoatClassName,
+            boatClassName: item.raceBoatClassName,
             gender: item.raceGender,
             distance: item.raceDistance,
             sortOrder: 0,
@@ -449,6 +450,7 @@ export class ExportService {
           name: item.raceName,
           discipline: item.raceDiscipline,
           boatClassCode: item.raceBoatClassName,
+          boatClassName: item.raceBoatClassName,
           gender: item.raceGender,
           distance: item.raceDistance,
           sortOrder: 0,
@@ -498,6 +500,7 @@ export class ExportService {
           name: item.raceName,
           discipline: item.raceDiscipline,
           boatClassCode: item.raceBoatClassName,
+          boatClassName: item.raceBoatClassName,
           gender: item.raceGender,
           distance: item.raceDistance,
           sortOrder: 0,
@@ -909,10 +912,10 @@ export class ExportService {
 
       const race1Name = race1Level
         ? `${violation.race1.name} ${race1Level}`
-        : `${violation.race1.name} (${violation.race1.boatClassCode})`;
+        : `${violation.race1.name} (${violation.race1.boatClassName || violation.race1.boatClassCode})`;
       const race2Name = race2Level
         ? `${violation.race2.name} ${race2Level}`
-        : `${violation.race2.name} (${violation.race2.boatClassCode})`;
+        : `${violation.race2.name} (${violation.race2.boatClassName || violation.race2.boatClassCode})`;
 
       return {
         versenyszam1: race1Name,

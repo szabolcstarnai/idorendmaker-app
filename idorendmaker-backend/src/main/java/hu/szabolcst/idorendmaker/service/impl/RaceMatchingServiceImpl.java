@@ -1,5 +1,6 @@
 package hu.szabolcst.idorendmaker.service.impl;
 
+import hu.szabolcst.idorendmaker.mapper.RaceMapper;
 import hu.szabolcst.idorendmaker.mapper.RaceMatchingMapper;
 import hu.szabolcst.idorendmaker.model.dto.competitor.CompetitorRaceInfoDto;
 import hu.szabolcst.idorendmaker.model.dto.matching.CompetitorDataDto;
@@ -52,6 +53,7 @@ public class RaceMatchingServiceImpl implements RaceMatchingService {
     private final RaceCompetitorAssociationRepository raceCompetitorAssociationRepository;
     private final RaceCatalogLookupService raceCatalogLookupService;
     private final RaceMatchingMapper raceMatchingMapper;
+    private final RaceMapper raceMapper;
 
     @Override
     @Transactional
@@ -170,10 +172,16 @@ public class RaceMatchingServiceImpl implements RaceMatchingService {
 
                 // Create DTO from the catalog race
                 final RaceWithCompetitorDataDto dto = raceMatchingMapper.toRaceWithCompetitorDataDto(display.race());
+                dto.setAgeGroups(
+                    display.ageGroups().stream()
+                        .map(raceMapper::toAgeGroupDto)
+                        .toList()
+                );
                 dto.setEntryCount(competitorIds.size());
                 dto.setCompetitorIds(competitorIds);
                 dto.setTopCompetitors(topCompetitors);
                 dto.setPdfExtractionId(pdfExtractionId);
+                dto.setBoatClassName(display.boatClassName());
 
                 filteredRaces.add(dto);
             }

@@ -5,10 +5,12 @@ import hu.szabolcst.idorendmaker.model.dto.DatabaseStatsDto;
 import hu.szabolcst.idorendmaker.model.dto.race.AgeGroupDto;
 import hu.szabolcst.idorendmaker.model.dto.race.RaceWithAgeGroupsAndBoatClassDto;
 import hu.szabolcst.idorendmaker.model.entity.catalog.AgeGroup;
+import hu.szabolcst.idorendmaker.model.entity.catalog.BoatClass;
 import hu.szabolcst.idorendmaker.model.entity.catalog.Race;
 import hu.szabolcst.idorendmaker.model.entity.catalog.RaceAgeGroup;
 import hu.szabolcst.idorendmaker.repository.ScheduleRepository;
 import hu.szabolcst.idorendmaker.repository.catalog.AgeGroupRepository;
+import hu.szabolcst.idorendmaker.repository.catalog.BoatClassRepository;
 import hu.szabolcst.idorendmaker.repository.catalog.RaceAgeGroupRepository;
 import hu.szabolcst.idorendmaker.repository.catalog.RaceRepository;
 import hu.szabolcst.idorendmaker.service.RaceService;
@@ -27,6 +29,7 @@ public class RaceServiceImpl implements RaceService {
     private final RaceRepository raceRepository;
     private final RaceAgeGroupRepository raceAgeGroupRepository;
     private final AgeGroupRepository ageGroupRepository;
+    private final BoatClassRepository boatClassRepository;
     // ScheduleRepository is a user-DB repository; it stays on the primary
     // (user) transaction manager and is only used inside getStats() for a
     // single count() call.
@@ -91,11 +94,20 @@ public class RaceServiceImpl implements RaceService {
         final Map<String, AgeGroup> ageGroupsByCode = ageGroupRepository.findAll().stream()
             .collect(Collectors.toMap(AgeGroup::getCode, Function.identity()));
 
+        // Bulk fetch all boat classes once into a code→entity map.
+        final Map<String, BoatClass> boatClassesByCode = boatClassRepository.findAll().stream()
+            .collect(Collectors.toMap(BoatClass::getCode, Function.identity()));
+
         return races.stream()
-            .map(race -> raceMapper.toRaceWithAgeGroupsDto(
-                race,
-                joinsByRace.getOrDefault(race.getCode(), List.of()),
-                ageGroupsByCode))
+            .map(race -> {
+                final RaceWithAgeGroupsAndBoatClassDto dto = raceMapper.toRaceWithAgeGroupsDto(
+                    race,
+                    joinsByRace.getOrDefault(race.getCode(), List.of()),
+                    ageGroupsByCode);
+                final BoatClass bc = boatClassesByCode.get(race.getBoatClassCode());
+                dto.setBoatClassName(bc != null ? bc.getName() : race.getBoatClassCode());
+                return dto;
+            })
             .toList();
     }
 }

@@ -22,7 +22,7 @@ const createWindow = () => {
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
-      devTools: false
+      devTools: true
     },
   });
 
@@ -34,7 +34,7 @@ const createWindow = () => {
   }
 
   // // Open the DevTools.
-  // mainWindow.webContents.openDevTools();
+   mainWindow.webContents.openDevTools();
 };
 
 // Initialize database and IPC handlers

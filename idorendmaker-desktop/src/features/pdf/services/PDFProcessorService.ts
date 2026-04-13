@@ -252,12 +252,13 @@ private async resolveRuntime(): Promise<void> {
     }
 
     console.log('Stopping PDF processor...');
+    const pid = this.process.pid;
 
     return new Promise((resolve) => {
       const shutdownTimeout = setTimeout(() => {
         if (this.process && !this.process.killed) {
           console.log('Force killing PDF processor...');
-          this.process.kill('SIGKILL');
+          this.forceKillProcess(pid);
         }
       }, 5000);
 
@@ -269,8 +270,29 @@ private async resolveRuntime(): Promise<void> {
         resolve();
       });
 
-      this.process.kill('SIGTERM');
+      // On Windows, SIGTERM doesn't kill Java processes reliably.
+      if (process.platform === 'win32' && pid) {
+        this.forceKillProcess(pid);
+      } else {
+        this.process.kill('SIGTERM');
+      }
     });
+  }
+
+  private forceKillProcess(pid: number | undefined): void {
+    if (!pid) return;
+    try {
+      if (process.platform === 'win32') {
+        spawn('taskkill', ['/F', '/T', '/PID', pid.toString()], {
+          stdio: 'ignore',
+          windowsHide: true,
+        });
+      } else {
+        this.process?.kill('SIGKILL');
+      }
+    } catch (e) {
+      console.error('Error killing process:', e);
+    }
   }
 
   /**

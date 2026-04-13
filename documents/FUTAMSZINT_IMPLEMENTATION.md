@@ -279,10 +279,10 @@ Error: @esbuild/win32-x64 vs @esbuild/linux-x64 platform mismatch
 ### ✅ **Phase 1 & 2 & 2.5 - All Completed Components**
 
 #### Database Layer
-- [x] **Prisma Schema**: Level model + ScheduleItem.levelId field
+- [x] **JPA Entities**: `model/entity/Level.java` + `ScheduleItem.levelId` column with `@ManyToOne` to `Level`
 - [x] **SQL Schema**: Updated shared/database/schema.sql with levels table
 - [x] **Migration Script**: Populates 45+ levels from Futamszint.txt
-- [x] **Service Layer**: LevelService + updated ScheduleService
+- [x] **Service Layer**: Spring `LevelService` (`service/LevelService.java`) + updated `ScheduleService`; backed by Spring Data JPA repositories (`LevelRepository`, `ScheduleItemRepository`)
 
 #### Business Logic
 - [x] **TypeScript Types**: Enhanced with Level model throughout
@@ -441,33 +441,41 @@ documents/
 ├── FUTAMSZINT_IMPLEMENTATION.md          # This documentation
 └── Futamszint.txt                        # Source data (45 levels)
 
-prisma/
-└── schema.prisma                         # Level model + enhanced ScheduleItem
+idorendmaker-backend/                     # Spring Boot 3.4.5 JAR (Java 23, Spring Data JPA)
+└── src/main/java/hu/szabolcst/idorendmaker/
+    ├── model/entity/
+    │   ├── Level.java                    # @Entity, @Table("levels")
+    │   └── ScheduleItem.java             # @ManyToOne Level via level_id
+    ├── repository/
+    │   ├── LevelRepository.java          # extends JpaRepository<Level, Integer>
+    │   └── ScheduleItemRepository.java   # levelId-aware queries
+    ├── service/
+    │   ├── LevelService.java             # Level-specific operations (interface + impl)
+    │   └── ScheduleService.java          # Updated with levelId support
+    └── controller/
+        ├── LevelController.java          # REST: /api/levels/*
+        └── ScheduleController.java       # REST: /api/schedules/*
+
+idorendmaker-backend/src/main/resources/
+├── db/migrations/                        # Custom MigrationRunner SQL files (levels table seed)
+└── application.properties                # JPA props, SQLite dialect, no ddl-auto
 
 shared/
-├── database/schema.sql                   # Updated SQL schema with levels
-└── types/race.ts                         # Enhanced TypeScript types
+├── database/schema.sql                   # Updated SQL schema with levels (applied desktop-side)
+└── types/race.ts                         # Enhanced TypeScript types (frontend mirror)
 
-src/
-├── database/
-│   ├── LevelService.ts                   # Level-specific operations
-│   └── ScheduleService.ts                # Updated with levelId support
-├── hooks/
+idorendmaker-desktop/src/
+├── data/services/BackendAPIService.ts    # HTTP client → level + schedule endpoints
+├── features/schedule/hooks/
 │   ├── useScheduleSectionData.ts         # Enhanced addRaceToSchedule with level support
 │   └── useSaveSchedule.ts                # levelId persistence and race+level combinations
-├── utils/
+├── features/schedule/utils/
 │   └── levelUtils.ts                     # Level filtering and management utilities
-├── components/
-│   ├── LevelSelectorModal.tsx            # Beautiful level selection modal
-│   ├── ScheduleRaceCard.tsx              # Level badge display with color coding
-│   ├── RaceList.tsx                      # Enhanced with smart tab logic and level management
-│   ├── ScheduleBuilder.tsx               # Level-aware race addition
-│   └── App.tsx                           # Updated for level-aware race handling
-└── preload.ts                            # Electron API with level functions
-
-scripts/
-├── populate-db.ts                        # Levels population (enhanced)
-└── migrate-levels.js                     # Migration script
+└── features/schedule/components/
+    ├── LevelSelectorModal.tsx            # Level selection modal
+    ├── ScheduleRaceCard.tsx              # Level badge display with color coding
+    ├── RaceList.tsx                      # Smart tab logic and level management
+    └── ScheduleBuilder.tsx               # Level-aware race addition
 ```
 
 ---
@@ -475,9 +483,9 @@ scripts/
 ## 🔗 **Integration Points & Dependencies**
 
 ### Database Dependencies
-- **Prisma Client**: Regenerate after schema changes
-- **SQLite Database**: Run population script for levels data
-- **Migration**: Existing data automatically gets default level
+- **Spring Data JPA / Hibernate 6.6**: Auto-wires repositories; entity changes require a recompile only (no generated-client step). `spring.jpa.hibernate.ddl-auto=none` — Hibernate never touches the schema.
+- **SQLite Database**: Schema is applied by the desktop layer from `shared/database/schema.sql`; the backend's custom `MigrationRunner` (`migration/MigrationRunner.java`, `@Order(1)`) runs SQL files from `classpath:db/migrations/` at startup for subsequent changes.
+- **Migration**: Existing schedule items get a default level via the migration runner.
 
 ### UI Dependencies
 - **Electron IPC**: getDefaultLevel(), getAllLevels() functions

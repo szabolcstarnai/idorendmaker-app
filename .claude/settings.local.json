@@ -13,7 +13,13 @@
       "Bash(wc:*)",
       "Bash(./mvnw dependency:tree:*)",
       "Bash(./mvnw.cmd:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(./idorendmaker-backend/mvnw.cmd:*)",
+      "Bash(./mvnw.cmd spring-boot:run:*)",
+      "Bash(./mvnw:*)",
+      "Bash(netstat:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []

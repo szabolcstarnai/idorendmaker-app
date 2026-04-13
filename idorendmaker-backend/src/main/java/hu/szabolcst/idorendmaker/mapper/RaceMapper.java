@@ -31,6 +31,7 @@ public interface RaceMapper {
     // ------------------------------------------------------------------
 
     @Mapping(target = "ageGroups", ignore = true)
+    @Mapping(target = "boatClassName", ignore = true)
     RaceWithAgeGroupsAndBoatClassDto toRaceWithAgeGroupsDto(Race paramRace);
 
     AgeGroupDto toAgeGroupDto(AgeGroup paramAgeGroup);

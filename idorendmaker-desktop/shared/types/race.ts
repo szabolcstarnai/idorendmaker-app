@@ -4,6 +4,7 @@ export interface Race {
   name: string
   discipline: string // 'Kajak', 'Kenu', 'SUP', 'Kajakpóló', 'Parakenu', 'Sárkányhajó', 'Szlalom', 'Tengeri kajak'
   boatClassCode: string // Reference to boat_classes by code
+  boatClassName?: string // Resolved display name (e.g., "Minikajak egyes")
   gender: string // 'Férfi', 'Női', 'Vegyes'
   distance: string
   sortOrder: number // For ordering (was occurrence)

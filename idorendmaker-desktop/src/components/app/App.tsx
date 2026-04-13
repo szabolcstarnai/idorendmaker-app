@@ -330,6 +330,7 @@ const App: React.FC = () => {
             gender: item.raceGender,
             distance: item.raceDistance,
             boatClassCode: item.raceBoatClassName,
+            boatClassName: item.raceBoatClassName,
             sortOrder: 0,
             ageGroups: [],
             hidden: false

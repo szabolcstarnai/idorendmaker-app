@@ -88,7 +88,7 @@ const ScheduleRaceCard: React.FC<ScheduleRaceCardProps> = React.memo(({
                     {scheduleRace.race.discipline}
                   </Badge>
                   <Badge variant="outline" className="text-xs px-1 py-0">
-                    {scheduleRace.race.boatClassCode}
+                    {scheduleRace.race.boatClassName || scheduleRace.race.boatClassCode}
                   </Badge>
                   <Badge variant="outline" className="text-xs px-1 py-0">
                     {scheduleRace.race.gender}
@@ -97,7 +97,7 @@ const ScheduleRaceCard: React.FC<ScheduleRaceCardProps> = React.memo(({
                     {scheduleRace.race.distance}
                   </Badge>
                 </div>
-                {scheduleRace.race.ageGroups.length > 0 && (
+                {scheduleRace.race.ageGroups?.length > 0 && (
                   <div className="text-xs text-muted-foreground mt-0">
                     {scheduleRace.race.ageGroups.map(ag => ag.name).join(', ')}
                   </div>

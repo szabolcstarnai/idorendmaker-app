@@ -97,11 +97,13 @@ public class RaceCatalogLookupService {
                 .orElse(boatClassCode);
 
         final List<RaceAgeGroup> raceAgeGroups = raceAgeGroupRepository.findAllByRaceCode(raceCode);
+        final List<AgeGroup> resolvedAgeGroups;
         final String ageGroupsDisplay;
         if (raceAgeGroups.isEmpty()) {
+            resolvedAgeGroups = List.of();
             ageGroupsDisplay = null;
         } else {
-            final String joined = raceAgeGroups.stream()
+            resolvedAgeGroups = raceAgeGroups.stream()
                 .map(rag -> ageGroupRepository.findById(rag.getAgeGroupCode()).orElse(null))
                 .filter(ag -> ag != null)
                 .sorted(Comparator
@@ -109,18 +111,20 @@ public class RaceCatalogLookupService {
                         Comparator.nullsLast(Comparator.naturalOrder()))
                     .thenComparing(AgeGroup::getName,
                         Comparator.nullsLast(Comparator.naturalOrder())))
+                .toList();
+            final String joined = resolvedAgeGroups.stream()
                 .map(AgeGroup::getName)
                 .filter(name -> name != null)
                 .collect(Collectors.joining(", "));
             ageGroupsDisplay = joined.isEmpty() ? null : joined;
         }
 
-        return new RaceDisplayData(race, boatClassName, ageGroupsDisplay);
+        return new RaceDisplayData(race, boatClassName, ageGroupsDisplay, resolvedAgeGroups);
     }
 
     /**
      * Immutable bundle returned by {@link #loadRaceDisplayData(String)}.
      */
-    public record RaceDisplayData(Race race, String boatClassName, String ageGroupsDisplay) {
+    public record RaceDisplayData(Race race, String boatClassName, String ageGroupsDisplay, List<AgeGroup> ageGroups) {
     }
 }

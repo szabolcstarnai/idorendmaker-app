@@ -19,6 +19,7 @@ public class RaceWithAgeGroupsAndBoatClassDto {
     private String name;
     private String discipline;
     private String boatClassCode;
+    private String boatClassName;
     private String gender;
     private String distance;
     private Boolean hidden;
