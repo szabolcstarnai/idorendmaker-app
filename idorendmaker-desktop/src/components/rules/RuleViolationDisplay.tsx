@@ -49,7 +49,7 @@ const ViolationCard: React.FC<{
 
   const formatRaceName = useCallback((race: any) => {
     // Use the race name directly as it's more user-friendly
-    return race.name || `${race.boatClass} ${race.gender} ${race.distance}`.trim();
+    return race.name || `${race.boatClassCode} ${race.gender} ${race.distance}`.trim();
   }, []);
 
   const formatTime = useCallback((minutes: number) => {

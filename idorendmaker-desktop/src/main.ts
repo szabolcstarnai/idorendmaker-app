@@ -191,8 +191,8 @@ const initializeApp = async () => {
           try {
             // Check for competitor conflicts between the two races
             const competitorConflict = await BackendAPIService.checkCompetitorConflicts(
-              violation.race1.id,
-              violation.race2.id,
+              violation.race1.code,
+              violation.race2.code,
               pdfExtractionId
             );
 
@@ -298,8 +298,8 @@ const initializeApp = async () => {
     return await BackendAPIService.getStats();
   });
 
-  ipcMain.handle('db:updateRaceHidden', async (_, raceId: number, hidden: boolean) => {
-    return await BackendAPIService.updateRaceHidden(raceId, hidden);
+  ipcMain.handle('db:updateRaceHidden', async (_, raceCode: string, hidden: boolean) => {
+    return await BackendAPIService.updateRaceHidden(raceCode, hidden);
   });
 
   ipcMain.handle('db:saveScheduleWithSections', async (_, name: string, sectionsData: any[], pdfExtractionId?: number) => {
@@ -340,8 +340,8 @@ const initializeApp = async () => {
   });
 
   // Schedule item operations - MIGRATED TO BACKEND API
-  ipcMain.handle('db:createScheduleItem', async (_, scheduleId: number, sectionId: number, raceId: number, levelId: number, orderIndex: number, intervalMinutes: number, notes?: string) => {
-    return await BackendAPIService.createScheduleItem(scheduleId, sectionId, raceId, levelId, orderIndex, intervalMinutes, notes);
+  ipcMain.handle('db:createScheduleItem', async (_, scheduleId: number, sectionId: number, raceCode: string, levelCode: string, orderIndex: number, intervalMinutes: number, notes?: string) => {
+    return await BackendAPIService.createScheduleItem(scheduleId, sectionId, raceCode, levelCode, orderIndex, intervalMinutes, notes);
   });
 
   ipcMain.handle('db:getScheduleItemsBySection', async (_, sectionId: number) => {
@@ -670,18 +670,18 @@ const initializeApp = async () => {
     }
   });
 
-  ipcMain.handle('competitor:checkConflicts', async (_, race1Id: number, race2Id: number, pdfExtractionId?: number) => {
+  ipcMain.handle('competitor:checkConflicts', async (_, race1Code: string, race2Code: string, pdfExtractionId?: number) => {
     try {
-      return await BackendAPIService.checkCompetitorConflicts(race1Id, race2Id, pdfExtractionId);
+      return await BackendAPIService.checkCompetitorConflicts(race1Code, race2Code, pdfExtractionId);
     } catch (error) {
       console.error('Error checking competitor conflicts:', error);
       return { hasConflicts: false, conflictingCompetitors: [], competitorCount: 0 };
     }
   });
 
-  ipcMain.handle('competitor:getRaceSummary', async (_, raceId: number, pdfExtractionId?: number) => {
+  ipcMain.handle('competitor:getRaceSummary', async (_, raceCode: string, pdfExtractionId?: number) => {
     try {
-      return await BackendAPIService.getRaceCompetitorSummary(raceId, pdfExtractionId);
+      return await BackendAPIService.getRaceCompetitorSummary(raceCode, pdfExtractionId);
     } catch (error) {
       console.error('Error getting race competitor summary:', error);
       return { entryCount: 0, topCompetitors: [], organizations: [] };

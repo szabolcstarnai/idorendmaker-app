@@ -2,7 +2,7 @@
  * HTTP Client Service for Spring Boot Backend
  * Replaces Prisma client calls with REST API requests during migration
  */
-import { 
+import {
   Level,
   AgeGroup,
   Schedule,
@@ -20,7 +20,6 @@ import {
   RuleWithConditions,
   CreateRuleData,
   CompetitorSchedule,
-  CompetitorRaceDetails,
   CompetitorRacePairDetails,
   ScheduleRace
 } from '../../../shared/types/race'
@@ -220,14 +219,14 @@ export class BackendAPIService {
   }
 
   /**
-   * Get level by ID
+   * Get level by code
    * Replaces: LevelService.getLevelById()
-   * Endpoint: GET /api/levels/{id}
+   * Endpoint: GET /api/levels/{code}
    * Note: Currently dead code but keeping for completeness
    */
-  static async getLevelById(id: number): Promise<Level | null> {
+  static async getLevelByCode(code: string): Promise<Level | null> {
     try {
-      return await this.get<Level>(`${BackendConfig.ENDPOINTS.LEVELS}/${id}`)
+      return await this.get<Level>(`${BackendConfig.ENDPOINTS.LEVELS}/${encodeURIComponent(code)}`)
     } catch (error) {
       // Backend returns 404 for not found, we return null to match Prisma behavior
       if (error instanceof Error && error.message.includes('HTTP 404')) {
@@ -294,15 +293,15 @@ export class BackendAPIService {
   static async createScheduleItem(
     scheduleId: number,
     sectionId: number,
-    raceId: number,
-    levelId: number,
-    orderIndex: number, 
+    raceCode: string,
+    levelCode: string,
+    orderIndex: number,
     intervalMinutes: number = 0,
     notes?: string
   ): Promise<number> {
     const payload = {
-      raceId,
-      levelId,
+      raceCode,
+      levelCode,
       orderIndex,
       intervalMinutes,
       notes
@@ -325,8 +324,8 @@ export class BackendAPIService {
       sectionType: 'délelőtt' | 'délután',
       startTime: string,
       items: Array<{
-        raceId: number,
-        levelId: number,
+        raceCode: string,
+        levelCode: string,
         orderIndex: number,
         intervalMinutes: number,
         notes?: string
@@ -355,8 +354,8 @@ export class BackendAPIService {
       sectionType: 'délelőtt' | 'délután',
       startTime: string,
       items: Array<{
-        raceId: number,
-        levelId: number,
+        raceCode: string,
+        levelCode: string,
         orderIndex: number,
         intervalMinutes: number,
         notes?: string
@@ -495,10 +494,10 @@ export class BackendAPIService {
    * Replaces: RaceService.updateRaceHidden()
    * Endpoint: PUT /api/races/{id}/hidden?hidden={boolean}
    */
-  static async updateRaceHidden(raceId: number, hidden: boolean): Promise<boolean> {
+  static async updateRaceHidden(raceCode: string, hidden: boolean): Promise<boolean> {
     try {
-      await this.request<void>(`${BackendConfig.ENDPOINTS.RACES}/${raceId}/hidden?hidden=${hidden}`, { 
-        method: 'PUT' 
+      await this.request<void>(`${BackendConfig.ENDPOINTS.RACES}/${encodeURIComponent(raceCode)}/hidden?hidden=${hidden}`, {
+        method: 'PUT'
       })
       return true
     } catch (error) {
@@ -864,8 +863,8 @@ export class BackendAPIService {
    * Endpoint: GET /api/competitors/conflicts
    */
   static async checkCompetitorConflicts(
-    race1Id: number, 
-    race2Id: number, 
+    race1Code: string,
+    race2Code: string,
     pdfExtractionId?: number
   ): Promise<{
     hasConflicts: boolean
@@ -874,13 +873,13 @@ export class BackendAPIService {
   }> {
     try {
       const params = new URLSearchParams({
-        race1Id: race1Id.toString(),
-        race2Id: race2Id.toString()
+        race1Code: race1Code,
+        race2Code: race2Code
       })
       if (pdfExtractionId) {
         params.append('pdfExtractionId', pdfExtractionId.toString())
       }
-      
+
       return await this.get<{
         hasConflicts: boolean
         conflictingCompetitors: string[]
@@ -898,7 +897,7 @@ export class BackendAPIService {
    * Endpoint: GET /api/competitors/races/{raceId}/summary
    */
   static async getRaceCompetitorSummary(
-    raceId: number,
+    raceCode: string,
     pdfExtractionId?: number
   ): Promise<{
     entryCount: number
@@ -916,7 +915,7 @@ export class BackendAPIService {
         entryCount: number
         topCompetitors: string[]
         organizations: string[]
-      }>(`${BackendConfig.ENDPOINTS.COMPETITORS}/races/${raceId}/summary${queryString}`)
+      }>(`${BackendConfig.ENDPOINTS.COMPETITORS}/races/${encodeURIComponent(raceCode)}/summary${queryString}`)
     } catch (error) {
       console.error('Error getting race competitor summary:', error)
       return { entryCount: 0, topCompetitors: [], organizations: [] }
@@ -929,32 +928,32 @@ export class BackendAPIService {
    * Endpoint: POST /api/competitors/races/batch-summary
    */
   static async getBatchRaceCompetitorSummary(
-    raceIds: number[],
+    raceCodes: string[],
     pdfExtractionId?: number
-  ): Promise<Record<number, {
+  ): Promise<Record<string, {
     entryCount: number
     topCompetitors: string[]
     organizations: string[]
   }>> {
     try {
-      return await this.post<Record<number, {
+      return await this.post<Record<string, {
         entryCount: number
         topCompetitors: string[]
         organizations: string[]
       }>>(`${BackendConfig.ENDPOINTS.COMPETITORS}/races/batch-summary`, {
-        raceIds,
+        raceCodes,
         pdfExtractionId
       })
     } catch (error) {
       console.error('Error getting batch race competitor summaries:', error)
-      // Return empty summaries for all requested race IDs in case of error
-      const fallback: Record<number, {
+      // Return empty summaries for all requested race codes in case of error
+      const fallback: Record<string, {
         entryCount: number
         topCompetitors: string[]
         organizations: string[]
       }> = {}
-      raceIds.forEach(raceId => {
-        fallback[raceId] = { entryCount: 0, topCompetitors: [], organizations: [] }
+      raceCodes.forEach(raceCode => {
+        fallback[raceCode] = { entryCount: 0, topCompetitors: [], organizations: [] }
       })
       return fallback
     }

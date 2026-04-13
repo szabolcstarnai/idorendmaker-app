@@ -76,11 +76,11 @@ const ScheduleRaceList: React.FC<ScheduleRaceListProps> = React.memo(({
     // This ensures only races actually involved in violations get highlighted
     const raceViolations = violations.filter(v => {
       // Check if this schedule race matches either race in the violation
-      // We match by both race ID and start time to identify specific race+level combinations
-      const matchesRace1 = v.race1.id === scheduleRace.race.id && 
-                          v.violationHash.includes(`-${scheduleRace.race.id}-${scheduleRace.startTime}-`)
-      const matchesRace2 = v.race2.id === scheduleRace.race.id && 
-                          v.violationHash.includes(`-${scheduleRace.race.id}-${scheduleRace.startTime}`)
+      // We match by both race code and start time to identify specific race+level combinations
+      const matchesRace1 = v.race1.code === scheduleRace.race.code &&
+                          v.violationHash.includes(`-${scheduleRace.race.code}-${scheduleRace.startTime}-`)
+      const matchesRace2 = v.race2.code === scheduleRace.race.code &&
+                          v.violationHash.includes(`-${scheduleRace.race.code}-${scheduleRace.startTime}`)
       
       return matchesRace1 || matchesRace2
     });

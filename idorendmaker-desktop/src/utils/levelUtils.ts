@@ -14,14 +14,14 @@ export const getAvailableLevels = (
   allLevels: Level[]
 ): Level[] => {
   // Get levels already used for this specific race
-  const usedLevelIds = new Set(
+  const usedLevelCodes = new Set(
     scheduleRaces
-      .filter(sr => sr.race.id === race.id)
-      .map(sr => sr.level.id)
+      .filter(sr => sr.race.code === race.code)
+      .map(sr => sr.level.code)
   );
 
   // Return levels not yet used for this race
-  return allLevels.filter(level => !usedLevelIds.has(level.id));
+  return allLevels.filter(level => !usedLevelCodes.has(level.code));
 };
 
 /**
@@ -36,12 +36,12 @@ export const getAvailableLevelsForMode = (
   mode: ScheduleMode
 ): Level[] => {
   const availableLevels = getAvailableLevels(race, scheduleRaces, allLevels);
-  
+
   if (mode === 'simplified') {
     // In simplified mode, only return the default level if available
     return availableLevels.filter(level => level.isDefault);
   }
-  
+
   // In full mode, return all available levels
   return availableLevels;
 };
@@ -54,26 +54,26 @@ export const getAddedLevels = (
   scheduleRaces: ScheduleRace[]
 ): Level[] => {
   return scheduleRaces
-    .filter(sr => sr.race.id === race.id)
+    .filter(sr => sr.race.code === race.code)
     .map(sr => sr.level);
 };
 
 /**
  * Generate race+level combination key for tracking purposes
  */
-export const getRaceLevelKey = (raceId: number, levelId: number): string => {
-  return `${raceId}-${levelId}`;
+export const getRaceLevelKey = (raceCode: string, levelCode: string): string => {
+  return `${raceCode}-${levelCode}`;
 };
 
 /**
  * Check if a specific race+level combination exists in schedule
  */
 export const hasRaceLevelCombination = (
-  raceId: number,
-  levelId: number,
+  raceCode: string,
+  levelCode: string,
   scheduleRaces: ScheduleRace[]
 ): boolean => {
-  return scheduleRaces.some(sr => sr.race.id === raceId && sr.level.id === levelId);
+  return scheduleRaces.some(sr => sr.race.code === raceCode && sr.level.code === levelCode);
 };
 
 /**
@@ -81,7 +81,7 @@ export const hasRaceLevelCombination = (
  */
 export const getRaceLevelCombinations = (scheduleRaces: ScheduleRace[]): Set<string> => {
   return new Set(
-    scheduleRaces.map(sr => getRaceLevelKey(sr.race.id, sr.level.id))
+    scheduleRaces.map(sr => getRaceLevelKey(sr.race.code, sr.level.code))
   );
 };
 

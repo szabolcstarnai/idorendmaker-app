@@ -63,7 +63,7 @@ export class ExportService {
 
     // For each race in the schedule, find shortest competitor interval
     scheduleRaces.forEach((scheduleRace) => {
-      const raceKey = `${scheduleRace.race.id}-${scheduleRace.level.id}`;
+      const raceKey = `${scheduleRace.race.code}-${scheduleRace.level.code}`;
       let shortestInterval: number | null = null;
 
       // Look through all competitor schedules
@@ -72,8 +72,8 @@ export class ExportService {
         competitor.racePairs?.forEach((racePair) => {
           // Check if this race is the target race (race2) in the pair
           const isTargetRace =
-            racePair.race2Id === scheduleRace.race.id &&
-            racePair.level2Id === scheduleRace.level.id;
+            racePair.race2Code === scheduleRace.race.code &&
+            racePair.level2Code === scheduleRace.level.code;
 
           if (isTargetRace && racePair.intervalToNext !== null && racePair.intervalToNext !== undefined) {
             // Update shortest interval
@@ -274,66 +274,55 @@ export class ExportService {
 
     // Get competitor data if PDF extraction exists
     let raceCompetitorData: Map<
-      number,
+      string,
       { entryCount: number; seatCount: number | null }
     > | null = null;
     let competitorSchedules: CompetitorSchedule[] = [];
     if (schedule.pdfExtractionId) {
       raceCompetitorData = new Map();
 
-      // Get unique race IDs from schedule items
-      const raceIds = [...new Set(allItems.map((item) => item.raceId))];
+      // Get unique race codes from schedule items
+      const raceCodes = [...new Set(allItems.map((item) => item.raceCode))];
 
       // Fetch competitor summaries for all races in a single batch call
       try {
         const competitorSummaries = await BackendAPIService.getBatchRaceCompetitorSummary(
-          raceIds,
+          raceCodes,
           schedule.pdfExtractionId
         );
 
         // Process the batch results
-        for (const raceId of raceIds) {
-          const competitorSummary = competitorSummaries[raceId];
+        for (const raceCode of raceCodes) {
+          const competitorSummary = competitorSummaries[raceCode];
 
           if (competitorSummary) {
-            // Get race data to access boat class information
-            const raceWithBoatClass = allItems.find(
-              (item) => item.raceId === raceId
-            )?.race;
-            const seatCount = raceWithBoatClass?.boatClassData?.seatCount || null;
-
-            raceCompetitorData.set(raceId, {
+            // Seat count is no longer available on flat schedule items
+            raceCompetitorData.set(raceCode, {
               entryCount: competitorSummary.entryCount,
-              seatCount: seatCount,
+              seatCount: null,
             });
           } else {
-            console.warn(`No competitor data received for race ${raceId}`);
+            console.warn(`No competitor data received for race ${raceCode}`);
           }
         }
       } catch (error) {
         console.error('Failed to fetch batch competitor data:', error);
         // Fallback to individual calls if batch fails
-        for (const raceId of raceIds) {
+        for (const raceCode of raceCodes) {
           try {
             const competitorSummary =
               await BackendAPIService.getRaceCompetitorSummary(
-                raceId,
+                raceCode,
                 schedule.pdfExtractionId
               );
 
-            // Get race data to access boat class information
-            const raceWithBoatClass = allItems.find(
-              (item) => item.raceId === raceId
-            )?.race;
-            const seatCount = raceWithBoatClass?.boatClassData?.seatCount || null;
-
-            raceCompetitorData.set(raceId, {
+            raceCompetitorData.set(raceCode, {
               entryCount: competitorSummary.entryCount,
-              seatCount: seatCount,
+              seatCount: null,
             });
           } catch (individualError) {
             console.warn(
-              `Failed to fetch competitor data for race ${raceId}:`,
+              `Failed to fetch competitor data for race ${raceCode}:`,
               individualError
             );
           }
@@ -342,11 +331,27 @@ export class ExportService {
 
       // Get competitor schedules for interval calculation
       try {
-        // Convert schedule items to ScheduleRace format
+        // Convert schedule items to ScheduleRace format using flat snapshot fields
         const scheduleRaces: ScheduleRace[] = allItems.map((item, index) => ({
-          id: `${item.raceId}-${item.levelId}-${index}`, // Unique identifier
-          race: item.race,
-          level: item.level,
+          id: `${item.raceCode}-${item.levelCode}-${index}`, // Unique identifier
+          race: {
+            code: item.raceCode,
+            name: item.raceName,
+            discipline: item.raceDiscipline,
+            boatClassCode: item.raceBoatClassName,
+            gender: item.raceGender,
+            distance: item.raceDistance,
+            sortOrder: 0,
+            hidden: false,
+            ageGroups: [],
+          },
+          level: {
+            code: item.levelCode,
+            name: item.levelName,
+            levelType: item.levelType,
+            sortOrder: 0,
+            isDefault: false,
+          },
           startTime: item.calculatedStartTime || "00:00",
           order: item.orderIndex,
           day: item.section.dayNumber,
@@ -379,7 +384,7 @@ export class ExportService {
     items: ScheduleItemWithRaceAndSection[];
     rules: any[];
     raceCompetitorData?: Map<
-      number,
+      string,
       { entryCount: number; seatCount: number | null }
     > | null;
     competitorSchedules?: CompetitorSchedule[];
@@ -433,11 +438,27 @@ export class ExportService {
     rules: any[]
   ): Promise<RuleViolation[]> {
     try {
-      // Convert schedule items to ScheduleRace format for rule engine
+      // Convert schedule items to ScheduleRace format using flat snapshot fields
       const scheduleRaces: ScheduleRace[] = items.map((item, index) => ({
-        id: `${item.raceId}-${item.levelId}-${index}`, // Unique identifier
-        race: item.race,
-        level: item.level,
+        id: `${item.raceCode}-${item.levelCode}-${index}`, // Unique identifier
+        race: {
+          code: item.raceCode,
+          name: item.raceName,
+          discipline: item.raceDiscipline,
+          boatClassCode: item.raceBoatClassName,
+          gender: item.raceGender,
+          distance: item.raceDistance,
+          sortOrder: 0,
+          hidden: false,
+          ageGroups: [],
+        },
+        level: {
+          code: item.levelCode,
+          name: item.levelName,
+          levelType: item.levelType,
+          sortOrder: 0,
+          isDefault: false,
+        },
         startTime: item.calculatedStartTime || "00:00",
         order: item.orderIndex,
         day: item.section.dayNumber,
@@ -458,7 +479,7 @@ export class ExportService {
     items: ScheduleItemWithRaceAndSection[],
     violations: RuleViolation[],
     raceCompetitorData?: Map<
-      number,
+      string,
       { entryCount: number; seatCount: number | null }
     > | null,
     competitorSchedules?: CompetitorSchedule[]
@@ -468,9 +489,25 @@ export class ExportService {
     if (competitorSchedules && competitorSchedules.length > 0) {
       // Convert items to ScheduleRace format for calculation
       const scheduleRaces: ScheduleRace[] = items.map((item, index) => ({
-        id: `${item.raceId}-${item.levelId}-${index}`,
-        race: item.race,
-        level: item.level,
+        id: `${item.raceCode}-${item.levelCode}-${index}`,
+        race: {
+          code: item.raceCode,
+          name: item.raceName,
+          discipline: item.raceDiscipline,
+          boatClassCode: item.raceBoatClassName,
+          gender: item.raceGender,
+          distance: item.raceDistance,
+          sortOrder: 0,
+          hidden: false,
+          ageGroups: [],
+        },
+        level: {
+          code: item.levelCode,
+          name: item.levelName,
+          levelType: item.levelType,
+          sortOrder: 0,
+          isDefault: false,
+        },
         startTime: item.calculatedStartTime || "00:00",
         order: item.orderIndex,
         day: item.section.dayNumber,
@@ -534,17 +571,17 @@ export class ExportService {
         const itemWarnings = violations.filter((violation) => {
           const hashParts = violation.violationHash.split("-");
           if (hashParts.length >= 5) {
-            const race1Id = parseInt(hashParts[1]);
+            const race1Code = hashParts[1];
             const race1StartTime = hashParts[2];
-            const race2Id = parseInt(hashParts[3]);
+            const race2Code = hashParts[3];
             const race2StartTime = hashParts[4];
 
             // Check if this specific item (race+level+time) is involved in the violation
             const isRace1 =
-              race1Id === item.raceId &&
+              race1Code === item.raceCode &&
               race1StartTime === (item.calculatedStartTime || "00:00");
             const isRace2 =
-              race2Id === item.raceId &&
+              race2Code === item.raceCode &&
               race2StartTime === (item.calculatedStartTime || "00:00");
 
             return isRace1 || isRace2;
@@ -558,12 +595,12 @@ export class ExportService {
             : "";
 
         // Format race name with level (clean, no age groups)
-        const raceName = `${item.race.name} ${item.level.name}`;
+        const raceName = `${item.raceName} ${item.levelName}`;
 
         // Calculate boat units if competitor data is available
         let boatUnits: number | undefined = undefined;
-        if (raceCompetitorData?.has(item.raceId)) {
-          const competitorData = raceCompetitorData.get(item.raceId)!;
+        if (raceCompetitorData?.has(item.raceCode)) {
+          const competitorData = raceCompetitorData.get(item.raceCode)!;
           boatUnits =
             this.calculateBoatUnits(
               competitorData.entryCount,
@@ -572,7 +609,7 @@ export class ExportService {
         }
 
         // Get shortest competitor interval if available
-        const raceKey = `${item.raceId}-${item.levelId}`;
+        const raceKey = `${item.raceCode}-${item.levelCode}`;
         const shortestInterval = shortestIntervals.get(raceKey) || null;
 
         const row: ExportRow = {
@@ -852,27 +889,27 @@ export class ExportService {
     violations: RuleViolation[],
     items: ScheduleItemWithRaceAndSection[]
   ): ExportWarning[] {
-    // Create a map to lookup level information by race ID and start time
+    // Create a map to lookup level information by race code and start time
     const raceLevelMap = new Map<string, string>();
     items.forEach((item) => {
-      const key = `${item.raceId}-${item.calculatedStartTime || "00:00"}`;
-      raceLevelMap.set(key, item.level.name);
+      const key = `${item.raceCode}-${item.calculatedStartTime || "00:00"}`;
+      raceLevelMap.set(key, item.levelName);
     });
 
     return violations.map((violation) => {
       // Try to get level names for both races
-      const race1Key = `${violation.race1.id}-${violation.violationHash.split("-")[2] || ""}`;
-      const race2Key = `${violation.race2.id}-${violation.violationHash.split("-")[4] || ""}`;
+      const race1Key = `${violation.race1.code}-${violation.violationHash.split("-")[2] || ""}`;
+      const race2Key = `${violation.race2.code}-${violation.violationHash.split("-")[4] || ""}`;
 
       const race1Level = raceLevelMap.get(race1Key) || "";
       const race2Level = raceLevelMap.get(race2Key) || "";
 
       const race1Name = race1Level
         ? `${violation.race1.name} ${race1Level}`
-        : `${violation.race1.name} (${violation.race1.boatClass})`;
+        : `${violation.race1.name} (${violation.race1.boatClassCode})`;
       const race2Name = race2Level
         ? `${violation.race2.name} ${race2Level}`
-        : `${violation.race2.name} (${violation.race2.boatClass})`;
+        : `${violation.race2.name} (${violation.race2.boatClassCode})`;
 
       return {
         versenyszam1: race1Name,

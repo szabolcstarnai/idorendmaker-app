@@ -398,11 +398,11 @@ const PDFExtractionDetails: React.FC<PDFExtractionDetailsProps> = ({
                   <div key={index} className="p-2 border rounded-md">
                     <div className="flex justify-between items-start mb-1">
                       <span className="font-medium text-sm">{race.name}</span>
-                      <Badge 
-                        variant={race.id ? "default" : "outline"}
+                      <Badge
+                        variant={race.code ? "default" : "outline"}
                         className="text-xs"
                       >
-                        {race.id ? "Párosítva" : "Nincs pár"}
+                        {race.code ? "Párosítva" : "Nincs pár"}
                       </Badge>
                     </div>
                     <div className="text-xs text-muted-foreground">

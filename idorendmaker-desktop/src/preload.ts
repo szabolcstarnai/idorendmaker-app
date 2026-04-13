@@ -6,7 +6,7 @@ export interface ElectronAPI {
   // Database operations
   getAllRaces: () => Promise<RaceWithAgeGroupsAndBoatClass[]>;
   searchRaces: (searchTerm: string) => Promise<RaceWithAgeGroupsAndBoatClass[]>;
-  getAllAgeGroups: () => Promise<{ id: number; name: string; createdAt: Date; }[]>;
+  getAllAgeGroups: () => Promise<{ code: string; name: string; sortOrder: number; }[]>;
   getAllLevels: () => Promise<Level[]>;
   getDefaultLevel: () => Promise<Level>;
   getAllSchedules: () => Promise<Schedule[]>;
@@ -36,14 +36,14 @@ export interface ElectronAPI {
   getDismissedViolationCount: (scheduleId: number) => Promise<number>;
   
   getStats: () => Promise<{ races: number, ageGroups: number, schedules: number }>;
-  updateRaceHidden: (raceId: number, hidden: boolean) => Promise<boolean>;
+  updateRaceHidden: (raceCode: string, hidden: boolean) => Promise<boolean>;
   // Schedule section operations
   createScheduleSection: (sectionData: CreateScheduleSectionData) => Promise<number>;
   getScheduleSections: (scheduleId: number) => Promise<ScheduleSection[]>;
   getScheduleItemsBySection: (sectionId: number) => Promise<ScheduleItemWithRaceAndSection[]>;
   
   // Schedule item operations
-  createScheduleItem: (scheduleId: number, sectionId: number, raceId: number, levelId: number, orderIndex: number, intervalMinutes: number, notes?: string) => Promise<number>;
+  createScheduleItem: (scheduleId: number, sectionId: number, raceCode: string, levelCode: string, orderIndex: number, intervalMinutes: number, notes?: string) => Promise<number>;
   
   // Unified schedule operations
   saveScheduleWithSections: (name: string, sectionsData: Array<{
@@ -51,8 +51,8 @@ export interface ElectronAPI {
     sectionType: 'délelőtt' | 'délután',
     startTime: string,
     items: Array<{
-      raceId: number,
-      levelId: number,
+      raceCode: string,
+      levelCode: string,
       orderIndex: number,
       intervalMinutes: number,
       notes?: string
@@ -63,8 +63,8 @@ export interface ElectronAPI {
     sectionType: 'délelőtt' | 'délután',
     startTime: string,
     items: Array<{
-      raceId: number,
-      levelId: number,
+      raceCode: string,
+      levelCode: string,
       orderIndex: number,
       intervalMinutes: number,
       notes?: string
@@ -155,12 +155,12 @@ export interface ElectronAPI {
   
   // Competitor analysis operations
   competitorAnalyzeSchedules: (scheduleRaces: ScheduleRace[], pdfExtractionId?: number) => Promise<CompetitorSchedule[]>;
-  competitorCheckConflicts: (race1Id: number, race2Id: number, pdfExtractionId?: number) => Promise<{
+  competitorCheckConflicts: (race1Code: string, race2Code: string, pdfExtractionId?: number) => Promise<{
     hasConflicts: boolean;
     conflictingCompetitors: string[];
     competitorCount: number;
   }>;
-  competitorGetRaceSummary: (raceId: number, pdfExtractionId?: number) => Promise<{
+  competitorGetRaceSummary: (raceCode: string, pdfExtractionId?: number) => Promise<{
     entryCount: number;
     topCompetitors: string[];
     organizations: string[];
@@ -216,7 +216,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('db:getDismissedViolationCount', scheduleId),
   
   getStats: () => ipcRenderer.invoke('db:getStats'),
-  updateRaceHidden: (raceId: number, hidden: boolean) => ipcRenderer.invoke('db:updateRaceHidden', raceId, hidden),
+  updateRaceHidden: (raceCode: string, hidden: boolean) => ipcRenderer.invoke('db:updateRaceHidden', raceCode, hidden),
   // Schedule section operations
   createScheduleSection: (sectionData: CreateScheduleSectionData) => 
     ipcRenderer.invoke('db:createScheduleSection', sectionData),
@@ -226,8 +226,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('db:getScheduleItemsBySection', sectionId),
     
   // Schedule item operations
-  createScheduleItem: (scheduleId: number, sectionId: number, raceId: number, levelId: number, orderIndex: number, intervalMinutes: number, notes?: string) => 
-    ipcRenderer.invoke('db:createScheduleItem', scheduleId, sectionId, raceId, levelId, orderIndex, intervalMinutes, notes),
+  createScheduleItem: (scheduleId: number, sectionId: number, raceCode: string, levelCode: string, orderIndex: number, intervalMinutes: number, notes?: string) =>
+    ipcRenderer.invoke('db:createScheduleItem', scheduleId, sectionId, raceCode, levelCode, orderIndex, intervalMinutes, notes),
     
   // Unified schedule operations
   saveScheduleWithSections: (name: string, sectionsData: any[], pdfExtractionId?: number) => 
@@ -273,10 +273,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Competitor analysis operations
   competitorAnalyzeSchedules: (scheduleRaces: ScheduleRace[], pdfExtractionId?: number) => 
     ipcRenderer.invoke('competitor:analyzeSchedules', scheduleRaces, pdfExtractionId),
-  competitorCheckConflicts: (race1Id: number, race2Id: number, pdfExtractionId?: number) => 
-    ipcRenderer.invoke('competitor:checkConflicts', race1Id, race2Id, pdfExtractionId),
-  competitorGetRaceSummary: (raceId: number, pdfExtractionId?: number) => 
-    ipcRenderer.invoke('competitor:getRaceSummary', raceId, pdfExtractionId),
+  competitorCheckConflicts: (race1Code: string, race2Code: string, pdfExtractionId?: number) =>
+    ipcRenderer.invoke('competitor:checkConflicts', race1Code, race2Code, pdfExtractionId),
+  competitorGetRaceSummary: (raceCode: string, pdfExtractionId?: number) =>
+    ipcRenderer.invoke('competitor:getRaceSummary', raceCode, pdfExtractionId),
   competitorGetHighRiskCompetitors: (pdfExtractionId: number) => 
     ipcRenderer.invoke('competitor:getHighRiskCompetitors', pdfExtractionId),
   competitorGetStats: (pdfExtractionId: number) => 

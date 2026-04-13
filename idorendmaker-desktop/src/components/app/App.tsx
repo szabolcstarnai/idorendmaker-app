@@ -320,10 +320,25 @@ const App: React.FC = () => {
         console.log(`Section items:`, (section as any).items);
         
         // Transform schedule items to ScheduleRace format
+        // Items now have flat snapshot fields instead of nested race/level objects
         const scheduleRaces: ScheduleRace[] = ((section as any).items || []).map((item: any, index: number) => ({
           id: `schedule-race-${item.id}`,
-          race: item.race,
-          level: item.level,
+          race: {
+            code: item.raceCode,
+            name: item.raceName,
+            discipline: item.raceDiscipline,
+            gender: item.raceGender,
+            distance: item.raceDistance,
+            boatClassCode: item.raceBoatClassCode,
+            sortOrder: 0,
+            ageGroups: [],
+            isHidden: false
+          } as RaceWithAgeGroupsAndBoatClass,
+          level: {
+            code: item.levelCode,
+            name: item.levelName,
+            levelType: ''
+          } as Level,
           day: section.dayNumber,
           startTime: item.calculatedStartTime || '09:00',
           order: item.orderIndex || index
@@ -483,8 +498,8 @@ const App: React.FC = () => {
           sectionType: section.sectionType as 'délelőtt' | 'délután',
           startTime: workingData?.settings.startTime || section.startTime,
           items: races.map((sr, index) => ({
-            raceId: sr.race.id,
-            levelId: sr.level.id,
+            raceCode: sr.race.code,
+            levelCode: sr.level.code,
             orderIndex: index,
             intervalMinutes: workingData?.intervals[index] ?? (workingData?.settings.defaultInterval ?? 0),
             notes: undefined

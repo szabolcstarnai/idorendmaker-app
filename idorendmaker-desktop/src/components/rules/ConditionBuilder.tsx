@@ -35,22 +35,22 @@ interface ConditionBuilderProps {
 
 // Age groups will be loaded from database
 interface AgeGroupOption extends DropdownValue {
-  id: number;
+  code: string;
 }
 
 // Seat counts will be loaded from database
 interface SeatCountOption extends DropdownValue {
-  id: number;
+  code: string;
 }
 
 // Boat types will be loaded from database
 interface BoatTypeOption extends DropdownValue {
-  id: number;
+  code: string;
 }
 
 // Levels will be loaded from database
 interface LevelOption extends DropdownValue {
-  id: number;
+  code: string;
   levelType: string;
 }
 
@@ -65,7 +65,7 @@ const loadAgeGroups = async () => {
     try {
       const dbAgeGroups = await window.electronAPI.getAllAgeGroups();
       ageGroups = dbAgeGroups.map(ag => ({
-        id: ag.id,
+        code: ag.code,
         value: ag.name,
         label: ag.name
       }));
@@ -81,7 +81,7 @@ const loadLevels = async () => {
     try {
       const dbLevels = await window.electronAPI.getAllLevels();
       levels = dbLevels.map(level => ({
-        id: level.id,
+        code: level.code,
         value: level.name,
         label: level.name,
         levelType: level.levelType

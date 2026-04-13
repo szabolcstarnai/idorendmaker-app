@@ -79,16 +79,16 @@ const CompetitorTracker: React.FC<CompetitorTrackerProps> = ({
       competitor.racePairs.forEach(racePair => {
         // Find the exact schedule race ID for race1 (match both race and level)
         const race1ScheduleId = scheduleRaces.find(sr =>
-          sr.race.id === racePair.race1Id && sr.level.id === racePair.level1Id
+          sr.race.code === racePair.race1Code && sr.level.code === racePair.level1Code
         )?.id;
         if (race1ScheduleId) {
           raceIds.push(race1ScheduleId);
         }
 
         // Find the exact schedule race ID for race2 (match both race and level)
-        if (racePair.race2Id && racePair.level2Id) {
+        if (racePair.race2Code && racePair.level2Code) {
           const race2ScheduleId = scheduleRaces.find(sr =>
-            sr.race.id === racePair.race2Id && sr.level.id === racePair.level2Id
+            sr.race.code === racePair.race2Code && sr.level.code === racePair.level2Code
           )?.id;
           if (race2ScheduleId) {
             raceIds.push(race2ScheduleId);
@@ -228,7 +228,7 @@ const CompetitorTracker: React.FC<CompetitorTrackerProps> = ({
                     <div className="space-y-1.5">
                       {competitor.racePairs.map((racePair, index) =>
                         racePair.intervalToNext ? (
-                          <div key={`${racePair.race1Id}-${racePair.race1StartTime}-${racePair.race2Id || 'single'}`}
+                          <div key={`${racePair.race1Code}-${racePair.race1StartTime}-${racePair.race2Code || 'single'}`}
                                className={`bg-gray-50 rounded p-1.5 border-l-3 ${
                                  racePair.conflictLevel === 'critical' ? 'border-red-400 bg-red-50' :
                                  racePair.conflictLevel === 'warning' ? 'border-yellow-400 bg-yellow-50' :

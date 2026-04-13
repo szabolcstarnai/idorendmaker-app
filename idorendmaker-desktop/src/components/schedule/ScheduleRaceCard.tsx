@@ -88,7 +88,7 @@ const ScheduleRaceCard: React.FC<ScheduleRaceCardProps> = React.memo(({
                     {scheduleRace.race.discipline}
                   </Badge>
                   <Badge variant="outline" className="text-xs px-1 py-0">
-                    {scheduleRace.race.boatClass}
+                    {scheduleRace.race.boatClassCode}
                   </Badge>
                   <Badge variant="outline" className="text-xs px-1 py-0">
                     {scheduleRace.race.gender}

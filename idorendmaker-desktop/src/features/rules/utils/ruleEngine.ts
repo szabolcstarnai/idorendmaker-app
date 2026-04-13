@@ -59,7 +59,7 @@ export class ConditionEvaluator {
         return race.discipline
       
       case 'boatClass':
-        return race.boatClass
+        return race.boatClassCode
       
       case 'gender':
         return race.gender
@@ -82,12 +82,13 @@ export class ConditionEvaluator {
         return scheduleRace.level.levelType
 
       case 'boatType':
-        // Get boat type from boat class metadata for enhanced rule system
-        return race.boatClassData?.boatType || null
+        // boatType no longer available on race - boat class data not nested
+        // boatClassCode is used instead as a proxy
+        return race.boatClassCode || null
 
       case 'seatCount':
-        // Get seat count text from boat class metadata for enhanced rule system
-        return race.boatClassData?.seatCountText || null
+        // seatCount no longer available on race - boat class data not nested
+        return null
 
       default:
         console.warn(`Unknown field: ${field}`)
@@ -121,9 +122,9 @@ export class MatchingEvaluator {
       return ageGroups1.some(ag1 => ageGroups2.includes(ag1))
     }
     
-    if (field === 'baseRaceId') {
-      // For baseRaceId, check if the base race ID matches (same race, different levels)
-      return scheduleRace1.race.id === scheduleRace2.race.id
+    if (field === 'baseRaceCode') {
+      // For baseRaceCode, check if the base race code matches (same race, different levels)
+      return scheduleRace1.race.code === scheduleRace2.race.code
     }
     
     return value1 === value2
@@ -139,7 +140,7 @@ export class MatchingEvaluator {
         return race.discipline
       
       case 'boatClass':
-        return race.boatClass
+        return race.boatClassCode
       
       case 'gender':
         return race.gender
@@ -161,15 +162,15 @@ export class MatchingEvaluator {
         return scheduleRace.level.levelType
 
       case 'boatType':
-        // Get boat type from boat class metadata for enhanced rule system
-        return race.boatClassData?.boatType || null
+        // boatType no longer available on race - boat class data not nested
+        return race.boatClassCode || null
 
       case 'seatCount':
-        // Get seat count text from boat class metadata for enhanced rule system
-        return race.boatClassData?.seatCountText || null
+        // seatCount no longer available on race - boat class data not nested
+        return null
 
-      case 'baseRaceId':
-        // Return null here - baseRaceId is handled specially above
+      case 'baseRaceCode':
+        // Return null here - baseRaceCode is handled specially above
         return null
 
       default:
@@ -272,10 +273,10 @@ export class RuleProcessor {
 
   /**
    * Generate unique hash for violation dismissal tracking
-   * Format: ruleId-race1Id-race1StartTime-race2Id-race2StartTime
+   * Format: ruleId-race1Code-race1StartTime-race2Code-race2StartTime
    */
   private static generateViolationHash(ruleId: number, raceA: ScheduleRace, raceB: ScheduleRace): string {
-    return `${ruleId}-${raceA.race.id}-${raceA.startTime}-${raceB.race.id}-${raceB.startTime}`
+    return `${ruleId}-${raceA.race.code}-${raceA.startTime}-${raceB.race.code}-${raceB.startTime}`
   }
 
   /**
@@ -289,7 +290,7 @@ export class RuleProcessor {
   ): string {
     const formatRaceNameWithLevel = (scheduleRace: ScheduleRace) => {
       // Include level information for clarity
-      const baseName = scheduleRace.race.name || `${scheduleRace.race.boatClass} ${scheduleRace.race.gender} ${scheduleRace.race.distance}`.trim()
+      const baseName = scheduleRace.race.name || `${scheduleRace.race.boatClassCode} ${scheduleRace.race.gender} ${scheduleRace.race.distance}`.trim();
       return `${baseName} (${scheduleRace.level.name})`
     }
 
@@ -351,8 +352,8 @@ export class CompetitorAwareRuleProcessor {
       try {
         // Check for competitor conflicts between the two races
         const competitorConflict = await window.electronAPI.competitorCheckConflicts(
-          violation.race1.id,
-          violation.race2.id,
+          violation.race1.code,
+          violation.race2.code,
           pdfExtractionId
         )
 

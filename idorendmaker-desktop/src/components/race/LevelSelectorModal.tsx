@@ -36,7 +36,7 @@ export const LevelSelectorModal: React.FC<LevelSelectorModalProps> = ({
   onLevelSelect
 }) => {
   // Multi-select state management
-  const [selectedLevelIds, setSelectedLevelIds] = useState<Set<number>>(new Set());
+  const [selectedLevelCodes, setSelectedLevelCodes] = useState<Set<string>>(new Set());
   
   // Collapsible state - all sections open by default
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
@@ -44,7 +44,7 @@ export const LevelSelectorModal: React.FC<LevelSelectorModalProps> = ({
   // Reset selection when modal opens/closes
   React.useEffect(() => {
     if (!isOpen) {
-      setSelectedLevelIds(new Set());
+      setSelectedLevelCodes(new Set());
     }
   }, [isOpen]);
 
@@ -62,13 +62,13 @@ export const LevelSelectorModal: React.FC<LevelSelectorModalProps> = ({
   }, []);
 
   // Toggle level selection
-  const toggleLevelSelection = useCallback((levelId: number) => {
-    setSelectedLevelIds(prev => {
+  const toggleLevelSelection = useCallback((levelCode: string) => {
+    setSelectedLevelCodes(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(levelId)) {
-        newSet.delete(levelId);
+      if (newSet.has(levelCode)) {
+        newSet.delete(levelCode);
       } else {
-        newSet.add(levelId);
+        newSet.add(levelCode);
       }
       return newSet;
     });
@@ -76,21 +76,21 @@ export const LevelSelectorModal: React.FC<LevelSelectorModalProps> = ({
 
   // Select all available levels
   const selectAllLevels = useCallback(() => {
-    setSelectedLevelIds(new Set(availableLevels.map(level => level.id)));
+    setSelectedLevelCodes(new Set(availableLevels.map(level => level.code)));
   }, [availableLevels]);
 
   // Clear all selections
   const clearAllSelections = useCallback(() => {
-    setSelectedLevelIds(new Set());
+    setSelectedLevelCodes(new Set());
   }, []);
 
   // Handle adding selected levels to schedule
   const handleAddSelectedLevels = useCallback(() => {
-    if (!race || selectedLevelIds.size === 0) return;
+    if (!race || selectedLevelCodes.size === 0) return;
 
     // Get selected levels and sort by sortOrder
     const selectedLevels = availableLevels
-      .filter(level => selectedLevelIds.has(level.id))
+      .filter(level => selectedLevelCodes.has(level.code))
       .sort((a, b) => a.sortOrder - b.sortOrder);
 
     // Add each level to schedule in correct order
@@ -100,7 +100,7 @@ export const LevelSelectorModal: React.FC<LevelSelectorModalProps> = ({
 
     // Close modal and reset selections
     onClose();
-  }, [race, selectedLevelIds, availableLevels, onLevelSelect, onClose]);
+  }, [race, selectedLevelCodes, availableLevels, onLevelSelect, onClose]);
 
   const getLevelTypeColor = (levelType: string) => {
     switch (levelType) {
@@ -200,24 +200,24 @@ export const LevelSelectorModal: React.FC<LevelSelectorModalProps> = ({
                     <CollapsibleContent>
                       <div className="grid grid-cols-2 gap-3 px-2">
                         {levels.map((level) => {
-                          const isSelected = selectedLevelIds.has(level.id);
+                          const isSelected = selectedLevelCodes.has(level.code);
                           const baseColors = getLevelTypeColor(type);
                           const ringColor = getLevelTypeRingColor(type);
                           const checkboxColor = getLevelTypeCheckboxColor(type);
                           return (
                             <div
-                              key={level.id}
+                              key={level.code}
                               className={`border rounded-md p-3 cursor-pointer transition-all min-w-0 ${baseColors} ${
-                                isSelected 
-                                  ? `ring-2 ${ringColor} ring-offset-2 ${baseColors.replace('hover:bg-', 'bg-')}` 
+                                isSelected
+                                  ? `ring-2 ${ringColor} ring-offset-2 ${baseColors.replace('hover:bg-', 'bg-')}`
                                   : 'hover:shadow-sm'
                               }`}
-                              onClick={() => toggleLevelSelection(level.id)}
+                              onClick={() => toggleLevelSelection(level.code)}
                             >
                               <div className="flex items-center gap-2 min-w-0">
                                 <Checkbox
                                   checked={isSelected}
-                                  onCheckedChange={() => toggleLevelSelection(level.id)}
+                                  onCheckedChange={() => toggleLevelSelection(level.code)}
                                   className={`shrink-0 ${checkboxColor}`}
                                 />
                                 <div className="flex-1 min-w-0">
@@ -239,9 +239,9 @@ export const LevelSelectorModal: React.FC<LevelSelectorModalProps> = ({
         <div className="flex flex-col gap-3 pt-4 flex-shrink-0">
           {/* Selection info */}
           <div className="text-sm text-muted-foreground text-center">
-            {selectedLevelIds.size === 0 
+            {selectedLevelCodes.size === 0 
               ? "Válasszon ki legalább egy futamszintet"
-              : `${selectedLevelIds.size} futamszint kiválasztva`
+              : `${selectedLevelCodes.size} futamszint kiválasztva`
             }
           </div>
           
@@ -252,7 +252,7 @@ export const LevelSelectorModal: React.FC<LevelSelectorModalProps> = ({
                 variant="outline" 
                 size="sm"
                 onClick={selectAllLevels}
-                disabled={selectedLevelIds.size === availableLevels.length}
+                disabled={selectedLevelCodes.size === availableLevels.length}
               >
                 Mind kiválaszt
               </Button>
@@ -260,7 +260,7 @@ export const LevelSelectorModal: React.FC<LevelSelectorModalProps> = ({
                 variant="outline" 
                 size="sm"
                 onClick={clearAllSelections}
-                disabled={selectedLevelIds.size === 0}
+                disabled={selectedLevelCodes.size === 0}
               >
                 Kiválasztás törlése
               </Button>
@@ -272,9 +272,9 @@ export const LevelSelectorModal: React.FC<LevelSelectorModalProps> = ({
               </Button>
               <Button 
                 onClick={handleAddSelectedLevels}
-                disabled={selectedLevelIds.size === 0}
+                disabled={selectedLevelCodes.size === 0}
               >
-                Hozzáadás ({selectedLevelIds.size})
+                Hozzáadás ({selectedLevelCodes.size})
               </Button>
             </div>
           </div>

@@ -75,7 +75,7 @@ const RaceCard = React.memo(({ race, onRaceClick, onToggleHidden, showAddButton 
             {entryCount !== undefined && (
               <span className="text-green-600 font-semibold ml-1">
                 {(() => {
-                  const boatUnits = calculateBoatUnits(entryCount, competitorRace?.boatClassData?.seatCount)
+                  const boatUnits = calculateBoatUnits(entryCount, competitorRace?.boatClassSeatCount)
                   return boatUnits !== null ? `(${boatUnits} hajóegység)` : `(${entryCount} nevezés)`
                 })()}
               </span>
@@ -116,7 +116,7 @@ const RaceCard = React.memo(({ race, onRaceClick, onToggleHidden, showAddButton 
             {race.discipline}
           </Badge>
           <Badge variant="secondary" className="text-xs">
-            {race.boatClass}
+            {race.boatClassCode}
           </Badge>
           <Badge variant={getGenderVariant(race.gender)} className="text-xs">
             {race.gender}
@@ -268,7 +268,7 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
       searchText: [
         raceStatus.race.name,
         raceStatus.race.discipline,
-        raceStatus.race.boatClass,
+        raceStatus.race.boatClassCode,
         raceStatus.race.gender,
         raceStatus.race.distance,
         ...raceStatus.race.ageGroups.map(ag => ag.name)
@@ -337,16 +337,14 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
         // Use filtered races from PDF
         // Convert RaceWithCompetitorData to RaceWithAgeGroups format
         const convertedRaces: RaceWithAgeGroupsAndBoatClass[] = filteredRaces.map(race => ({
-          id: race.id,
+          code: race.code,
           name: race.name,
           discipline: race.discipline,
-          boatClass: race.boatClass,
+          boatClassCode: race.boatClassCode,
           gender: race.gender,
           distance: race.distance,
-          occurrence: race.occurrence,
+          sortOrder: race.sortOrder,
           hidden: race.hidden,
-          createdAt: race.createdAt,
-          updatedAt: race.updatedAt,
           ageGroups: race.ageGroups
         }));
         setRaces(convertedRaces);
@@ -429,12 +427,12 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
 
     try {
       const newHiddenStatus = !race.hidden;
-      const success = await window.electronAPI.updateRaceHidden(race.id, newHiddenStatus);
+      const success = await window.electronAPI.updateRaceHidden(race.code, newHiddenStatus);
 
       if (success) {
         // Update the local state
         setRaces(prev => prev.map(r =>
-          r.id === race.id ? { ...r, hidden: newHiddenStatus } : r
+          r.code === race.code ? { ...r, hidden: newHiddenStatus } : r
         ));
       } else {
         console.error('Failed to update race hidden status');
@@ -557,11 +555,11 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
           ) : (
             paginatedRaces.map((raceStatus) => {
               // Find competitor data if this is from PDF filtering
-              const competitorRace = filteredRaces?.find(fr => fr.id === raceStatus.race.id);
+              const competitorRace = filteredRaces?.find(fr => fr.code === raceStatus.race.code);
 
               return (
                 <RaceCard
-                  key={raceStatus.race.id}
+                  key={raceStatus.race.code}
                   race={raceStatus.race}
                   onRaceClick={handleRaceClick}
                   onToggleHidden={handleToggleRaceHidden}

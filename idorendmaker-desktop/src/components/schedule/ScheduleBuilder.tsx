@@ -298,25 +298,25 @@ const ScheduleBuilder: React.FC<ScheduleBuilderProps> = React.memo(({
 
   // Handle violation click to highlight related races
   const handleHighlightRaces = useCallback((violation: RuleViolation) => {
-    // Extract race IDs and start times from violation hash
-    // Format: ruleId-race1Id-race1StartTime-race2Id-race2StartTime
+    // Extract race codes and start times from violation hash
+    // Format: ruleId-race1Code-race1StartTime-race2Code-race2StartTime
     const hashParts = violation.violationHash.split('-');
     if (hashParts.length >= 5) {
-      const race1Id = parseInt(hashParts[1]);
+      const race1Code = hashParts[1];
       const race1StartTime = hashParts[2];
-      const race2Id = parseInt(hashParts[3]);
+      const race2Code = hashParts[3];
       const race2StartTime = hashParts[4];
-      
+
       // Find the specific schedule races involved in this violation
       const scheduleRaceIds = allScheduleRaces
-        .filter(sr => 
-          (sr.race.id === race1Id && sr.startTime === race1StartTime) ||
-          (sr.race.id === race2Id && sr.startTime === race2StartTime)
+        .filter(sr =>
+          (sr.race.code === race1Code && sr.startTime === race1StartTime) ||
+          (sr.race.code === race2Code && sr.startTime === race2StartTime)
         )
         .map(sr => sr.id);
-      
+
       setHighlightedRaceIds(scheduleRaceIds);
-      
+
       // Auto clear highlight after 5 seconds
       setTimeout(() => {
         setHighlightedRaceIds([]);

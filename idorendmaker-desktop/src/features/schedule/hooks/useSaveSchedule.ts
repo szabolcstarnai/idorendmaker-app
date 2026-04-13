@@ -71,8 +71,8 @@ export const useSaveSchedule = ({
             sectionType: section.sectionType as 'délelőtt' | 'délután',
             startTime: workingData?.settings.startTime || section.startTime,
             items: workingData?.races.map((sr, index) => ({
-              raceId: sr.race.id,
-              levelId: sr.level.id,
+              raceCode: sr.race.code,
+              levelCode: sr.level.code,
               orderIndex: index,
               intervalMinutes: workingData.intervals[index] ?? workingData.settings.defaultInterval,
               notes: undefined

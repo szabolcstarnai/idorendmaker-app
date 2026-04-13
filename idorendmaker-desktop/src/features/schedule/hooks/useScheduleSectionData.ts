@@ -239,9 +239,9 @@ export const useScheduleSectionData = ({
       // Calculate start time using updated intervals
       const newStartTime = calculateRaceTime(newOrder, updatedIntervals, sectionData.settings.startTime);
       
-      // Generate simple unique ID using race ID + level ID + counter (stable, no timestamps)
+      // Generate simple unique ID using race code + level code + counter (stable, no timestamps)
       const newScheduleRace: ScheduleRace = {
-        id: `${race.id}-${level.id}-${raceIdCounter}`,
+        id: `${race.code}-${level.code}-${raceIdCounter}`,
         race,
         level,
         startTime: newStartTime,
