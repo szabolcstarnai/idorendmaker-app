@@ -82,12 +82,15 @@ export class ConditionEvaluator {
         return scheduleRace.level.levelType
 
       case 'boatType':
-        // boatType no longer available on race - boat class data not nested
-        // boatClassCode is used instead as a proxy
-        return race.boatClassCode || null
+        // TODO: seatCount/boatType data not available on denormalized ScheduleItem snapshots.
+        // Requires adding these fields to the backend ScheduleItem entity and populator.
+        // For now, rules using these conditions will not match.
+        return null
 
       case 'seatCount':
-        // seatCount no longer available on race - boat class data not nested
+        // TODO: seatCount/boatType data not available on denormalized ScheduleItem snapshots.
+        // Requires adding these fields to the backend ScheduleItem entity and populator.
+        // For now, rules using these conditions will not match.
         return null
 
       default:
@@ -162,11 +165,15 @@ export class MatchingEvaluator {
         return scheduleRace.level.levelType
 
       case 'boatType':
-        // boatType no longer available on race - boat class data not nested
-        return race.boatClassCode || null
+        // TODO: seatCount/boatType data not available on denormalized ScheduleItem snapshots.
+        // Requires adding these fields to the backend ScheduleItem entity and populator.
+        // For now, rules using these conditions will not match.
+        return null
 
       case 'seatCount':
-        // seatCount no longer available on race - boat class data not nested
+        // TODO: seatCount/boatType data not available on denormalized ScheduleItem snapshots.
+        // Requires adding these fields to the backend ScheduleItem entity and populator.
+        // For now, rules using these conditions will not match.
         return null
 
       case 'baseRaceCode':
@@ -273,10 +280,11 @@ export class RuleProcessor {
 
   /**
    * Generate unique hash for violation dismissal tracking
-   * Format: ruleId-race1Code-race1StartTime-race2Code-race2StartTime
+   * Format: ruleId|race1Code|race1StartTime|race2Code|race2StartTime
+   * Uses pipe delimiter because race codes may contain hyphens (e.g., K1-ferfi-500)
    */
   private static generateViolationHash(ruleId: number, raceA: ScheduleRace, raceB: ScheduleRace): string {
-    return `${ruleId}-${raceA.race.code}-${raceA.startTime}-${raceB.race.code}-${raceB.startTime}`
+    return `${ruleId}|${raceA.race.code}|${raceA.startTime}|${raceB.race.code}|${raceB.startTime}`
   }
 
   /**

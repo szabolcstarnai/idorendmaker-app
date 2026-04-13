@@ -30,7 +30,7 @@ const MATCHING_FIELDS = [
   { value: 'levelType', label: 'Futamszint típus', description: 'Ugyanaz a futamszint típus (döntő, előfutam, középfutam)' },
   { value: 'seatCount', label: 'Ülésszám', description: 'Ugyanaz az ülésszám (egyes, páros, stb.)' },
   { value: 'boatType', label: 'Hajótípus', description: 'Ugyanaz a hajótípus (pl. Minikajak, Túrakenu, stb.)' },
-  { value: 'baseRaceId', label: 'Ugyanaz a versenyszám', description: 'Ugyanaz a versenyszám alapja (különböző szinteken)' }
+  { value: 'baseRaceCode', label: 'Ugyanaz a versenyszám', description: 'Ugyanaz a versenyszám alapja (különböző szinteken)' }
 ];
 
 const CompactMatchingSelector: React.FC<{

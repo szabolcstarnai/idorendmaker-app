@@ -25,7 +25,7 @@ interface PDFProcessorResult {
   pdfExtractionId?: number;
   extractedRaces?: Array<{
     name: string;
-    matchedDatabaseRaceId?: number;
+    matchedDatabaseRaceCode?: string;
     competitors: Array<{ name: string }>;
   }>;
 }
@@ -423,15 +423,15 @@ const PDFUploadPanel: React.FC<PDFUploadPanelProps> = ({
                   {result.extractedRaces && result.extractedRaces.length > 0 && (
                     <ScrollArea className="h-48 w-full border rounded">
                       <div className="p-4 space-y-2">
-                        {result.extractedRaces.map((race: { name: string; matchedDatabaseRaceId?: number; competitors: Array<{ name: string }> }, index: number) => (
+                        {result.extractedRaces.map((race: { name: string; matchedDatabaseRaceCode?: string; competitors: Array<{ name: string }> }, index: number) => (
                           <div key={index} className="p-3 border rounded bg-card">
                             <div className="flex justify-between items-start mb-2">
                               <div className="font-medium text-sm">{race.name}</div>
                               <Badge 
-                                variant={race.matchedDatabaseRaceId ? "default" : "outline"}
+                                variant={race.matchedDatabaseRaceCode ? "default" : "outline"}
                                 className="text-xs"
                               >
-                                {race.matchedDatabaseRaceId ? "Párosítva" : "Nincs pár"}
+                                {race.matchedDatabaseRaceCode ? "Párosítva" : "Nincs pár"}
                               </Badge>
                             </div>
                             <div className="text-xs text-muted-foreground">

@@ -472,7 +472,7 @@ export class BackendAPIService {
   // ========================
 
   /**
-   * Get all races with their age groups, ordered by occurrence and name
+   * Get all races with their age groups, ordered by sortOrder and name
    * Replaces: RaceService.getAllRaces()
    * Endpoint: GET /api/races
    */

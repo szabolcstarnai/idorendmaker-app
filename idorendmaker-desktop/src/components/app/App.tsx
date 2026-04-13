@@ -329,7 +329,7 @@ const App: React.FC = () => {
             discipline: item.raceDiscipline,
             gender: item.raceGender,
             distance: item.raceDistance,
-            boatClassCode: item.raceBoatClassCode,
+            boatClassCode: item.raceBoatClassName,
             sortOrder: 0,
             ageGroups: [],
             hidden: false
@@ -337,7 +337,7 @@ const App: React.FC = () => {
           level: {
             code: item.levelCode,
             name: item.levelName,
-            levelType: ''
+            levelType: item.levelType
           } as Level,
           day: section.dayNumber,
           startTime: item.calculatedStartTime || '09:00',

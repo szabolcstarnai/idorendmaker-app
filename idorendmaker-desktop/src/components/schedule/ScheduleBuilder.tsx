@@ -299,8 +299,8 @@ const ScheduleBuilder: React.FC<ScheduleBuilderProps> = React.memo(({
   // Handle violation click to highlight related races
   const handleHighlightRaces = useCallback((violation: RuleViolation) => {
     // Extract race codes and start times from violation hash
-    // Format: ruleId-race1Code-race1StartTime-race2Code-race2StartTime
-    const hashParts = violation.violationHash.split('-');
+    // Format: ruleId|race1Code|race1StartTime|race2Code|race2StartTime
+    const hashParts = violation.violationHash.split('|');
     if (hashParts.length >= 5) {
       const race1Code = hashParts[1];
       const race1StartTime = hashParts[2];

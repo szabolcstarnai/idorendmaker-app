@@ -78,9 +78,9 @@ const ScheduleRaceList: React.FC<ScheduleRaceListProps> = React.memo(({
       // Check if this schedule race matches either race in the violation
       // We match by both race code and start time to identify specific race+level combinations
       const matchesRace1 = v.race1.code === scheduleRace.race.code &&
-                          v.violationHash.includes(`-${scheduleRace.race.code}-${scheduleRace.startTime}-`)
+                          v.violationHash.includes(`|${scheduleRace.race.code}|${scheduleRace.startTime}|`)
       const matchesRace2 = v.race2.code === scheduleRace.race.code &&
-                          v.violationHash.includes(`-${scheduleRace.race.code}-${scheduleRace.startTime}`)
+                          v.violationHash.includes(`|${scheduleRace.race.code}|${scheduleRace.startTime}`)
       
       return matchesRace1 || matchesRace2
     });

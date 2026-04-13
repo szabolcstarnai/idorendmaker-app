@@ -53,7 +53,7 @@ export class ExportService {
    * Calculate shortest competitor intervals for each race in the schedule
    * @param scheduleRaces The races in the schedule
    * @param competitorSchedules Competitor analysis data
-   * @returns Map of "raceId-levelId" to shortest interval in minutes
+   * @returns Map of "raceCode-levelCode" to shortest interval in minutes
    */
   private static async calculateShortestCompetitorIntervals(
     scheduleRaces: ScheduleRace[],
@@ -296,7 +296,8 @@ export class ExportService {
           const competitorSummary = competitorSummaries[raceCode];
 
           if (competitorSummary) {
-            // Seat count is no longer available on flat schedule items
+            // TODO: seatCount not available on denormalized ScheduleItem snapshots.
+            // Boat unit calculation will fall back to raw entry counts.
             raceCompetitorData.set(raceCode, {
               entryCount: competitorSummary.entryCount,
               seatCount: null,
@@ -316,6 +317,8 @@ export class ExportService {
                 schedule.pdfExtractionId
               );
 
+            // TODO: seatCount not available on denormalized ScheduleItem snapshots.
+            // Boat unit calculation will fall back to raw entry counts.
             raceCompetitorData.set(raceCode, {
               entryCount: competitorSummary.entryCount,
               seatCount: null,
@@ -569,7 +572,7 @@ export class ExportService {
       const sectionRows = sectionItems.map((item) => {
         // Find warnings for this specific race+level+time combination
         const itemWarnings = violations.filter((violation) => {
-          const hashParts = violation.violationHash.split("-");
+          const hashParts = violation.violationHash.split("|");
           if (hashParts.length >= 5) {
             const race1Code = hashParts[1];
             const race1StartTime = hashParts[2];
@@ -898,8 +901,8 @@ export class ExportService {
 
     return violations.map((violation) => {
       // Try to get level names for both races
-      const race1Key = `${violation.race1.code}-${violation.violationHash.split("-")[2] || ""}`;
-      const race2Key = `${violation.race2.code}-${violation.violationHash.split("-")[4] || ""}`;
+      const race1Key = `${violation.race1.code}-${violation.violationHash.split("|")[2] || ""}`;
+      const race2Key = `${violation.race2.code}-${violation.violationHash.split("|")[4] || ""}`;
 
       const race1Level = raceLevelMap.get(race1Key) || "";
       const race2Level = raceLevelMap.get(race2Key) || "";
