@@ -42,6 +42,7 @@ interface PDFExtraction {
 interface PDFExtractionDetailsProps {
   extraction: PDFExtraction;
   onCreateSchedule: (pdfExtractionId: number) => void;
+  onNewPDF?: () => void;
 }
 
 const PDFExtractionDetails: React.FC<PDFExtractionDetailsProps> = ({ 

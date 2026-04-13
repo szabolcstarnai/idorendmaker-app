@@ -97,8 +97,8 @@ const loadSeatCounts = async () => {
   if (seatCounts.length === 0 && window.electronAPI) {
     try {
       const dbSeatCounts = await window.electronAPI.getAllSeatCounts();
-      seatCounts = dbSeatCounts.map((seatCount, index) => ({
-        id: index,
+      seatCounts = dbSeatCounts.map((seatCount) => ({
+        code: seatCount,
         value: seatCount,
         label: seatCount
       }));
@@ -113,8 +113,8 @@ const loadBoatTypes = async () => {
   if (boatTypes.length === 0 && window.electronAPI) {
     try {
       const dbBoatTypes = await window.electronAPI.getAllBoatTypes();
-      boatTypes = dbBoatTypes.map((boatType, index) => ({
-        id: index,
+      boatTypes = dbBoatTypes.map((boatType) => ({
+        code: boatType,
         value: boatType,
         label: boatType
       }));

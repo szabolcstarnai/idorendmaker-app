@@ -180,7 +180,7 @@ const ScheduleDetailsPanel: React.FC<ScheduleDetailsPanelProps> = ({
       const updatedSchedule: ScheduleWithPDFStatus = {
         ...selectedSchedule,
         name: newName.trim(),
-        updatedAt: new Date() // Update the modified timestamp
+        updatedAt: new Date().toISOString() // Update the modified timestamp
       };
 
       setIsRenaming(false);

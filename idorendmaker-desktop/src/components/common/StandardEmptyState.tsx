@@ -4,7 +4,7 @@ import { Button } from '../ui/button';
 import { cn } from '../../lib/utils';
 
 interface StandardEmptyStateProps {
-  type?: 'no-data' | 'no-results' | 'action-prompt';
+  type?: 'no-data' | 'no-results' | 'action-prompt' | 'error';
   icon?: LucideIcon;
   title: string;
   description?: string;
@@ -32,7 +32,8 @@ const StandardEmptyState: React.FC<StandardEmptyStateProps> = ({
   const defaultIcons = {
     'no-data': FileX,
     'no-results': Search,
-    'action-prompt': Plus
+    'action-prompt': Plus,
+    'error': AlertCircle
   };
 
   const Icon = CustomIcon || defaultIcons[type] || AlertCircle;

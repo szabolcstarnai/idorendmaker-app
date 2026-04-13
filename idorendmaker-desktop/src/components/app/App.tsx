@@ -76,8 +76,8 @@ const App: React.FC = () => {
         id: -1, // Use -1 for temporary in-memory schedules
         name: 'Új időrend',
         pdfExtractionId: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         sections: [
           {
             id: defaultSectionId, // Use timestamp for unique temporary ID
@@ -85,11 +85,11 @@ const App: React.FC = () => {
             dayNumber: 1,
             sectionType: 'délelőtt',
             startTime: '09:00',
-            createdAt: new Date()
+            createdAt: new Date().toISOString()
           }
         ]
       };
-      
+
       console.log('Created default schedule:', defaultSchedule);
       console.log('Default section properties:');
       console.log('  id:', defaultSectionId, typeof defaultSectionId);
@@ -139,9 +139,9 @@ const App: React.FC = () => {
           dayNumber: sectionData.dayNumber,
           sectionType: sectionData.sectionType,
           startTime: sectionData.startTime,
-          createdAt: new Date()
+          createdAt: new Date().toISOString()
         };
-        
+
         console.log('Created new section object:', newSection);
         console.log('Section properties check:');
         console.log('  id:', newSection.id, typeof newSection.id);
@@ -332,7 +332,7 @@ const App: React.FC = () => {
             boatClassCode: item.raceBoatClassCode,
             sortOrder: 0,
             ageGroups: [],
-            isHidden: false
+            hidden: false
           } as RaceWithAgeGroupsAndBoatClass,
           level: {
             code: item.levelCode,
