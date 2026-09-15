@@ -64,11 +64,13 @@ const MainMenu: React.FC<MainMenuProps> = ({ onCreateNewSchedule, onLoadSchedule
       .catch(error => console.error('Failed to load app version:', error));
   }, []);
 
-  // Update check (#50) is deliberately user-triggered, not run automatically
-  // on startup - this app is often used at race venues with no reliable
-  // internet, where a silent background check would just fail on every
-  // launch while adding latency for no benefit.
-  const handleCheckForUpdate = useCallback(async () => {
+  // Checks for an update. `silent` suppresses toasts and swallows errors -
+  // used for the automatic startup check below, where a network failure
+  // (no internet at the race venue, most commonly) should be invisible
+  // rather than an alarming error popup on every launch. An explicit click
+  // on "Frissítések keresése" always gets a toast either way, since the
+  // user asked for that feedback.
+  const handleCheckForUpdate = useCallback(async (silent = false) => {
     setUpdateState({ phase: 'checking' });
     try {
       const result = await window.electronAPI.checkForAppUpdate();
@@ -76,17 +78,30 @@ const MainMenu: React.FC<MainMenuProps> = ({ onCreateNewSchedule, onLoadSchedule
         setUpdateState({ phase: 'update-available', latestVersion: result.latestVersion, releaseUrl: result.releaseUrl });
       } else if (result.status === 'up-to-date') {
         setUpdateState({ phase: 'up-to-date' });
-        toast.success(result.message);
+        if (!silent) toast.success(result.message);
       } else {
-        setUpdateState({ phase: 'error', message: result.message });
-        toast.error(result.message);
+        setUpdateState({ phase: silent ? 'idle' : 'error', message: result.message });
+        if (!silent) toast.error(result.message);
       }
     } catch (error) {
       console.error('Update check failed:', error);
       const message = 'Nem sikerült ellenőrizni a frissítéseket.';
-      setUpdateState({ phase: 'error', message });
-      toast.error(message);
+      setUpdateState({ phase: silent ? 'idle' : 'error', message });
+      if (!silent) toast.error(message);
     }
+  }, []);
+
+  // Also check once automatically, shortly after the menu appears: earlier
+  // work on this feature (see the now-superseded `feature/50-latest-version-check`
+  // branch) already established that this is safe to do quietly - it just
+  // means most users see the "update available" badge without having to
+  // look for a button. Delayed so it never competes with the stats/version
+  // calls above for the app's attention right at startup.
+  useEffect(() => {
+    const timer = setTimeout(() => { handleCheckForUpdate(true); }, 2000);
+    return () => clearTimeout(timer);
+    // Intentionally runs once on mount only - handleCheckForUpdate is a
+    // stable useCallback with no external deps of its own.
   }, []);
 
   const handleOpenReleasePage = useCallback((releaseUrl: string) => {
@@ -163,7 +178,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onCreateNewSchedule, onLoadSchedule
                 ) : (
                   <button
                     type="button"
-                    onClick={handleCheckForUpdate}
+                    onClick={() => handleCheckForUpdate()}
                     disabled={updateState.phase === 'checking'}
                     className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-60"
                   >
