@@ -4,6 +4,7 @@ import axios from 'axios';
 import { promises as fs, constants } from 'fs';
 import { app } from 'electron';
 import * as net from 'net';
+import { findDevJar } from '../../common/services/devJarResolver';
 
 interface ProcessedVersenyszam {
   nev: string;
@@ -40,12 +41,15 @@ export class PDFProcessorService {
   }
 
   /**
-   * Candidate paths for jar in packaged app or dev target
+   * Candidate paths for the jar in a packaged app, plus the dev-mode
+   * `target/` directory to scan for a freshly `mvn package`-built one (see
+   * `findDevJar` - a plain `idorendmaker-pdfprocessor.jar` dev candidate
+   * never resolved, since Maven always names it with the version suffix).
    */
   private getJarCandidates() {
     const packaged = path.join(process.resourcesPath, 'idorendmaker-pdfprocessor.jar');
-    const dev = path.join(process.cwd(), '..', 'idorendmaker-pdfprocessor', 'target', 'idorendmaker-pdfprocessor.jar');
-    return { packaged, dev };
+    const devDir = path.join(process.cwd(), '..', 'idorendmaker-pdfprocessor', 'target');
+    return { packaged, devDir };
   }
 
   /**
@@ -83,18 +87,16 @@ private async findSystemJava(): Promise<string | null> {
  * Sets launchMode/javaPath/jarPath
  */
 private async resolveRuntime(): Promise<void> {
-  const { packaged, dev } = this.getJarCandidates();
+  const { packaged, devDir } = this.getJarCandidates();
 
-  // Prefer packaged JAR, else dev-target
+  // Prefer packaged JAR, else whatever's actually in the dev target dir
   try {
     await fs.access(packaged, constants.F_OK);
     this.jarPath = packaged;
   } catch {
-    try {
-      await fs.access(dev, constants.F_OK);
-      this.jarPath = dev;
-    } catch {
-      throw new Error(`PDF processor JAR not found. Looked at: ${packaged}, ${dev}`);
+    this.jarPath = await findDevJar(devDir, 'idorendmaker-pdfprocessor');
+    if (!this.jarPath) {
+      throw new Error(`PDF processor JAR not found. Looked at: ${packaged}, ${devDir}/idorendmaker-pdfprocessor*.jar`);
     }
   }
 

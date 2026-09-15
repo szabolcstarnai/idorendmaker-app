@@ -4,6 +4,7 @@ import axios from 'axios';
 import { promises as fs, constants } from 'fs';
 import { app } from 'electron';
 import * as net from 'net';
+import { findDevJar } from './devJarResolver';
 
 interface BackendHealthCheck {
   status: string;
@@ -33,13 +34,15 @@ export class BackendService {
   }
 
   /**
-   * Candidate paths for the backend jar in packaged app or dev target.
+   * Candidate paths for the backend jar: the packaged resource, plus the
+   * dev-mode `target/` directory to scan for a freshly `mvn package`-built
+   * one (see `findDevJar` - a hardcoded versioned path here used to break
+   * silently on every `pom.xml` version bump).
    */
   private getJarCandidates() {
     const packaged = path.join(process.resourcesPath, 'idorendmaker-backend.jar');
-    const dev = path.join(process.cwd(), '..', 'idorendmaker-backend', 'target', 'idorendmaker-backend.jar');
-    const devVersioned = path.join(process.cwd(), '..', 'idorendmaker-backend', 'target', 'idorendmaker-backend-2.0.0.jar');
-    return { packaged, dev, devVersioned };
+    const devDir = path.join(process.cwd(), '..', 'idorendmaker-backend', 'target');
+    return { packaged, devDir };
   }
 
   /**
@@ -75,20 +78,16 @@ export class BackendService {
    * Locate the backend jar and a Java runtime to run it with.
    */
   private async resolveRuntime(): Promise<void> {
-    const { packaged, dev, devVersioned } = this.getJarCandidates();
+    const { packaged, devDir } = this.getJarCandidates();
 
-    const candidates = [packaged, dev, devVersioned];
-    for (const candidate of candidates) {
-      try {
-        await fs.access(candidate, constants.F_OK);
-        this.jarPath = candidate;
-        break;
-      } catch {
-        // try next
-      }
+    try {
+      await fs.access(packaged, constants.F_OK);
+      this.jarPath = packaged;
+    } catch {
+      this.jarPath = await findDevJar(devDir, 'idorendmaker-backend');
     }
     if (!this.jarPath) {
-      throw new Error(`Backend JAR not found. Looked at: ${candidates.join(', ')}`);
+      throw new Error(`Backend JAR not found. Looked at: ${packaged}, ${devDir}/idorendmaker-backend*.jar`);
     }
     console.log('Backend JAR:', this.jarPath);
 
