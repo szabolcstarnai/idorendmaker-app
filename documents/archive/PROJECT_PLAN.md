@@ -1,3 +1,9 @@
+> **Archived 2026-09-15.** Describes a pre-catalog/user-DB-split, pre-string-code
+> architecture (single SQLite DB, numeric `Integer id`s, a custom
+> `MigrationRunner` that has since been deleted). Kept for historical context
+> only — for current architecture see `documents/ARCHITECTURE.md`, and
+> `CLAUDE.md` at the repo root for orientation.
+
 # Időrend Készítő - Current State Overview
 
 **Status**: 🎉 **PRODUCTION READY** - Modern Distributed Desktop Application

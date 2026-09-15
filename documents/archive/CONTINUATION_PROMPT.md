@@ -1,5 +1,9 @@
 # Continuation Prompt — Catalog/User DB Separation Refactor
 
+> **Moved to `documents/archive/` 2026-09-15** (was already marked complete
+> below). For current architecture, start at `CLAUDE.md` / `documents/ARCHITECTURE.md`
+> instead of this document.
+
 > **Status: complete.** Every phase described below (1–6, 8, 9) is implemented,
 > reviewed and committed on `feature/separate-catalog-from-user-data`, followed
 > by the frontend `Integer id` → `String code` migration (`bd8d6d7`…`518613c`)

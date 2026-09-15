@@ -1,3 +1,12 @@
+> **Archived 2026-09-15.** Superseded by `documents/PDF_AND_COMPETITOR_TRACKING.md`
+> (current, verified live against the running app). This doc's database
+> schema (`race_id INTEGER` FKs, `MigrationRunner`, `shared/database/schema.sql`
+> as schema owner) describes the pre-catalog/user-DB-split architecture and
+> is wrong today - `user.db`'s schema is now Liquibase-owned and
+> catalog references are `String code`. Still useful for the competitor-conflict
+> UX rationale (severity classification, the worst-case heat logic) if read
+> as narrative, not fact.
+
 # PDF Processing & Competitor-Aware Scheduling Architecture
 
 **Document Version**: 3.0

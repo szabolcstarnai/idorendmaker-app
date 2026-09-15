@@ -82,6 +82,12 @@ adjust if this ever runs somewhere else.
 # API call fails, since BackendService.ts spawns this exact jar.
 cd idorendmaker-backend && ./mvnw -q clean package -DskipTests && cd ..
 
+# PDF processor JAR - only needed if the task touches PDF import. As of the
+# devJarResolver fix (#62) this no longer needs any manual renaming - just
+# build it normally and BackendService's sibling, PDFProcessorService, finds
+# whatever versioned jar Maven produced.
+cd idorendmaker-pdfprocessor && ./mvnw -q clean package -DskipTests && cd ..
+
 # playwright-core - the CDP driver's only dependency. Deliberately installed
 # with --no-save: it's a dev/test tool, not a real app dependency, and this
 # keeps package.json/package-lock.json untouched. It has to be re-run after
@@ -90,9 +96,10 @@ cd idorendmaker-backend && ./mvnw -q clean package -DskipTests && cd ..
 cd idorendmaker-desktop && npm install --no-save playwright-core && cd ..
 ```
 
-Both are idempotent — safe to re-run; skip if already present
-(`idorendmaker-backend/target/*.jar` and
-`idorendmaker-desktop/node_modules/playwright-core` respectively).
+All three are idempotent — safe to re-run; skip whichever already has its
+output (`idorendmaker-backend/target/*.jar`,
+`idorendmaker-pdfprocessor/target/*.jar`,
+`idorendmaker-desktop/node_modules/playwright-core`).
 
 ### 2. Start the renderer dev server **first**
 
@@ -184,6 +191,33 @@ git status --short    # should be clean of anything but intentional source edits
 
 ---
 
+## ⚠️ Setup gotchas
+
+- **Rebuilding `main.js`/`preload.js` (step 3) can bake in a different Vite
+  port than the one you started.** If port 5173 is already taken (a
+  standalone `npx vite` instance left over from earlier in the same
+  session, say), the `electron-forge start` rebuild picks the next free
+  port (5174, ...) for *its own* internal dev server and bakes that URL
+  into the fresh `main.js` — even though your actual standalone Vite
+  server is still happily running on 5173. Symptom: `driver.mjs windows`
+  reports `chrome-error://chromewebdata/` even after a `reload`, because
+  reload retries the *wrong* port. Fix: `node driver.mjs goto
+  "http://localhost:5173/"` (or whatever port your actual Vite instance is
+  on) to point the window at the right one; or avoid the mismatch
+  entirely by not leaving stale Vite instances running before a rebuild —
+  grep `.vite/build/main.js` for `localhost:` to see what port it actually
+  expects if this happens.
+- **Native file pickers (`dialog.showOpenDialog`) are unreachable from CDP,
+  full stop** — not a workaround-needed case, a hard boundary (it's not a
+  web `<input type="file">`, which Playwright *can* intercept; it's an OS
+  dialog spawned from the Electron main process, entirely outside the
+  Chromium page). Before concluding a flow "can't be tested headlessly"
+  because it starts with a file picker, check whether the actual
+  processing step is a *separate* IPC call that takes a raw path — it
+  usually is, decoupled from the dialog on purpose or not, and calling it
+  directly exercises the real pipeline. Confirmed working this way for the
+  PDF import flow — see `documents/PDF_AND_COMPETITOR_TRACKING.md`.
+
 ## 🔍 Interaction gotchas (found the hard way)
 
 - **Cards are usually not the click target — a hover-revealed icon button
@@ -218,6 +252,18 @@ git status --short    # should be clean of anything but intentional source edits
   editor's condition dropdowns are plain `<select>`; use the
   `HTMLSelectElement.prototype` setter the same way (the `fill` command
   auto-detects the tag and picks the right prototype).
+- **A bare `[role=checkbox]` (or any un-scoped selector) can match an
+  element behind an open modal, not the one you're looking at.** Custom
+  checkbox components (Radix-style, used in the level-picker modal and
+  elsewhere) aren't real `<input type="checkbox">` elements, so `input[type=checkbox]`
+  won't find them - but a generic `[role=checkbox]` selector matches
+  *every* one on the page, including sidebar filter checkboxes sitting
+  underneath the modal's overlay, and `document.querySelector` returns
+  document order, not visual stacking order. Scope the selector to the
+  modal's own container (or use `click-nth-text`/an explicit label match)
+  rather than a bare role selector when more than one instance of a
+  component exists on the page at once - which, with an overlay open, is
+  almost always the case.
 
 ---
 

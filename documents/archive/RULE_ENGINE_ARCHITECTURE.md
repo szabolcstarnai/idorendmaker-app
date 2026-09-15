@@ -1,3 +1,9 @@
+> **Archived 2026-09-15.** Superseded by `documents/RULE_ENGINE.md` (current
+> field list, file paths, and semantics — including `boatType`/`seatCount`
+> which this doc predates support for). Still useful for the rule-editor UX
+> rationale and example rules, but its SQL schema and TypeScript type
+> snippets use the pre-migration numeric-ID schema.
+
 # Rule Engine Architecture Documentation
 
 **Status**: ✅ **LEVEL-AWARE** - Fully Extensible Rule System with Futamszint Integration

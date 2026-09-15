@@ -1,3 +1,12 @@
+> **Archived 2026-09-15.** Documents the original design of the
+> `sectionDataMap`/`SectionWorkingData` in-memory model, which is still the
+> current architecture in principle - but the code snippets predate the
+> string-code migration (`race.id` → `race.code`) and several real
+> performance bugs in this exact hook have since been found and fixed (see
+> `documents/ARCHITECTURE.md`'s "Schedule Builder data model" section,
+> commit `f895f01`). Read for the *why* of the data-loss bug this solved,
+> not for current code.
+
 # Section Management Architecture - Multi-Section Working Data System
 
 ## Overview

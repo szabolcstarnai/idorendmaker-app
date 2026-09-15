@@ -1,3 +1,11 @@
+> **Archived 2026-09-15.** Documents a real refactor (decomposing
+> `ScheduleBuilder` into hooks/components) whose *principle* still holds,
+> but the file paths (`src/components/...`, `src/hooks/...`) and line counts
+> are stale — current paths are under `src/features/schedule/hooks/` and
+> `src/components/schedule/`. See `documents/ARCHITECTURE.md`'s "Schedule
+> Builder data model" section for the current, load-bearing state
+> management details (including recent performance fixes this doc predates).
+
 # ScheduleBuilder Architecture - Component-Based Refactoring
 
 ## Overview

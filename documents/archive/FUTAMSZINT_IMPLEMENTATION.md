@@ -1,3 +1,10 @@
+> **Archived 2026-09-15.** Good narrative on *why* the competitive-level
+> (futamszint) system exists and the phased approach used to build it, but
+> the schema/code snippets predate the `Integer id → String code` migration
+> and are wrong if read as current fact. For the current `levels` table and
+> how level fields are used in rules, see `documents/ARCHITECTURE.md` and
+> `documents/RULE_ENGINE.md`.
+
 # Futamszint (Competitive Level) Implementation Documentation
 
 **Project**: Időrend Készítő Desktop App  
