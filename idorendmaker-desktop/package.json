@@ -1,7 +1,7 @@
 {
   "name": "idorendmaker-desktop",
   "productName": "Időrend Készítő",
-  "version": "2025.9.2",
+  "version": "2026.3.1",
   "description": "Kajak-kenu verseny időrend készítő alkalmazás",
   "main": ".vite/build/main.js",
   "scripts": {
@@ -38,10 +38,6 @@
       {
         "from": "resources/idorendmaker-pdfprocessor.jar",
         "to": "idorendmaker-pdfprocessor.jar"
-      },
-      {
-        "from": "resources/idorendmaker-production.db",
-        "to": "idorendmaker-production.db"
       },
       {
         "from": "resources/LICENSE",

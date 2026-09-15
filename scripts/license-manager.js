@@ -37,7 +37,8 @@ try {
         console.log(`   🔄 Processing ${projectName}...`);
         const projectDir = path.join(rootDir, projectName);
 
-        execSync('mvn license:download-licenses', {
+        const mvnwCommand = process.platform === 'win32' ? '.\\mvnw.cmd' : './mvnw';
+        execSync(`${mvnwCommand} license:download-licenses`, {
             stdio: 'inherit',
             cwd: projectDir
         });

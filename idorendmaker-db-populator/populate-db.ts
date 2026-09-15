@@ -412,7 +412,7 @@ class CatalogPopulator {
         "INSERT INTO catalog_meta (meta_key, meta_value) VALUES (?, ?)"
       );
       insertMeta.run("schema_version", "1");
-      insertMeta.run("catalog_version", "2026.0");
+      insertMeta.run("catalog_version", "2026.3.1");
       insertMeta.run("generated_at", new Date().toISOString());
       insertMeta.run("source", "seed");
 

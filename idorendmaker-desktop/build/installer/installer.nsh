@@ -8,13 +8,6 @@
 ; show the Details pane by default (must be at top-level, NOT inside a Function)
 ; ShowInstDetails show
 
-; ---------------- variables ----------------
-Var DB_DEST
-Var SRC1
-Var SRC2
-Var SRC3
-Var SRC4
-
 ; ---------------- JRE download/install configuration ----------------
 !define REQUIRED_JAVA_MAJOR "23"
 !define JRE_DOWNLOAD_URL "https://github.com/adoptium/temurin23-binaries/releases/download/jdk-23.0.2%2B7/OpenJDK23U-jre_x64_windows_hotspot_23.0.2_7.zip"
@@ -131,95 +124,13 @@ Function InstallJRE
   Pop $0
 FunctionEnd
 
-; ---------------- Copy DB using cmd copy ----------------
-Function CopyDatabase
-  SetDetailsPrint both
-  SetShellVarContext current
-
-  StrCpy $DB_DEST "$LOCALAPPDATA\\idorendmaker\\idorendmaker.db"
-  DetailPrint "Adatbázis cél helye: $DB_DEST"
-
-  ${If} ${FileExists} "$DB_DEST"
-    DetailPrint "Adatbázis már létezik, felhasználói adatok megőrizve."
-    SetShellVarContext all
-    Return
-  ${EndIf}
-
-  CreateDirectory "$LOCALAPPDATA\\idorendmaker"
-  ; We ignore CreateDirectory errors here; copy will fail if directory creation actually failed.
-
-  StrCpy $SRC1 "$INSTDIR\\resources\\idorendmaker-production.db"
-  StrCpy $SRC2 "$INSTDIR\\resources\\app.asar.unpacked\\idorendmaker-production.db"
-  StrCpy $SRC3 "$INSTDIR\\idorendmaker-production.db"
-  StrCpy $SRC4 "$INSTDIR\\app.asar.unpacked\\idorendmaker-production.db"
-
-  DetailPrint "Adatbázis források ellenőrzése (sorrend):"
-  DetailPrint "  1: $SRC1"
-  DetailPrint "  2: $SRC2"
-  DetailPrint "  3: $SRC3"
-  DetailPrint "  4: $SRC4"
-
-  ${If} ${FileExists} "$SRC1"
-    DetailPrint "Talált adatbázis: $SRC1"
-    StrCpy $R0 'cmd.exe /C copy /Y "$SRC1" "$DB_DEST"'
-    ExecWait '$R0' $R1
-    ${If} $R1 == 0
-      ${If} ${FileExists} "$DB_DEST"
-        DetailPrint "Adatbázis sikeresen átmásolva (forrás: 1)."
-        SetShellVarContext all
-        Return
-      ${EndIf}
-    ${EndIf}
-  ${EndIf}
-
-  ${If} ${FileExists} "$SRC2"
-    DetailPrint "Talált adatbázis: $SRC2"
-    StrCpy $R0 'cmd.exe /C copy /Y "$SRC2" "$DB_DEST"'
-    ExecWait '$R0' $R1
-    ${If} $R1 == 0
-      ${If} ${FileExists} "$DB_DEST"
-        DetailPrint "Adatbázis sikeresen átmásolva (forrás: 2)."
-        SetShellVarContext all
-        Return
-      ${EndIf}
-    ${EndIf}
-  ${EndIf}
-
-  ${If} ${FileExists} "$SRC3"
-    DetailPrint "Talált adatbázis: $SRC3"
-    StrCpy $R0 'cmd.exe /C copy /Y "$SRC3" "$DB_DEST"'
-    ExecWait '$R0' $R1
-    ${If} $R1 == 0
-      ${If} ${FileExists} "$DB_DEST"
-        DetailPrint "Adatbázis sikeresen átmásolva (forrás: 3)."
-        SetShellVarContext all
-        Return
-      ${EndIf}
-    ${EndIf}
-  ${EndIf}
-
-  ${If} ${FileExists} "$SRC4"
-    DetailPrint "Talált adatbázis: $SRC4"
-    StrCpy $R0 'cmd.exe /C copy /Y "$SRC4" "$DB_DEST"'
-    ExecWait '$R0' $R1
-    ${If} $R1 == 0
-      ${If} ${FileExists} "$DB_DEST"
-        DetailPrint "Adatbázis sikeresen átmásolva (forrás: 4)."
-        SetShellVarContext all
-        Return
-      ${EndIf}
-    ${EndIf}
-  ${EndIf}
-
-  DetailPrint "Nem találtam csomagolt adatbázist; folytatom a telepítést anélkül, hogy felülírnám a felhasználói adatokat."
-  SetShellVarContext all
-FunctionEnd
-
 ; ---------------- electron-builder hook: canonical install entry ----------------
+; Note: no database copying needed — the app self-initialises both databases on
+; first launch: catalog.db is seeded from the bundled JAR classpath resource by
+; CatalogBootstrapService, and user.db is created by Liquibase migrations.
 !macro customInstall
     SetDetailsPrint both
     Call InstallJRE
-    Call CopyDatabase
     DetailPrint "Telepítés befejeződött."
 !macroend
 

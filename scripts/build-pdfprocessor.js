@@ -7,15 +7,14 @@ const path = require('path');
 console.log('🔨 Building PDF processor JAR...');
 
 try {
-    // Change to pdfprocessor directory and run Maven
     const pdfprocessorDir = path.join(__dirname, '..', 'idorendmaker-pdfprocessor');
     process.chdir(pdfprocessorDir);
 
     console.log(`📁 Working directory: ${process.cwd()}`);
     console.log('⚡ Running Maven package build...');
 
-    // Execute Maven clean package
-    execSync('mvn clean package', {
+   const mvnwCommand = process.platform === 'win32' ? '.\\mvnw.cmd' : './mvnw';
+    execSync(`${mvnwCommand} clean package -DskipTests`, {
         stdio: 'inherit',
         cwd: pdfprocessorDir
     });

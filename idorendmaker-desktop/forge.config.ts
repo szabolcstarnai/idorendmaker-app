@@ -17,10 +17,9 @@ const config: ForgeConfig = {
     executableName: 'idorendmaker',
     icon: './assets/icon', // Add your icon path here
     extraResource: [
-      // Bundle the backend + PDF processor JARs and production database
+      // Bundle the backend + PDF processor JARs
       'resources/idorendmaker-backend.jar',
       'resources/idorendmaker-pdfprocessor.jar',
-      'resources/idorendmaker-production.db'
     ],
     // Squirrel requires these for proper Windows integration
     appBundleId: 'hu.szabolcst.idorendmaker',
@@ -127,7 +126,6 @@ async function validateResources(): Promise<void> {
   const requiredFiles = [
     'idorendmaker-backend.jar',
     'idorendmaker-pdfprocessor.jar',
-    'idorendmaker-production.db'
   ];
 
   for (const fileName of requiredFiles) {

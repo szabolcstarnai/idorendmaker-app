@@ -1484,7 +1484,7 @@
     "path": "C:\\Users\\Szabolcs\\Documents\\PROJECTS\\idorendmaker-app\\idorendmaker-desktop\\node_modules\\camelcase-css",
     "licenseFile": "C:\\Users\\Szabolcs\\Documents\\PROJECTS\\idorendmaker-app\\idorendmaker-desktop\\node_modules\\camelcase-css\\license"
   },
-  "caniuse-lite@1.0.30001735": {
+  "caniuse-lite@1.0.30001787": {
     "licenses": "CC-BY-4.0",
     "repository": "https://github.com/browserslist/caniuse-lite",
     "publisher": "Ben Briggs",
@@ -1886,8 +1886,8 @@
     "repository": "https://github.com/visionmedia/debug",
     "publisher": "TJ Holowaychuk",
     "email": "tj@vision-media.ca",
-    "path": "C:\\Users\\Szabolcs\\Documents\\PROJECTS\\idorendmaker-app\\idorendmaker-desktop\\node_modules\\eslint-import-resolver-node\\node_modules\\debug",
-    "licenseFile": "C:\\Users\\Szabolcs\\Documents\\PROJECTS\\idorendmaker-app\\idorendmaker-desktop\\node_modules\\eslint-import-resolver-node\\node_modules\\debug\\LICENSE"
+    "path": "C:\\Users\\Szabolcs\\Documents\\PROJECTS\\idorendmaker-app\\idorendmaker-desktop\\node_modules\\eslint-module-utils\\node_modules\\debug",
+    "licenseFile": "C:\\Users\\Szabolcs\\Documents\\PROJECTS\\idorendmaker-app\\idorendmaker-desktop\\node_modules\\eslint-module-utils\\node_modules\\debug\\LICENSE"
   },
   "debug@4.4.1": {
     "licenses": "MIT",
@@ -3067,8 +3067,8 @@
     "path": "C:\\Users\\Szabolcs\\Documents\\PROJECTS\\idorendmaker-app\\idorendmaker-desktop\\node_modules\\iconv-lite",
     "licenseFile": "C:\\Users\\Szabolcs\\Documents\\PROJECTS\\idorendmaker-app\\idorendmaker-desktop\\node_modules\\iconv-lite\\LICENSE"
   },
-  "idorendmaker-desktop@2025.9.1": {
-    "licenses": "MIT",
+  "idorendmaker-desktop@2026.3.1": {
+    "licenses": "Apache-2.0",
     "publisher": "Szabolcs Tárnai",
     "email": "tarnai.szabolcs01@gmail.com",
     "path": "C:\\Users\\Szabolcs\\Documents\\PROJECTS\\idorendmaker-app\\idorendmaker-desktop"

@@ -3,7 +3,6 @@
 ## Extra Credits
 - **App icon**: '<a href="https://www.flaticon.com/free-icons/schedule" title="schedule icons">Schedule icons created by Freepik - Flaticon</a>'
 - **NSIS Installer**: NSIS (Nullsoft Scriptable Install System) — Licensed under the zlib/libpng license. See: https://nsis.sourceforge.io/License
-- **Microsoft VC++ Runtime**: Downloaded during installation from Microsoft servers. Licensed under Microsoft Software License Terms.
 - **Adoptium Temurin JRE**: Downloaded during installation from Adoptium GitHub releases. Licensed under GPL+Classpath Exception.
 
 ## idorendmaker-backend
@@ -13,55 +12,86 @@
 | ch.qos.logback:logback-classic | GNU Lesser General Public License | [](./licenses/) |
 | ch.qos.logback:logback-core | Eclipse Public License - v 1.0 | [eclipse public license - v 1.0 - epl-v10.html](./licenses/eclipse%20public%20license%20-%20v%201.0%20-%20epl-v10.html) |
 | ch.qos.logback:logback-core | GNU Lesser General Public License | [](./licenses/) |
-| com.fasterxml.jackson.core:jackson-annotations | The Apache Software License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
-| com.fasterxml.jackson.core:jackson-core | The Apache Software License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
-| com.fasterxml.jackson.core:jackson-databind | The Apache Software License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
+| com.fasterxml:classmate | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
+| com.fasterxml.jackson.core:jackson-annotations | The Apache Software License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
+| com.fasterxml.jackson.core:jackson-core | The Apache Software License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
+| com.fasterxml.jackson.core:jackson-databind | The Apache Software License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
 | com.fasterxml.jackson.datatype:jackson-datatype-jdk8 | The Apache Software License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
 | com.fasterxml.jackson.datatype:jackson-datatype-jsr310 | The Apache Software License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
 | com.fasterxml.jackson.module:jackson-module-parameter-names | The Apache Software License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
-| com.jayway.jsonpath:json-path | The Apache Software License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
+| com.jayway.jsonpath:json-path | The Apache Software License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
+| com.opencsv:opencsv | Apache 2 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
+| com.sun.istack:istack-commons-runtime | Eclipse Distribution License - v 1.0 | [eclipse distribution license - v 1.0 - edl-v10.html](./licenses/eclipse%20distribution%20license%20-%20v%201.0%20-%20edl-v10.html) |
 | com.vaadin.external.google:android-json | Apache License 2.0 | [apache license 2.0 - license-2.0.txt](./licenses/apache%20license%202.0%20-%20license-2.0.txt) |
-| com.zaxxer:HikariCP | The Apache Software License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
+| com.zaxxer:HikariCP | The Apache Software License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
+| commons-io:commons-io | Apache-2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
 | io.micrometer:micrometer-commons | The Apache Software License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
 | io.micrometer:micrometer-observation | The Apache Software License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
-| jakarta.activation:jakarta.activation-api | EDL 1.0 | [edl 1.0 - edl-v10.html](./licenses/edl%201.0%20-%20edl-v10.html) |
+| io.smallrye:jandex | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
+| jakarta.activation:jakarta.activation-api | EDL 1.0 | [eclipse distribution license - v 1.0 - edl-v10.html](./licenses/eclipse%20distribution%20license%20-%20v%201.0%20-%20edl-v10.html) |
 | jakarta.annotation:jakarta.annotation-api | EPL 2.0 | [epl 2.0 - epl-2.0.html](./licenses/epl%202.0%20-%20epl-2.0.html) |
 | jakarta.annotation:jakarta.annotation-api | GPL2 w/ CPE | [](./licenses/) |
-| jakarta.xml.bind:jakarta.xml.bind-api | Eclipse Distribution License - v 1.0 | [edl 1.0 - edl-v10.html](./licenses/edl%201.0%20-%20edl-v10.html) |
+| jakarta.inject:jakarta.inject-api | The Apache Software License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
+| jakarta.persistence:jakarta.persistence-api | Eclipse Public License v. 2.0 | [epl 2.0 - epl-2.0.html](./licenses/epl%202.0%20-%20epl-2.0.html) |
+| jakarta.persistence:jakarta.persistence-api | Eclipse Distribution License v. 1.0 | [eclipse distribution license - v 1.0 - edl-v10.html](./licenses/eclipse%20distribution%20license%20-%20v%201.0%20-%20edl-v10.html) |
+| jakarta.transaction:jakarta.transaction-api | EPL 2.0 | [epl 2.0 - epl-2.0.html](./licenses/epl%202.0%20-%20epl-2.0.html) |
+| jakarta.transaction:jakarta.transaction-api | GPL2 w/ CPE | [](./licenses/) |
+| jakarta.xml.bind:jakarta.xml.bind-api | Eclipse Distribution License - v 1.0 | [eclipse distribution license - v 1.0 - edl-v10.html](./licenses/eclipse%20distribution%20license%20-%20v%201.0%20-%20edl-v10.html) |
+| javax.xml.bind:jaxb-api | CDDL 1.1 | [cddl 1.1 - cddl+gpl-1.1.txt](./licenses/cddl%201.1%20-%20cddl+gpl-1.1.txt) |
+| javax.xml.bind:jaxb-api | GPL2 w/ CPE | [cddl 1.1 - cddl+gpl-1.1.txt](./licenses/cddl%201.1%20-%20cddl+gpl-1.1.txt) |
+| net.bytebuddy:byte-buddy | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
+| net.bytebuddy:byte-buddy-agent | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
 | net.minidev:accessors-smart | The Apache Software License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
 | net.minidev:json-smart | The Apache Software License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
-| org.apache.logging.log4j:log4j-api | Apache License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
-| org.apache.logging.log4j:log4j-to-slf4j | Apache License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
+| org.antlr:antlr4-runtime | BSD-3-Clause | [bsd-3-clause - license.html](./licenses/bsd-3-clause%20-%20license.html) |
+| org.apache.commons:commons-collections4 | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
+| org.apache.commons:commons-lang3 | Apache-2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
+| org.apache.commons:commons-text | Apache-2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
+| org.apache.logging.log4j:log4j-api | Apache-2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
+| org.apache.logging.log4j:log4j-to-slf4j | Apache-2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
 | org.apache.tomcat.embed:tomcat-embed-core | Apache License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
 | org.apache.tomcat.embed:tomcat-embed-el | Apache License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
 | org.apache.tomcat.embed:tomcat-embed-websocket | Apache License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
 | org.apiguardian:apiguardian-api | The Apache License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
-| org.assertj:assertj-core | Apache License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
+| org.aspectj:aspectjweaver | Eclipse Public License - v 2.0 | [eclipse public license - v 2.0 - epl-2.0.txt](./licenses/eclipse%20public%20license%20-%20v%202.0%20-%20epl-2.0.txt) |
+| org.assertj:assertj-core | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
+| org.awaitility:awaitility | Apache 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
+| org.eclipse.angus:angus-activation | EDL 1.0 | [eclipse distribution license - v 1.0 - edl-v10.html](./licenses/eclipse%20distribution%20license%20-%20v%201.0%20-%20edl-v10.html) |
+| org.glassfish.jaxb:jaxb-core | Eclipse Distribution License - v 1.0 | [eclipse distribution license - v 1.0 - edl-v10.html](./licenses/eclipse%20distribution%20license%20-%20v%201.0%20-%20edl-v10.html) |
+| org.glassfish.jaxb:jaxb-runtime | Eclipse Distribution License - v 1.0 | [eclipse distribution license - v 1.0 - edl-v10.html](./licenses/eclipse%20distribution%20license%20-%20v%201.0%20-%20edl-v10.html) |
+| org.glassfish.jaxb:txw2 | Eclipse Distribution License - v 1.0 | [eclipse distribution license - v 1.0 - edl-v10.html](./licenses/eclipse%20distribution%20license%20-%20v%201.0%20-%20edl-v10.html) |
 | org.hamcrest:hamcrest | BSD License 3 | [bsd license 3 - bsd-3-clause.html](./licenses/bsd%20license%203%20-%20bsd-3-clause.html) |
+| org.hibernate.common:hibernate-commons-annotations | Apache License Version 2.0 | [apache license version 2.0 - apache-2.0.html](./licenses/apache%20license%20version%202.0%20-%20apache-2.0.html) |
+| org.hibernate.orm:hibernate-community-dialects | GNU Library General Public License v2.1 or later | [gnu library general public license v2.1 or later - lgpl-2.1.html](./licenses/gnu%20library%20general%20public%20license%20v2.1%20or%20later%20-%20lgpl-2.1.html) |
+| org.hibernate.orm:hibernate-core | GNU Library General Public License v2.1 or later | [gnu library general public license v2.1 or later - lgpl-2.1.html](./licenses/gnu%20library%20general%20public%20license%20v2.1%20or%20later%20-%20lgpl-2.1.html) |
+| org.jboss.logging:jboss-logging | Apache License 2.0 | [apache license 2.0 - apache-2.0.txt](./licenses/apache%20license%202.0%20-%20apache-2.0.txt) |
 | org.junit.jupiter:junit-jupiter | Eclipse Public License v2.0 | [eclipse public license v2.0 - epl-v20.html](./licenses/eclipse%20public%20license%20v2.0%20-%20epl-v20.html) |
 | org.junit.jupiter:junit-jupiter-api | Eclipse Public License v2.0 | [eclipse public license v2.0 - epl-v20.html](./licenses/eclipse%20public%20license%20v2.0%20-%20epl-v20.html) |
 | org.junit.jupiter:junit-jupiter-engine | Eclipse Public License v2.0 | [eclipse public license v2.0 - epl-v20.html](./licenses/eclipse%20public%20license%20v2.0%20-%20epl-v20.html) |
 | org.junit.jupiter:junit-jupiter-params | Eclipse Public License v2.0 | [eclipse public license v2.0 - epl-v20.html](./licenses/eclipse%20public%20license%20v2.0%20-%20epl-v20.html) |
 | org.junit.platform:junit-platform-commons | Eclipse Public License v2.0 | [eclipse public license v2.0 - epl-v20.html](./licenses/eclipse%20public%20license%20v2.0%20-%20epl-v20.html) |
 | org.junit.platform:junit-platform-engine | Eclipse Public License v2.0 | [eclipse public license v2.0 - epl-v20.html](./licenses/eclipse%20public%20license%20v2.0%20-%20epl-v20.html) |
+| org.liquibase:liquibase-core | Apache License, Version 2.0 | [apache license 2.0 - license-2.0.txt](./licenses/apache%20license%202.0%20-%20license-2.0.txt) |
 | org.mapstruct:mapstruct | The Apache Software License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
-| org.mockito:mockito-core | The MIT License | [the mit license - license.html](./licenses/the%20mit%20license%20-%20license.html) |
-| org.mockito:mockito-junit-jupiter | The MIT License | [the mit license - license.html](./licenses/the%20mit%20license%20-%20license.html) |
+| org.mockito:mockito-core | MIT | [mit - mit.html](./licenses/mit%20-%20mit.html) |
+| org.mockito:mockito-junit-jupiter | MIT | [mit - mit.html](./licenses/mit%20-%20mit.html) |
 | org.objenesis:objenesis | Apache License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
-| org.opentest4j:opentest4j | The Apache License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
+| org.opentest4j:opentest4j | The Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
 | org.ow2.asm:asm | BSD-3-Clause | [bsd-3-clause - license.html](./licenses/bsd-3-clause%20-%20license.html) |
 | org.projectlombok:lombok | The MIT License | [the mit license - license.txt](./licenses/the%20mit%20license%20-%20license.txt) |
 | org.projectlombok:lombok-mapstruct-binding | The MIT License | [the mit license - license.txt](./licenses/the%20mit%20license%20-%20license.txt) |
 | org.skyscreamer:jsonassert | The Apache Software License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
-| org.slf4j:jul-to-slf4j | MIT License | [mit license - mit-license.html](./licenses/mit%20license%20-%20mit-license.html) |
-| org.slf4j:slf4j-api | MIT License | [mit license - mit-license.html](./licenses/mit%20license%20-%20mit-license.html) |
+| org.slf4j:jul-to-slf4j | MIT | [mit - mit.html](./licenses/mit%20-%20mit.html) |
+| org.slf4j:slf4j-api | MIT | [mit - mit.html](./licenses/mit%20-%20mit.html) |
 | org.springframework:spring-aop | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
+| org.springframework:spring-aspects | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
 | org.springframework:spring-beans | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
 | org.springframework:spring-context | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
 | org.springframework:spring-core | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
 | org.springframework:spring-expression | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
 | org.springframework:spring-jcl | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
 | org.springframework:spring-jdbc | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
+| org.springframework:spring-orm | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
 | org.springframework:spring-test | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
 | org.springframework:spring-tx | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
 | org.springframework:spring-web | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
@@ -70,6 +100,7 @@
 | org.springframework.boot:spring-boot-autoconfigure | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
 | org.springframework.boot:spring-boot-configuration-processor | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
 | org.springframework.boot:spring-boot-starter | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
+| org.springframework.boot:spring-boot-starter-data-jpa | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
 | org.springframework.boot:spring-boot-starter-jdbc | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
 | org.springframework.boot:spring-boot-starter-json | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
 | org.springframework.boot:spring-boot-starter-logging | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
@@ -78,7 +109,9 @@
 | org.springframework.boot:spring-boot-starter-web | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
 | org.springframework.boot:spring-boot-test | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
 | org.springframework.boot:spring-boot-test-autoconfigure | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
-| org.xerial:sqlite-jdbc | The Apache Software License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
+| org.springframework.data:spring-data-commons | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
+| org.springframework.data:spring-data-jpa | Apache License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
+| org.xerial:sqlite-jdbc | The Apache Software License, Version 2.0 | [apache license, version 2.0 - license-2.0.txt](./licenses/apache%20license,%20version%202.0%20-%20license-2.0.txt) |
 | org.xmlunit:xmlunit-core | The Apache Software License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
 | org.yaml:snakeyaml | Apache License, Version 2.0 | [the apache software license, version 2.0 - license-2.0.txt](./licenses/the%20apache%20software%20license,%20version%202.0%20-%20license-2.0.txt) |
 
@@ -294,7 +327,7 @@
 | call-bound@1.0.4 | MIT | [View](./licenses/idorendmaker-desktop/ALL-THIRD-PARTY-LICENSES.html#call-bound-1-0-4) |
 | callsites@3.1.0 | MIT | [View](./licenses/idorendmaker-desktop/ALL-THIRD-PARTY-LICENSES.html#callsites-3-1-0) |
 | camelcase-css@2.0.1 | MIT | [View](./licenses/idorendmaker-desktop/ALL-THIRD-PARTY-LICENSES.html#camelcase-css-2-0-1) |
-| caniuse-lite@1.0.30001735 | CC-BY-4.0 | [View](./licenses/idorendmaker-desktop/ALL-THIRD-PARTY-LICENSES.html#caniuse-lite-1-0-30001735) |
+| caniuse-lite@1.0.30001787 | CC-BY-4.0 | [View](./licenses/idorendmaker-desktop/ALL-THIRD-PARTY-LICENSES.html#caniuse-lite-1-0-30001787) |
 | chainsaw@0.1.0 | MIT* | [View](./licenses/idorendmaker-desktop/ALL-THIRD-PARTY-LICENSES.html#chainsaw-0-1-0) |
 | chalk@4.1.2 | MIT | [View](./licenses/idorendmaker-desktop/ALL-THIRD-PARTY-LICENSES.html#chalk-4-1-2) |
 | chokidar@3.6.0 | MIT | [View](./licenses/idorendmaker-desktop/ALL-THIRD-PARTY-LICENSES.html#chokidar-3-6-0) |
@@ -492,7 +525,7 @@
 | https-proxy-agent@5.0.1 | MIT | [View](./licenses/idorendmaker-desktop/ALL-THIRD-PARTY-LICENSES.html#https-proxy-agent-5-0-1) |
 | humanize-ms@1.2.1 | MIT | [View](./licenses/idorendmaker-desktop/ALL-THIRD-PARTY-LICENSES.html#humanize-ms-1-2-1) |
 | iconv-lite@0.6.3 | MIT | [View](./licenses/idorendmaker-desktop/ALL-THIRD-PARTY-LICENSES.html#iconv-lite-0-6-3) |
-| idorendmaker-desktop@2025.9.1 | MIT | [View](./licenses/idorendmaker-desktop/ALL-THIRD-PARTY-LICENSES.html#idorendmaker-desktop-2025-9-1) |
+| idorendmaker-desktop@2026.3.1 | Apache-2.0 | [View](./licenses/idorendmaker-desktop/ALL-THIRD-PARTY-LICENSES.html#idorendmaker-desktop-2026-3-1) |
 | ieee754@1.2.1 | BSD-3-Clause | [View](./licenses/idorendmaker-desktop/ALL-THIRD-PARTY-LICENSES.html#ieee754-1-2-1) |
 | ignore@5.3.2 | MIT | [View](./licenses/idorendmaker-desktop/ALL-THIRD-PARTY-LICENSES.html#ignore-5-3-2) |
 | immediate@3.0.6 | MIT | [View](./licenses/idorendmaker-desktop/ALL-THIRD-PARTY-LICENSES.html#immediate-3-0-6) |

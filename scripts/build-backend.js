@@ -24,7 +24,7 @@ try {
     // Find the built JAR (version may change in pom.xml).
     const targetDir = path.join(backendDir, 'target');
     const jarCandidates = fs.readdirSync(targetDir).filter((f) =>
-        f.startsWith('idorendmaker-backend-') && f.endsWith('.jar') && !f.endsWith('-sources.jar') && !f.endsWith('-javadoc.jar')
+        f.startsWith('idorendmaker-backend') && f.endsWith('.jar') && !f.endsWith('-sources.jar') && !f.endsWith('-javadoc.jar')
     );
 
     if (jarCandidates.length === 0) {
