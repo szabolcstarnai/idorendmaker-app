@@ -1,5 +1,16 @@
 # Continuation Prompt — Catalog/User DB Separation Refactor
 
+> **Status: complete.** Every phase described below (1–6, 8, 9) is implemented,
+> reviewed and committed on `feature/separate-catalog-from-user-data`, followed
+> by the frontend `Integer id` → `String code` migration (`bd8d6d7`…`518613c`)
+> and the 2026.3.1 release prep. This document is kept as the record of what was
+> done and why; it is no longer a prompt to execute.
+>
+> Known gaps left open after the refactor are tracked as issues, not here:
+> #55 (catalog update flow unreachable from the app), #56 (catalog EMF closed on
+> swap and never rebuilt), #57 (no CI), #58 (test coverage), #59 (age groups
+> snapshotted by name only), #60 (backend JAR defaults to the dev profile).
+
 Use this prompt verbatim at the start of a new Claude Code conversation in the `C:\Users\Szabolcs\Documents\PROJECTS\idorendmaker-app` working directory.
 
 ---
