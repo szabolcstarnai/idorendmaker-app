@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
-import { Plus, FolderOpen, Shield, Calendar, Trophy, FileText } from 'lucide-react';
+import { Plus, FolderOpen, Shield, Calendar, Trophy, FileText, Download, Loader2, CheckCircle2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface MainMenuProps {
   onCreateNewSchedule: () => void;
@@ -10,6 +11,12 @@ interface MainMenuProps {
   onRuleManagement?: () => void;
   onPDFProcessor?: () => void;
 }
+
+type UpdateCheckState =
+  | { phase: 'idle' | 'checking' }
+  | { phase: 'up-to-date' }
+  | { phase: 'update-available'; latestVersion: string; releaseUrl: string }
+  | { phase: 'error'; message: string };
 
 const MainMenu: React.FC<MainMenuProps> = ({ onCreateNewSchedule, onLoadSchedule, onRuleManagement, onPDFProcessor }) => {
   const [stats, setStats] = useState({
@@ -20,6 +27,8 @@ const MainMenu: React.FC<MainMenuProps> = ({ onCreateNewSchedule, onLoadSchedule
   });
 
   const [isHeightConstrained, setIsHeightConstrained] = useState(false);
+  const [appVersion, setAppVersion] = useState<string | null>(null);
+  const [updateState, setUpdateState] = useState<UpdateCheckState>({ phase: 'idle' });
 
   useEffect(() => {
     const loadStats = async () => {
@@ -44,6 +53,46 @@ const MainMenu: React.FC<MainMenuProps> = ({ onCreateNewSchedule, onLoadSchedule
     };
 
     loadStats();
+  }, []);
+
+  // Load the current app version once, locally - no network call, works
+  // offline. This replaces a version string that used to be hand-typed in
+  // this file and had to be kept in sync with package.json on every release.
+  useEffect(() => {
+    window.electronAPI.getAppVersion()
+      .then(setAppVersion)
+      .catch(error => console.error('Failed to load app version:', error));
+  }, []);
+
+  // Update check (#50) is deliberately user-triggered, not run automatically
+  // on startup - this app is often used at race venues with no reliable
+  // internet, where a silent background check would just fail on every
+  // launch while adding latency for no benefit.
+  const handleCheckForUpdate = useCallback(async () => {
+    setUpdateState({ phase: 'checking' });
+    try {
+      const result = await window.electronAPI.checkForAppUpdate();
+      if (result.status === 'update-available' && result.latestVersion && result.releaseUrl) {
+        setUpdateState({ phase: 'update-available', latestVersion: result.latestVersion, releaseUrl: result.releaseUrl });
+      } else if (result.status === 'up-to-date') {
+        setUpdateState({ phase: 'up-to-date' });
+        toast.success(result.message);
+      } else {
+        setUpdateState({ phase: 'error', message: result.message });
+        toast.error(result.message);
+      }
+    } catch (error) {
+      console.error('Update check failed:', error);
+      const message = 'Nem sikerült ellenőrizni a frissítéseket.';
+      setUpdateState({ phase: 'error', message });
+      toast.error(message);
+    }
+  }, []);
+
+  const handleOpenReleasePage = useCallback((releaseUrl: string) => {
+    window.electronAPI.openExternalUrl(releaseUrl).catch(error =>
+      console.error('Failed to open release page:', error)
+    );
   }, []);
 
   // Height-based responsive layout logic
@@ -89,10 +138,43 @@ const MainMenu: React.FC<MainMenuProps> = ({ onCreateNewSchedule, onLoadSchedule
           <div className="flex items-center gap-3">
             <div>
               <h1 className="text-lg font-bold text-foreground">Időrend előkészítő</h1>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-xs px-2 py-0">
-                  v2026.3.1
-                </Badge>
+              <div className="flex items-center gap-2 mt-0.5">
+                {appVersion && (
+                  <Badge variant="outline" className="text-xs px-2 py-0">
+                    v{appVersion}
+                  </Badge>
+                )}
+
+                {updateState.phase === 'update-available' ? (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenReleasePage(updateState.releaseUrl)}
+                    className="flex items-center gap-1 text-xs text-primary hover:underline"
+                    title="Új verzió letöltése a GitHub oldalon"
+                  >
+                    <Download className="h-3 w-3" />
+                    Új verzió elérhető: v{updateState.latestVersion}
+                  </button>
+                ) : updateState.phase === 'up-to-date' ? (
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Naprakész
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleCheckForUpdate}
+                    disabled={updateState.phase === 'checking'}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-60"
+                  >
+                    {updateState.phase === 'checking' ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Download className="h-3 w-3" />
+                    )}
+                    Frissítések keresése
+                  </button>
+                )}
               </div>
             </div>
           </div>

@@ -172,6 +172,17 @@ export interface ElectronAPI {
     racesWithEntries: number;
     organizationsRepresented: number;
   }>;
+
+  // App version / update check (#50)
+  getAppVersion: () => Promise<string>;
+  checkForAppUpdate: () => Promise<{
+    status: 'up-to-date' | 'update-available' | 'error';
+    currentVersion: string;
+    latestVersion?: string;
+    releaseUrl?: string;
+    message: string;
+  }>;
+  openExternalUrl: (url: string) => Promise<void>;
 }
 
 // Expose protected methods that allow the renderer process to use
@@ -279,6 +290,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('competitor:getRaceSummary', raceCode, pdfExtractionId),
   competitorGetHighRiskCompetitors: (pdfExtractionId: number) => 
     ipcRenderer.invoke('competitor:getHighRiskCompetitors', pdfExtractionId),
-  competitorGetStats: (pdfExtractionId: number) => 
+  competitorGetStats: (pdfExtractionId: number) =>
     ipcRenderer.invoke('competitor:getStats', pdfExtractionId),
+
+  // App version / update check (#50)
+  getAppVersion: () => ipcRenderer.invoke('app:getVersion'),
+  checkForAppUpdate: () => ipcRenderer.invoke('app:checkForUpdate'),
+  openExternalUrl: (url: string) => ipcRenderer.invoke('app:openExternalUrl', url),
 } as ElectronAPI);
