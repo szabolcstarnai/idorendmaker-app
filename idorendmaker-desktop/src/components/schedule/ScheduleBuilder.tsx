@@ -284,15 +284,26 @@ const ScheduleBuilder: React.FC<ScheduleBuilderProps> = React.memo(({
     return () => clearTimeout(timeoutId);
   }, [allScheduleRaces, checkRuleViolations]);
 
-  // Force rule re-validation when PDF extraction context changes
-  // This ensures competitor-aware checking is used when PDF data becomes available
+  // Keep the latest races available to the PDF-context effect below without
+  // making it a dependency - see that effect's comment for why.
+  const allScheduleRacesRef = useRef(allScheduleRaces);
+  allScheduleRacesRef.current = allScheduleRaces;
+
+  // Force an immediate (non-debounced) rule re-validation specifically when
+  // *PDF extraction context becomes available*, so competitor-aware checking
+  // kicks in right away instead of waiting for the next race edit.
+  //
+  // This used to also depend on `allScheduleRaces`, which meant it re-ran on
+  // every ordinary race add/remove/move too - duplicating the debounced
+  // effect above with an *undebounced* call, so every structural change
+  // fired two rule-check API calls instead of one. Reading the current races
+  // through a ref instead keeps this effect scoped to its actual purpose:
+  // reacting to `pdfExtractionId` transitions.
   useEffect(() => {
-    if (pdfExtractionId && allScheduleRaces.length > 0) {
-      console.log('PDF extraction context changed, re-validating rules with competitor data:', pdfExtractionId);
-      // Trigger immediate re-validation with the new PDF context
-      checkRuleViolations(allScheduleRaces);
+    if (pdfExtractionId && allScheduleRacesRef.current.length > 0) {
+      checkRuleViolations(allScheduleRacesRef.current);
     }
-  }, [pdfExtractionId, allScheduleRaces, checkRuleViolations]); // Re-check when PDF context or races change
+  }, [pdfExtractionId, checkRuleViolations]);
 
   // Handle drag end
   const handleDragEnd = (result: any) => {

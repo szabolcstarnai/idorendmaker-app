@@ -78,15 +78,23 @@ export const calculateTotalDuration = (
 };
 
 /**
- * Recalculate all race times in a schedule using updated intervals
+ * Recalculate all race times in a schedule using updated intervals.
+ *
+ * Preserves each race's object identity when its computed `startTime` turns
+ * out unchanged, instead of unconditionally spreading a new copy. Callers
+ * that use this to decide whether anything actually needs re-rendering or
+ * re-saving (see `useScheduleSectionData`'s `recalculateAllTimes`, which
+ * this was written for) rely on that: it lets them detect "recalculated to
+ * the exact same result" by comparing array/element references rather than
+ * deep-diffing every race on every call.
  */
 export const recalculateRaceTimes = <T extends { startTime: string }>(
   races: T[],
   intervals: number[],
   sectionStartTime: string
 ): T[] => {
-  return races.map((race, index) => ({
-    ...race,
-    startTime: calculateRaceTime(index, intervals, sectionStartTime)
-  }));
+  return races.map((race, index) => {
+    const newStartTime = calculateRaceTime(index, intervals, sectionStartTime);
+    return race.startTime === newStartTime ? race : { ...race, startTime: newStartTime };
+  });
 };

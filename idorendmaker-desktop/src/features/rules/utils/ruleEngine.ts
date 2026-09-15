@@ -1,4 +1,3 @@
-import { c } from 'vite/dist/node/types.d-aGj9QkWt'
 import { RuleWithConditions, RuleCondition, RuleViolation, ScheduleRace } from '../../../../shared/types/race'
 
 /**
