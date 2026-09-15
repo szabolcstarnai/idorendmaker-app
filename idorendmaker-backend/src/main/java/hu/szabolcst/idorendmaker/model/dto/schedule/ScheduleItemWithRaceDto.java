@@ -15,6 +15,10 @@ public class ScheduleItemWithRaceDto {
     private String raceName;
     private String raceDiscipline;
     private String raceBoatClassName;
+    private String raceBoatClassCode;
+    private String raceBoatTypeCode;
+    private Integer raceSeatCount;
+    private String raceSeatCountText;
     private String raceGender;
     private String raceDistance;
     private String raceAgeGroupsDisplay;

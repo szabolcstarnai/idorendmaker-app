@@ -90,11 +90,12 @@ public class RaceCatalogLookupService {
         final Race race = raceOpt.get();
 
         final String boatClassCode = race.getBoatClassCode();
-        final String boatClassName = boatClassCode == null
+        final BoatClass boatClass = boatClassCode == null
             ? null
-            : boatClassRepository.findById(boatClassCode)
-                .map(BoatClass::getName)
-                .orElse(boatClassCode);
+            : boatClassRepository.findById(boatClassCode).orElse(null);
+        // Fall back to the raw code when the boat class is missing from the
+        // catalog so the display string is never null.
+        final String boatClassName = boatClass != null ? boatClass.getName() : boatClassCode;
 
         final List<RaceAgeGroup> raceAgeGroups = raceAgeGroupRepository.findAllByRaceCode(raceCode);
         final List<AgeGroup> resolvedAgeGroups;
@@ -119,12 +120,18 @@ public class RaceCatalogLookupService {
             ageGroupsDisplay = joined.isEmpty() ? null : joined;
         }
 
-        return new RaceDisplayData(race, boatClassName, ageGroupsDisplay, resolvedAgeGroups);
+        return new RaceDisplayData(race, boatClass, boatClassName, ageGroupsDisplay, resolvedAgeGroups);
     }
 
     /**
      * Immutable bundle returned by {@link #loadRaceDisplayData(String)}.
+     *
+     * @param boatClass the resolved catalog boat class, or {@code null} when
+     *                  the race references a code the catalog does not know
+     * @param boatClassName the boat class display name, falling back to the
+     *                      raw code when {@code boatClass} is {@code null}
      */
-    public record RaceDisplayData(Race race, String boatClassName, String ageGroupsDisplay, List<AgeGroup> ageGroups) {
+    public record RaceDisplayData(Race race, BoatClass boatClass, String boatClassName, String ageGroupsDisplay,
+        List<AgeGroup> ageGroups) {
     }
 }

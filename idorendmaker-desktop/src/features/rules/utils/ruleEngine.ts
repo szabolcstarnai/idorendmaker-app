@@ -82,16 +82,14 @@ export class ConditionEvaluator {
         return scheduleRace.level.levelType
 
       case 'boatType':
-        // TODO: seatCount/boatType data not available on denormalized ScheduleItem snapshots.
-        // Requires adding these fields to the backend ScheduleItem entity and populator.
-        // For now, rules using these conditions will not match.
-        return null
+        // Resolved from the race's boat class: live from the catalog for races
+        // being placed, from the item snapshot for a reloaded schedule.
+        return race.boatTypeCode ?? null
 
       case 'seatCount':
-        // TODO: seatCount/boatType data not available on denormalized ScheduleItem snapshots.
-        // Requires adding these fields to the backend ScheduleItem entity and populator.
-        // For now, rules using these conditions will not match.
-        return null
+        // Matched against the text form ("1", "2", "csapat") because that is
+        // what the rule editor's dropdown offers.
+        return race.seatCountText ?? null
 
       default:
         console.warn(`Unknown field: ${field}`)
@@ -165,16 +163,14 @@ export class MatchingEvaluator {
         return scheduleRace.level.levelType
 
       case 'boatType':
-        // TODO: seatCount/boatType data not available on denormalized ScheduleItem snapshots.
-        // Requires adding these fields to the backend ScheduleItem entity and populator.
-        // For now, rules using these conditions will not match.
-        return null
+        // Resolved from the race's boat class: live from the catalog for races
+        // being placed, from the item snapshot for a reloaded schedule.
+        return race.boatTypeCode ?? null
 
       case 'seatCount':
-        // TODO: seatCount/boatType data not available on denormalized ScheduleItem snapshots.
-        // Requires adding these fields to the backend ScheduleItem entity and populator.
-        // For now, rules using these conditions will not match.
-        return null
+        // Matched against the text form ("1", "2", "csapat") because that is
+        // what the rule editor's dropdown offers.
+        return race.seatCountText ?? null
 
       case 'baseRaceCode':
         // Return null here - baseRaceCode is handled specially above

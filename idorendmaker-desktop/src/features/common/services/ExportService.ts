@@ -1,6 +1,7 @@
 import ExcelJS from "exceljs";
 import { BackendAPIService } from "../../../data/services/BackendAPIService";
 import { ConflictDetector } from "../../rules/utils/ruleEngine";
+import { raceFromSnapshot } from "../../../utils/scheduleItemSnapshot";
 import {
   ScheduleWithSections,
   ScheduleItemWithRaceAndSection,
@@ -284,6 +285,12 @@ export class ExportService {
       // Get unique race codes from schedule items
       const raceCodes = [...new Set(allItems.map((item) => item.raceCode))];
 
+      // Seat count per race comes from each item's catalog snapshot, so the
+      // boat-unit maths stays correct even after a catalog update.
+      const seatCountByRaceCode = new Map<string, number | null>(
+        allItems.map((item) => [item.raceCode, item.raceSeatCount ?? null])
+      );
+
       // Fetch competitor summaries for all races in a single batch call
       try {
         const competitorSummaries = await BackendAPIService.getBatchRaceCompetitorSummary(
@@ -296,11 +303,9 @@ export class ExportService {
           const competitorSummary = competitorSummaries[raceCode];
 
           if (competitorSummary) {
-            // TODO: seatCount not available on denormalized ScheduleItem snapshots.
-            // Boat unit calculation will fall back to raw entry counts.
             raceCompetitorData.set(raceCode, {
               entryCount: competitorSummary.entryCount,
-              seatCount: null,
+              seatCount: seatCountByRaceCode.get(raceCode) ?? null,
             });
           } else {
             console.warn(`No competitor data received for race ${raceCode}`);
@@ -317,11 +322,9 @@ export class ExportService {
                 schedule.pdfExtractionId
               );
 
-            // TODO: seatCount not available on denormalized ScheduleItem snapshots.
-            // Boat unit calculation will fall back to raw entry counts.
             raceCompetitorData.set(raceCode, {
               entryCount: competitorSummary.entryCount,
-              seatCount: null,
+              seatCount: seatCountByRaceCode.get(raceCode) ?? null,
             });
           } catch (individualError) {
             console.warn(
@@ -337,18 +340,7 @@ export class ExportService {
         // Convert schedule items to ScheduleRace format using flat snapshot fields
         const scheduleRaces: ScheduleRace[] = allItems.map((item, index) => ({
           id: `${item.raceCode}-${item.levelCode}-${index}`, // Unique identifier
-          race: {
-            code: item.raceCode,
-            name: item.raceName,
-            discipline: item.raceDiscipline,
-            boatClassCode: item.raceBoatClassName,
-            boatClassName: item.raceBoatClassName,
-            gender: item.raceGender,
-            distance: item.raceDistance,
-            sortOrder: 0,
-            hidden: false,
-            ageGroups: [],
-          },
+          race: raceFromSnapshot(item),
           level: {
             code: item.levelCode,
             name: item.levelName,
@@ -445,18 +437,7 @@ export class ExportService {
       // Convert schedule items to ScheduleRace format using flat snapshot fields
       const scheduleRaces: ScheduleRace[] = items.map((item, index) => ({
         id: `${item.raceCode}-${item.levelCode}-${index}`, // Unique identifier
-        race: {
-          code: item.raceCode,
-          name: item.raceName,
-          discipline: item.raceDiscipline,
-          boatClassCode: item.raceBoatClassName,
-          boatClassName: item.raceBoatClassName,
-          gender: item.raceGender,
-          distance: item.raceDistance,
-          sortOrder: 0,
-          hidden: false,
-          ageGroups: [],
-        },
+        race: raceFromSnapshot(item),
         level: {
           code: item.levelCode,
           name: item.levelName,
@@ -495,18 +476,7 @@ export class ExportService {
       // Convert items to ScheduleRace format for calculation
       const scheduleRaces: ScheduleRace[] = items.map((item, index) => ({
         id: `${item.raceCode}-${item.levelCode}-${index}`,
-        race: {
-          code: item.raceCode,
-          name: item.raceName,
-          discipline: item.raceDiscipline,
-          boatClassCode: item.raceBoatClassName,
-          boatClassName: item.raceBoatClassName,
-          gender: item.raceGender,
-          distance: item.raceDistance,
-          sortOrder: 0,
-          hidden: false,
-          ageGroups: [],
-        },
+        race: raceFromSnapshot(item),
         level: {
           code: item.levelCode,
           name: item.levelName,

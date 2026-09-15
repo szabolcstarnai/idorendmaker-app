@@ -11,6 +11,7 @@ import Navbar from './Navbar';
 import UnsavedChangesDialog from '../dialogs/UnsavedChangesDialog';
 import { TwoPanelLayout } from '../layout/TwoPanelLayout';
 import { RaceWithAgeGroupsAndBoatClass, ScheduleWithSections, ScheduleSection, CreateScheduleSectionData, ScheduleRace, SectionWorkingData, Schedule, RuleWithConditions, CreateRuleData, Level, ScheduleMode } from '../../../shared/types/race';
+import { raceFromSnapshot } from '../../utils/scheduleItemSnapshot';
 import { useUnsavedChanges } from '../../features/common/hooks/useUnsavedChanges';
 import { Toaster } from '../ui/sonner';
 import { toast } from 'sonner';
@@ -323,18 +324,7 @@ const App: React.FC = () => {
         // Items now have flat snapshot fields instead of nested race/level objects
         const scheduleRaces: ScheduleRace[] = ((section as any).items || []).map((item: any, index: number) => ({
           id: `schedule-race-${item.id}`,
-          race: {
-            code: item.raceCode,
-            name: item.raceName,
-            discipline: item.raceDiscipline,
-            gender: item.raceGender,
-            distance: item.raceDistance,
-            boatClassCode: item.raceBoatClassName,
-            boatClassName: item.raceBoatClassName,
-            sortOrder: 0,
-            ageGroups: [],
-            hidden: false
-          } as RaceWithAgeGroupsAndBoatClass,
+          race: raceFromSnapshot(item),
           level: {
             code: item.levelCode,
             name: item.levelName,

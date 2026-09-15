@@ -75,7 +75,7 @@ const RaceCard = React.memo(({ race, onRaceClick, onToggleHidden, showAddButton 
             {entryCount !== undefined && (
               <span className="text-green-600 font-semibold ml-1">
                 {(() => {
-                  const boatUnits = calculateBoatUnits(entryCount, competitorRace?.boatClassSeatCount)
+                  const boatUnits = calculateBoatUnits(entryCount, competitorRace?.seatCount)
                   return boatUnits !== null ? `(${boatUnits} hajóegység)` : `(${entryCount} nevezés)`
                 })()}
               </span>
@@ -342,6 +342,9 @@ const RaceList: React.FC<RaceListProps> = React.memo(({
           discipline: race.discipline,
           boatClassCode: race.boatClassCode,
           boatClassName: race.boatClassName,
+          boatTypeCode: race.boatTypeCode,
+          seatCount: race.seatCount,
+          seatCountText: race.seatCountText,
           gender: race.gender,
           distance: race.distance,
           sortOrder: race.sortOrder,

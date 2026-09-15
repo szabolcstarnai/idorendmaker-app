@@ -106,6 +106,9 @@ public class RaceServiceImpl implements RaceService {
                     ageGroupsByCode);
                 final BoatClass bc = boatClassesByCode.get(race.getBoatClassCode());
                 dto.setBoatClassName(bc != null ? bc.getName() : race.getBoatClassCode());
+                dto.setBoatTypeCode(bc != null ? bc.getBoatTypeCode() : null);
+                dto.setSeatCount(bc != null ? bc.getSeatCount() : null);
+                dto.setSeatCountText(bc != null ? bc.getSeatCountText() : null);
                 return dto;
             })
             .toList();

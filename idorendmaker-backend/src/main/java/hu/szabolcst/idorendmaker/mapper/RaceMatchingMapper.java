@@ -51,6 +51,9 @@ public interface RaceMatchingMapper {
     @Mappings({
         @Mapping(target = "ageGroups", ignore = true),
         @Mapping(target = "boatClassName", ignore = true),
+        @Mapping(target = "boatTypeCode", ignore = true),
+        @Mapping(target = "seatCount", ignore = true),
+        @Mapping(target = "seatCountText", ignore = true),
         @Mapping(target = "entryCount", ignore = true),
         @Mapping(target = "competitorIds", ignore = true),
         @Mapping(target = "topCompetitors", ignore = true),

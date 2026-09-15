@@ -1,6 +1,7 @@
 package hu.szabolcst.idorendmaker.service;
 
 import hu.szabolcst.idorendmaker.model.entity.ScheduleItem;
+import hu.szabolcst.idorendmaker.model.entity.catalog.BoatClass;
 import hu.szabolcst.idorendmaker.model.entity.catalog.Level;
 import hu.szabolcst.idorendmaker.model.entity.catalog.Race;
 import hu.szabolcst.idorendmaker.repository.catalog.LevelRepository;
@@ -19,9 +20,11 @@ import org.springframework.transaction.annotation.Transactional;
  * {@link #populate(ScheduleItem, String, String)} unconditionally overwrites
  * all snapshot fields ({@code raceName}, {@code raceDiscipline},
  * {@code raceGender}, {@code raceDistance}, {@code raceBoatClassName},
- * {@code raceAgeGroupsDisplay}, {@code levelName}, {@code levelType}) with
- * the current catalog values. There is no incremental merge; callers that
- * want to preserve a previous snapshot should not call this method again.
+ * {@code raceAgeGroupsDisplay}, {@code raceBoatClassCode},
+ * {@code raceBoatTypeCode}, {@code raceSeatCount}, {@code raceSeatCountText},
+ * {@code levelName}, {@code levelType}) with the current catalog values.
+ * There is no incremental merge; callers that want to preserve a previous
+ * snapshot should not call this method again.
  *
  * <p>Race-side resolution (race name / discipline / gender / distance /
  * boat-class name / age-groups display) is delegated to
@@ -63,6 +66,12 @@ public class ScheduleItemSnapshotPopulator {
         item.setRaceDistance(race.getDistance());
         item.setRaceBoatClassName(display.boatClassName());
         item.setRaceAgeGroupsDisplay(display.ageGroupsDisplay());
+
+        item.setRaceBoatClassCode(race.getBoatClassCode());
+        final BoatClass boatClass = display.boatClass();
+        item.setRaceBoatTypeCode(boatClass != null ? boatClass.getBoatTypeCode() : null);
+        item.setRaceSeatCount(boatClass != null ? boatClass.getSeatCount() : null);
+        item.setRaceSeatCountText(boatClass != null ? boatClass.getSeatCountText() : null);
 
         if (normalizedLevelCode != null) {
             final Level level = levelRepository.findById(normalizedLevelCode)

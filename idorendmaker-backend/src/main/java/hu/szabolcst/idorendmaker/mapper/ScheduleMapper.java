@@ -127,6 +127,8 @@ public interface ScheduleMapper {
         @Mapping(target = "schedule", ignore = true), @Mapping(target = "section", ignore = true),
         @Mapping(target = "raceName", ignore = true), @Mapping(target = "raceDiscipline", ignore = true),
         @Mapping(target = "raceBoatClassName", ignore = true), @Mapping(target = "raceGender", ignore = true),
+        @Mapping(target = "raceBoatClassCode", ignore = true), @Mapping(target = "raceBoatTypeCode", ignore = true),
+        @Mapping(target = "raceSeatCount", ignore = true), @Mapping(target = "raceSeatCountText", ignore = true),
         @Mapping(target = "raceDistance", ignore = true), @Mapping(target = "raceAgeGroupsDisplay", ignore = true),
         @Mapping(target = "levelName", ignore = true), @Mapping(target = "levelType", ignore = true)})
     ScheduleItem toScheduleItem(CreateScheduleItemDataDto paramCreateScheduleItemDataDto, Integer scheduleId, Integer sectionId);

@@ -44,6 +44,18 @@ public class ScheduleItem {
     @Column(name = "race_boat_class_name", nullable = false)
     private String raceBoatClassName;
 
+    @Column(name = "race_boat_class_code")
+    private String raceBoatClassCode;
+
+    @Column(name = "race_boat_type_code")
+    private String raceBoatTypeCode;
+
+    @Column(name = "race_seat_count")
+    private Integer raceSeatCount;
+
+    @Column(name = "race_seat_count_text")
+    private String raceSeatCountText;
+
     @Column(name = "race_gender", nullable = false)
     private String raceGender;
 

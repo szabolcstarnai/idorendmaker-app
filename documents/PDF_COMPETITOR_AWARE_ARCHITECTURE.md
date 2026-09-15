@@ -101,7 +101,6 @@ const config: ForgeConfig = {
     extraResource: [
       'resources/idorendmaker-backend.jar',     // main Spring Boot backend
       'resources/idorendmaker-pdfprocessor.jar', // PDF extraction microservice
-      'resources/idorendmaker-production.db',    // seed SQLite database
     ],
   },
   hooks: {
@@ -117,7 +116,7 @@ execSync(`${mvnwCommand} clean package -DskipTests`, { stdio: 'inherit', cwd: ba
 // Copies idorendmaker-backend-<version>.jar → idorendmaker-desktop/resources/idorendmaker-backend.jar
 ```
 
-The NSIS installer (`idorendmaker-desktop/build/installer/installer.nsh`) downloads and extracts Temurin 23 on first run if the user doesn't already have Java 23+ on PATH, then copies the seed DB into `%LOCALAPPDATA%/idorendmaker/idorendmaker.db`. Both JAR services reuse that same JRE.
+The NSIS installer (`idorendmaker-desktop/build/installer/installer.nsh`) downloads and extracts Temurin 23 on first run if the user doesn't already have Java 23+ on PATH. Both JAR services reuse that same JRE. The installer no longer ships or copies a database: on first launch the backend seeds `catalog.db` from the `db/seed-catalog.db` classpath resource inside its own JAR (`CatalogBootstrapService`) and Liquibase creates `user.db` from the changelog, both under `%LOCALAPPDATA%/idorendmaker/`.
 
 #### PDF Processor Service (`idorendmaker-pdfprocessor`)
 ```java

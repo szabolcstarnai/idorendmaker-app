@@ -182,6 +182,9 @@ public class RaceMatchingServiceImpl implements RaceMatchingService {
                 dto.setTopCompetitors(topCompetitors);
                 dto.setPdfExtractionId(pdfExtractionId);
                 dto.setBoatClassName(display.boatClassName());
+                dto.setBoatTypeCode(display.boatClass() != null ? display.boatClass().getBoatTypeCode() : null);
+                dto.setSeatCount(display.boatClass() != null ? display.boatClass().getSeatCount() : null);
+                dto.setSeatCountText(display.boatClass() != null ? display.boatClass().getSeatCountText() : null);
 
                 filteredRaces.add(dto);
             }

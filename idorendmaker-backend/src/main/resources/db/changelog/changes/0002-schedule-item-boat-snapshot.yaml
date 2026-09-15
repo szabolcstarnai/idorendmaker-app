@@ -1,0 +1,27 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0002-schedule-item-boat-snapshot
+      author: idorendmaker
+      comment: >
+        Adds the boat-class side of the schedule_items catalog snapshot.
+        0001 only snapshotted race_boat_class_name (a display string), which
+        left rule conditions on boatType / seatCount and the Excel boat-unit
+        count with no data to work from once a schedule was reloaded from
+        user.db. These four columns carry the stable boat class code plus the
+        boat type and seat count needed by those features.
+      changes:
+        - addColumn:
+            tableName: schedule_items
+            columns:
+              - column:
+                  name: race_boat_class_code
+                  type: VARCHAR(64)
+              - column:
+                  name: race_boat_type_code
+                  type: VARCHAR(64)
+              - column:
+                  name: race_seat_count
+                  type: INTEGER
+              - column:
+                  name: race_seat_count_text
+                  type: VARCHAR(32)

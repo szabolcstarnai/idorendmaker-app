@@ -5,6 +5,9 @@ export interface Race {
   discipline: string // 'Kajak', 'Kenu', 'SUP', 'Kajakpóló', 'Parakenu', 'Sárkányhajó', 'Szlalom', 'Tengeri kajak'
   boatClassCode: string // Reference to boat_classes by code
   boatClassName?: string // Resolved display name (e.g., "Minikajak egyes")
+  boatTypeCode?: string // Resolved from the boat class (e.g., "Kajak", "Minikajak")
+  seatCount?: number | null // Resolved from the boat class; null for "csapat"
+  seatCountText?: string // Resolved from the boat class (e.g., "1", "2", "csapat")
   gender: string // 'Férfi', 'Női', 'Vegyes'
   distance: string
   sortOrder: number // For ordering (was occurrence)
@@ -59,6 +62,10 @@ export interface ScheduleItem {
   raceName: string // Denormalized snapshot
   raceDiscipline: string // Denormalized snapshot
   raceBoatClassName: string // Denormalized snapshot
+  raceBoatClassCode: string | null // Denormalized snapshot - stable catalog code
+  raceBoatTypeCode: string | null // Denormalized snapshot - for boatType rule conditions
+  raceSeatCount: number | null // Denormalized snapshot - for boat unit counts
+  raceSeatCountText: string | null // Denormalized snapshot - for seatCount rule conditions
   raceGender: string // Denormalized snapshot
   raceDistance: string // Denormalized snapshot
   raceAgeGroupsDisplay: string // Denormalized snapshot - comma-separated age group names
@@ -155,7 +162,6 @@ export type RaceWithCompetitorData = RaceWithAgeGroupsAndBoatClass & {
   competitorIds: string[]
   topCompetitors: string[] // Sample of competitor names (first 3)
   pdfExtractionId?: number
-  boatClassSeatCount?: number | null // Seat count from boat class for boat unit calculation
 }
 
 export type CompetitorSchedule = {

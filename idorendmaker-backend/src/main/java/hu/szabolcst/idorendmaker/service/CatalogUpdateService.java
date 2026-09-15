@@ -3,6 +3,7 @@ package hu.szabolcst.idorendmaker.service;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zaxxer.hikari.HikariDataSource;
+import hu.szabolcst.idorendmaker.utils.CatalogVersions;
 import jakarta.annotation.PreDestroy;
 import jakarta.persistence.EntityManagerFactory;
 import java.io.InputStream;
@@ -112,7 +113,7 @@ public class CatalogUpdateService {
             final String currentVersion = readCurrentCatalogVersion();
             log.info("Current catalog version: {}", currentVersion);
 
-            if (manifest.catalogVersion().compareTo(currentVersion) <= 0) {
+            if (!CatalogVersions.isNewer(manifest.catalogVersion(), currentVersion)) {
                 log.info("Catalog is already up to date (version {})", currentVersion);
                 return UpdateResult.upToDate(currentVersion);
             }
