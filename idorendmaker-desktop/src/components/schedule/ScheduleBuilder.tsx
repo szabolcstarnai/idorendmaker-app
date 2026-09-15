@@ -8,6 +8,7 @@ import CompetitorTracker from '../pdf/CompetitorTracker';
 import { useScheduleSectionData } from '../../features/schedule/hooks/useScheduleSectionData';
 import { useSaveSchedule } from '../../features/schedule/hooks/useSaveSchedule';
 import { calculateTotalDuration, formatInterval } from '../../features/schedule/utils/scheduleTimeCalculator';
+import { buildScheduleSignature } from '../../features/schedule/utils/scheduleSignature';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
@@ -22,7 +23,7 @@ interface ScheduleBuilderProps {
   onSectionAdd?: (sectionData: { scheduleId: number, dayNumber: number, sectionType: 'délelőtt' | 'délután', startTime: string }) => void;
   onSectionRemove?: (sectionId: number) => void;
   onSectionStartTimeChange?: (sectionId: number, startTime: string) => void;
-  onScheduleSave?: (schedule: ScheduleWithSections, scheduleName: string, sectionData: Map<number, SectionWorkingData>, pdfExtractionId?: number) => void;
+  onScheduleSave?: (schedule: ScheduleWithSections, scheduleName: string, sectionData: Map<number, SectionWorkingData>, pdfExtractionId?: number) => Promise<void> | void;
   scheduleMode?: ScheduleMode;
   // New props for PDF-to-schedule integration
   pdfExtractionId?: number; // When coming from PDF workflow, enables competitor-aware features
@@ -60,7 +61,10 @@ const ScheduleBuilder: React.FC<ScheduleBuilderProps> = React.memo(({
   const [highlightedRaceIds, setHighlightedRaceIds] = useState<string[]>([]);
   const [dismissedViolationHashes, setDismissedViolationHashes] = useState<string[]>([]);
   const [dismissedCount, setDismissedCount] = useState<number>(0);
-  const [saveTimestamp, setSaveTimestamp] = useState<number>(0);
+  // Signature (name + structural content) of the schedule as of the last
+  // successful save, or as freshly loaded. `null` until either has happened.
+  // This is the baseline `hasUnsavedChanges` below compares against.
+  const [savedSignature, setSavedSignature] = useState<string | null>(null);
 
   // Rule validation status tracking
   const [ruleValidationStatus, setRuleValidationStatus] = useState<'unknown' | 'checking' | 'success' | 'no-rules' | 'error'>('unknown');
@@ -97,17 +101,29 @@ const ScheduleBuilder: React.FC<ScheduleBuilderProps> = React.memo(({
     pdfExtractionId,
     onScheduleSave,
     onSaveSuccess: () => {
-      // Clear unsaved changes state immediately after successful save
-      setSaveTimestamp(Date.now());
+      // The save just resolved for exactly this name and this section
+      // content - that is the new baseline. We deliberately do not wait for
+      // `schedule.name` to catch up (it is updated asynchronously by the
+      // parent after this callback runs) - see #18.
+      setSavedSignature(buildScheduleSignature(scheduleName, sectionDataMap));
     }
   });
 
-  // Initialize schedule name from schedule
+  // Sync the name field and (re)establish the saved baseline whenever a
+  // *different* schedule is loaded. Deliberately keyed on `schedule?.id`
+  // only, not on the `schedule` object or `schedule.name`: adding a section
+  // or race replaces the `schedule` object (new sections array) without
+  // changing its id, and must not clobber an in-progress rename - see #29.
+  //
+  // `sectionDataMap` is read here without being a dependency: App.tsx sets
+  // `schedule` and calls `populateSectionDataMap` (which updates
+  // `sectionDataMap`) from the same event handler when loading a saved
+  // schedule, so React batches both into the render this effect runs after.
   useEffect(() => {
-    if (schedule) {
-      setScheduleName(schedule.name);
-    }
-  }, [schedule, schedule?.name]);
+    if (!schedule) return;
+    setScheduleName(schedule.name);
+    setSavedSignature(buildScheduleSignature(schedule.name, sectionDataMap));
+  }, [schedule?.id]);
 
 
   // Notify parent component of aggregate schedule changes from all sections
@@ -155,19 +171,19 @@ const ScheduleBuilder: React.FC<ScheduleBuilderProps> = React.memo(({
   }, [schedule?.id]);
 
   // Track unsaved changes - use memo to calculate changes and prevent infinite loops  
+  // Compares the schedule's *current* content against the saved baseline.
+  // The previous version treated "the schedule has any races at all" as
+  // "unsaved" - which meant the warning fired forever after the first race
+  // was added, save or no save - and only ever suppressed it for a
+  // hardcoded one second after clicking save, regardless of whether the
+  // save had actually finished. See #18.
   const hasUnsavedChanges = useMemo(() => {
-    // If we just saved (timestamp changed), no unsaved changes for a moment
-    if (saveTimestamp > 0 && Date.now() - saveTimestamp < 1000) {
+    if (savedSignature === null) {
+      // No schedule loaded or initialized yet - nothing to compare against.
       return false;
     }
-    
-    // Determine if there are changes by checking:
-    // 1. If there are races in any section
-    // 2. If the schedule name has changed from the original
-    const hasRaces = sectionDataMap.size > 0 && Array.from(sectionDataMap.values()).some(data => data.races.length > 0);
-    const hasNameChange = schedule && scheduleName !== schedule.name;
-    return hasRaces || hasNameChange;
-  }, [sectionDataMap, scheduleName, schedule?.name, saveTimestamp]);
+    return buildScheduleSignature(scheduleName, sectionDataMap) !== savedSignature;
+  }, [sectionDataMap, scheduleName, savedSignature]);
   
   // Only notify when unsaved changes state actually changes
   const previousChangesRef = useRef<boolean>(false);
