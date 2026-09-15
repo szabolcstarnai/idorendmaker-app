@@ -268,6 +268,15 @@ const App: React.FC = () => {
     setCurrentView('rule-editor');
   };
 
+  // If the rule currently open in the editor was just deleted from the list,
+  // reset the editor back to the "Új szabály" (new rule) state rather than
+  // leaving it showing a rule that no longer exists - see #35.
+  const handleRuleDeleted = (ruleId: number) => {
+    if (editingRule?.id === ruleId) {
+      setEditingRule(undefined);
+    }
+  };
+
   const handleSaveRule = async (ruleData: CreateRuleData) => {
     try {
       if (editingRule) {
@@ -619,6 +628,7 @@ const App: React.FC = () => {
                 onCreateRule={handleCreateRule}
                 onEditRule={handleEditRule}
                 selectedRule={editingRule}
+                onRuleDeleted={handleRuleDeleted}
               >
                 {currentView === 'rule-editor' && (
                   <RuleEditor

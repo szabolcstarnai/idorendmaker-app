@@ -7,7 +7,7 @@ interface UseSaveScheduleProps {
   sectionDataMap: Map<number, SectionWorkingData>;
   scheduleName: string;
   pdfExtractionId?: number; // Optional PDF data to link
-  onScheduleSave?: (schedule: ScheduleWithSections, scheduleName: string, sectionData: Map<number, SectionWorkingData>, pdfExtractionId?: number) => void;
+  onScheduleSave?: (schedule: ScheduleWithSections, scheduleName: string, sectionData: Map<number, SectionWorkingData>, pdfExtractionId?: number) => Promise<void> | void;
   onSaveSuccess?: () => void; // Callback to clear unsaved changes state
 }
 
@@ -59,7 +59,12 @@ export const useSaveSchedule = ({
       if (onScheduleSave) {
         console.log('Calling onScheduleSave with:', { schedule, scheduleName, sectionDataMap, pdfExtractionId });
         // Pass the complete section working data and updated name to the parent
-        onScheduleSave(schedule, scheduleName, sectionDataMap, pdfExtractionId);
+        // and WAIT for it: the parent's save is async (an IPC round trip to
+        // the backend) and can fail. Awaiting is what lets the catch block
+        // below actually catch that failure, instead of it becoming an
+        // unhandled promise rejection while a "saved successfully" toast has
+        // already fired.
+        await onScheduleSave(schedule, scheduleName, sectionDataMap, pdfExtractionId);
         toast.success(hungarianStrings.scheduleSavedWithId);
       } else {
         // Direct save to database - convert section map to database format

@@ -19,6 +19,9 @@ interface RuleManagerProps {
   selectedRule?: RuleWithConditions;
   children?: React.ReactNode; // For right panel content (RuleEditor)
   refreshTrigger?: number; // Optional trigger for external refresh requests
+  // Notifies the parent that a rule was deleted, so it can reset the editor
+  // if that rule was the one currently open in it - see #35.
+  onRuleDeleted?: (ruleId: number) => void;
 }
 
 // Ultra-compact rule card component matching schedule builder aesthetic
@@ -124,7 +127,8 @@ const RuleManager: React.FC<RuleManagerProps> = ({
   onEditRule,
   selectedRule,
   children,
-  refreshTrigger
+  refreshTrigger,
+  onRuleDeleted
 }) => {
   const [rules, setRules] = useState<RuleWithConditions[]>([]);
   const [loading, setLoading] = useState(true);
@@ -212,6 +216,10 @@ const RuleManager: React.FC<RuleManagerProps> = ({
       }));
       
       setRuleToDelete(null);
+
+      // Tell the parent so it can reset the editor if this rule was open
+      // in it - otherwise the editor keeps showing a now-deleted rule.
+      onRuleDeleted?.(ruleToDelete.id);
     } catch (error) {
       console.error('Error deleting rule:', error);
       // Only reload on error to restore correct state
@@ -219,7 +227,7 @@ const RuleManager: React.FC<RuleManagerProps> = ({
     } finally {
       setIsDeleting(false);
     }
-  }, [ruleToDelete, loadRules]);
+  }, [ruleToDelete, loadRules, onRuleDeleted]);
 
   const handleCancelDelete = useCallback(() => {
     setRuleToDelete(null);

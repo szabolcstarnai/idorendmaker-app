@@ -97,6 +97,9 @@ dist/
 licenses.json
 resources/
 
+# Click-through testing screenshots (.claude/skills/run-desktop)
+.claude-shots/
+
 *.exe
 *.jar
 *.db

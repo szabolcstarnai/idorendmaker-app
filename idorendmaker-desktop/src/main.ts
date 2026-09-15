@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
 import path from 'node:path';
 import { promises as fs } from 'fs';
 import started from 'electron-squirrel-startup';
@@ -8,6 +8,7 @@ import { CreateRuleData, ScheduleRace } from '../shared/types/race';
 import { ExportService } from './features/common/services/ExportService';
 import { pdfProcessorService } from './features/pdf/services/PDFProcessorService';
 import { backendService } from './features/common/services/BackendService';
+import { checkForAppUpdate } from './features/common/services/AppUpdateService';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -710,7 +711,29 @@ const initializeApp = async () => {
       };
     }
   });
-  
+
+  // Current app version, straight from package.json via Electron - the
+  // single source of truth for what's shown in the UI, instead of a
+  // hand-maintained copy of the version string (see #50 / MainMenu).
+  ipcMain.handle('app:getVersion', () => app.getVersion());
+
+  // App update check (#50) - user-triggered only, see AppUpdateService.
+  ipcMain.handle('app:checkForUpdate', async () => {
+    return await checkForAppUpdate();
+  });
+
+  // Opens a URL in the user's default browser. Routed through a dedicated
+  // handler (rather than exposing `shell` itself to the renderer) and
+  // restricted to https so a compromised renderer can't use this to launch
+  // arbitrary local files or protocol handlers.
+  ipcMain.handle('app:openExternalUrl', async (_, url: string) => {
+    if (typeof url !== 'string' || !url.startsWith('https://')) {
+      console.error('Refusing to open non-https URL:', url);
+      return;
+    }
+    await shell.openExternal(url);
+  });
+
   // Perform startup cleanup of expired PDF session data
   (async () => {
     try {
